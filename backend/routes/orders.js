@@ -1,5 +1,6 @@
 const express = require('express');
 const Order = require('../models/Order');
+const Fleet = require('../models/Fleet');
 const { auth } = require('../middleware/auth');
 
 const router = express.Router();
@@ -26,31 +27,73 @@ router.get('/admin', auth, async (req, res) => {
 // Create new order
 router.post('/', auth, async (req, res) => {
   try {
-    const { pricing, ...rest } = req.body;
+    const { pricing, items, orderType, payment, delivery, promoCode, recipientName, recipientPhone, isGift } = req.body;
 
     const subtotal = pricing?.subtotal;
     if (typeof subtotal !== 'number' || subtotal <= 0) {
       return res.status(400).json({ message: 'Invalid subtotal' });
     }
+    if (!orderType) {
+      return res.status(400).json({ message: 'orderType is required' });
+    }
+    if (!payment?.method) {
+      return res.status(400).json({ message: 'payment.method is required' });
+    }
+    if (!items || items.length === 0) {
+      return res.status(400).json({ message: 'Order must have at least one item' });
+    }
 
     const deliveryFee = calculateDeliveryFee(subtotal);
-    const tax = Math.round(subtotal * 0.1);
     const discount = pricing?.discount || 0;
-    const total = subtotal + tax + deliveryFee - discount;
+    const total = subtotal + deliveryFee - discount;
 
     const order = new Order({
-      ...rest,
+      orderType,
+      items,
       customer: req.userId,
-      pricing: { subtotal, tax, deliveryFee, discount, total },
+      pricing: { subtotal, tax: 0, deliveryFee, discount, total },
+      payment: { method: payment.method, status: 'pending' },
+      delivery: delivery || {},
+      ...(promoCode ? { promoCode } : {}),
+      ...(recipientName ? { recipientName } : {}),
+      ...(recipientPhone ? { recipientPhone } : {}),
+      ...(isGift ? { isGift } : {}),
     });
 
     await order.save();
     await order.populate('items.menuItem customer');
 
-    req.io.emit('new-order', order);
+    // Auto-assign nearest available delivery agent
+    if (order.orderType === 'delivery') {
+      const agent = await Fleet.findOne({ status: 'available', isActive: true }).populate('driver');
+      if (agent) {
+        order.delivery.partner = agent.driver._id;
+        order.status.history.push({ status: 'confirmed', note: `Assigned to ${agent.driver.name}` });
+        order.status.current = 'confirmed';
+        agent.status = 'busy';
+        agent.currentOrder = order._id;
+        await Promise.all([order.save(), agent.save()]);
+        if (req.io) req.io.to(String(agent.driver._id)).emit('new-assignment', order);
+      }
+    }
+
+    if (req.io) req.io.emit('new-order', order);
     res.status(201).json(order);
   } catch (error) {
     res.status(400).json({ message: error.message });
+  }
+});
+
+// Get assigned orders for delivery partner
+router.get('/assigned', auth, async (req, res) => {
+  try {
+    const orders = await Order.find({
+      'delivery.partner': req.userId,
+      'status.current': { $in: ['confirmed', 'picked_up', 'out_for_delivery'] }
+    }).populate('items.menuItem').sort({ createdAt: -1 });
+    res.json(orders);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 });
 
@@ -77,6 +120,11 @@ router.patch('/:id/status', auth, async (req, res) => {
     
     if (status === 'delivered') {
       order.actualDeliveryTime = new Date();
+      // Free up the delivery agent
+      await Fleet.findOneAndUpdate(
+        { currentOrder: order._id },
+        { status: 'available', currentOrder: null }
+      );
     }
     
     await order.save();
@@ -128,8 +176,8 @@ router.post('/:id/items', auth, async (req, res) => {
     const itemTotal = price * quantity + (addOns?.reduce((sum, addon) => sum + addon.price, 0) || 0);
     order.pricing.subtotal += itemTotal;
     order.pricing.deliveryFee = calculateDeliveryFee(order.pricing.subtotal);
-    order.pricing.tax = Math.round(order.pricing.subtotal * 0.1);
-    order.pricing.total = order.pricing.subtotal + order.pricing.tax + order.pricing.deliveryFee - order.pricing.discount;
+    order.pricing.tax = 0;
+    order.pricing.total = order.pricing.subtotal + order.pricing.deliveryFee - order.pricing.discount;
     
     await order.save();
     await order.populate('items.menuItem customer');
@@ -159,8 +207,8 @@ router.post('/:id/charges', auth, async (req, res) => {
     }
     
     // Recalculate total
-    order.pricing.tax = Math.round(order.pricing.subtotal * 0.1);
-    order.pricing.total = order.pricing.subtotal + order.pricing.tax + order.pricing.deliveryFee - order.pricing.discount;
+    order.pricing.tax = 0;
+    order.pricing.total = order.pricing.subtotal + order.pricing.deliveryFee - order.pricing.discount;
     
     // Add to status history for tracking
     order.status.history.push({

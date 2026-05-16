@@ -162,7 +162,7 @@ function Orders() {
                       <span className="text-sm capitalize text-gray-600">{order.orderType?.replace('_', ' ') || '—'}</span>
                     </td>
                     <td className="px-5 py-4">
-                      <span className="text-sm font-semibold text-gray-800">₹{order.pricing?.total || 0}</span>
+                      <span className="text-sm font-semibold text-gray-800">₹{(order.pricing?.subtotal || 0) + (order.pricing?.deliveryFee || 0) - (order.pricing?.discount || 0)}</span>
                     </td>
                     <td className="px-5 py-4">
                       <span className={`px-2.5 py-1 text-xs font-medium rounded-full capitalize ${STATUS_BADGE[order.status?.current] || 'bg-gray-100 text-gray-600'}`}>

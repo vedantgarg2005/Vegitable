@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ordersAPI, menuAPI } from '../services/api';
@@ -43,10 +43,9 @@ function OrderDetails() {
     ],
     pricing: {
       subtotal: 747,
-      tax: 75,
       deliveryFee: 40,
       discount: 0,
-      total: 862
+      total: 787
     },
     delivery: {
       address: {
@@ -95,8 +94,8 @@ function OrderDetails() {
     retry: false,
   });
 
-  const displayOrder = order || mockOrder;
-  const displayMenuItems = menuItems?.data || mockMenuItems;
+  const displayOrder = order ?? mockOrder;
+  const displayMenuItems = menuItems || mockMenuItems;
 
   const addItemMutation = useMutation({
     mutationFn: (itemData) => ordersAPI.addItemToOrder(id, itemData),
@@ -246,12 +245,14 @@ function OrderDetails() {
                     <label className="text-sm text-gray-600">Pincode</label>
                     <p className="font-medium">{displayOrder.delivery.address.pincode}</p>
                   </div>
+                  {displayOrder.delivery?.address?.coordinates && (
                   <div>
                     <label className="text-sm text-gray-600">Coordinates</label>
                     <p className="font-medium text-sm">
                       {displayOrder.delivery.address.coordinates.lat}, {displayOrder.delivery.address.coordinates.lng}
                     </p>
                   </div>
+                  )}
                 </div>
                 {displayOrder.delivery.instructions && (
                   <div>
@@ -259,6 +260,7 @@ function OrderDetails() {
                     <p className="font-medium">{displayOrder.delivery.instructions}</p>
                   </div>
                 )}
+                {displayOrder.delivery?.address?.coordinates && (
                 <div className="mt-4">
                   <a
                     href={`https://maps.google.com/?q=${displayOrder.delivery.address.coordinates.lat},${displayOrder.delivery.address.coordinates.lng}`}
@@ -269,6 +271,7 @@ function OrderDetails() {
                     View on Map
                   </a>
                 </div>
+                )}
               </div>
             </div>
           )}
@@ -345,10 +348,6 @@ function OrderDetails() {
                 <span>₹{displayOrder.pricing.subtotal}</span>
               </div>
               <div className="flex justify-between">
-                <span>Tax:</span>
-                <span>₹{displayOrder.pricing.tax}</span>
-              </div>
-              <div className="flex justify-between">
                 <span>Delivery Fee:</span>
                 <span>₹{displayOrder.pricing.deliveryFee}</span>
               </div>
@@ -361,7 +360,7 @@ function OrderDetails() {
               <hr />
               <div className="flex justify-between font-semibold text-lg">
                 <span>Total:</span>
-                <span>₹{displayOrder.pricing.total}</span>
+                <span>₹{displayOrder.pricing.subtotal + displayOrder.pricing.deliveryFee - (displayOrder.pricing.discount || 0)}</span>
               </div>
             </div>
           </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,8 +8,9 @@ import {
   Alert,
 } from 'react-native';
 import * as Location from 'expo-location';
+import { io } from 'socket.io-client';
 import { useAuth } from '../services/AuthContext';
-import { fleetService, locationService } from '../services/api';
+import { fleetService, locationService, SOCKET_URL } from '../services/api';
 
 export default function HomeScreen() {
   const [isOnline, setIsOnline] = useState(false);
@@ -20,11 +21,26 @@ export default function HomeScreen() {
     rating: 0,
   });
   const { user } = useAuth();
+  const socketRef = useRef(null);
 
   useEffect(() => {
     requestLocationPermission();
     loadStats();
-  }, []);
+
+    // Connect socket and join personal room to receive new assignments
+    socketRef.current = io(SOCKET_URL, { transports: ['websocket'] });
+    if (user?._id) socketRef.current.emit('join', user._id);
+
+    socketRef.current.on('new-assignment', (order) => {
+      Alert.alert(
+        '🛵 New Order Assigned!',
+        `Order #${order.orderNumber}\n${order.delivery?.address?.street}, ${order.delivery?.address?.city}\nTotal: ₹${order.pricing?.total}`,
+        [{ text: 'OK', onPress: loadStats }]
+      );
+    });
+
+    return () => socketRef.current?.disconnect();
+  }, [user?._id]);
 
   useEffect(() => {
     let locationSubscription;

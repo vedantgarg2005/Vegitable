@@ -9,10 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCart } from '../context/CartContext';
 import { colors, shadows, borderRadius, ms, rs, vs } from '../utils/theme';
 import api from '../services/api';
-
-const FREE_DELIVERY_THRESHOLD = 299;
-const STANDARD_DELIVERY_FEE = 30;
-const getDeliveryFee = (subtotal) => subtotal >= FREE_DELIVERY_THRESHOLD ? 0 : STANDARD_DELIVERY_FEE;
+import { FREE_DELIVERY_THRESHOLD, STANDARD_DELIVERY_FEE, getDeliveryFee } from '../utils/constants';
 
 const CartScreen = ({ navigation }) => {
   const { items: cartItems, total, updateQuantity, removeFromCart } = useCart();

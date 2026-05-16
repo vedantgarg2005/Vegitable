@@ -136,14 +136,18 @@ const CheckoutScreen = ({ navigation, route }) => {
         ...(forSomeoneElse ? { recipientName, recipientPhone, isGift: true } : {}),
       };
 
-      await axios.post(`${API_BASE_URL}/orders`, payload, {
+      const res = await axios.post(`${API_BASE_URL}/orders`, payload, {
         headers: { Authorization: `Bearer ${userToken}` },
       });
 
       clearCart();
-      Alert.alert('Order Placed! 🎉', 'Your order has been placed successfully.', [
-        { text: 'Track Order', onPress: () => navigation.navigate('Orders') },
-      ]);
+      navigation.reset({
+        index: 1,
+        routes: [
+          { name: 'MainTabs' },
+          { name: 'OrderTracking', params: { orderId: res.data._id } },
+        ],
+      });
     } catch (err) {
       const msg = err.response?.data?.message || 'Failed to place order. Please try again.';
       Alert.alert('Error', msg);

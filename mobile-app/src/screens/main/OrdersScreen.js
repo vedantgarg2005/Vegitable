@@ -38,7 +38,8 @@ export default function OrdersScreen({ navigation }) {
   }, [navigation]);
 
   const renderOrder = useCallback(({ item }) => {
-    const cfg = STATUS_CONFIG[item.status] ?? { color: colors.placeholder, bg: colors.surfaceAlt, icon: 'ellipse-outline' };
+    const status = item.status?.current ?? item.status;
+    const cfg = STATUS_CONFIG[status] ?? { color: colors.placeholder, bg: colors.surfaceAlt, icon: 'ellipse-outline' };
     return (
       <View style={[styles.orderCard, shadows.medium]}>
         <View style={styles.orderHeader}>
@@ -47,7 +48,7 @@ export default function OrdersScreen({ navigation }) {
           </View>
           <View style={[styles.statusBadge, { backgroundColor: cfg.bg }]}>
             <Ionicons name={cfg.icon} size={rs(13)} color={cfg.color} />
-            <Text style={[styles.statusText, { color: cfg.color }]}>{item.status.toUpperCase()}</Text>
+            <Text style={[styles.statusText, { color: cfg.color }]}>{String(status).toUpperCase()}</Text>
           </View>
         </View>
 

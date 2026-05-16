@@ -39,8 +39,8 @@ export const dashboardAPI = {
 
 export const ordersAPI = {
   getOrders: (params) => api.get('/admin/orders', { params }),
-  getOrder: (id) => api.get(`/orders/${id}`),
-  updateOrderStatus: (id, data) => api.patch(`/orders/${id}/status`, data),
+  getOrder: (id) => api.get(`/orders/${id}`).then(res => res.data),
+  updateOrderStatus: (id, data) => api.patch(`/admin/orders/${id}/status`, data),
   addItemToOrder: (id, data) => api.post(`/orders/${id}/items`, data),
   addChargeToOrder: (id, data) => api.post(`/orders/${id}/charges`, data),
 };

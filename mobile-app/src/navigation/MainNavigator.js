@@ -3,7 +3,8 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import { Badge } from 'react-native-paper';
-import { View } from 'react-native';
+import { View, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import HomeScreen from '../screens/main/HomeScreen';
 import MenuScreen from '../screens/main/MenuScreen';
@@ -20,6 +21,7 @@ import TermsConditionsScreen from '../screens/TermsConditionsScreen';
 import RefundPolicyScreen from '../screens/RefundPolicyScreen';
 import ShippingPolicyScreen from '../screens/ShippingPolicyScreen';
 import MyProfileScreen from '../screens/MyProfileScreen';
+import OrderTrackingScreen from '../screens/OrderTrackingScreen';
 
 import { useCart } from '../context/CartContext';
 import { colors } from '../utils/theme';
@@ -50,6 +52,7 @@ function TabIcon({ name, color, size, badgeCount }) {
 
 function MainTabs() {
   const { itemCount } = useCart();
+  const insets = useSafeAreaInsets();
 
   return (
     <Tab.Navigator
@@ -78,8 +81,8 @@ function MainTabs() {
         tabBarStyle: {
           backgroundColor: colors.navy,
           borderTopWidth: 0,
-          height: 62,
-          paddingBottom: 4,
+          height: 62 + insets.bottom,
+          paddingBottom: insets.bottom + 4,
           paddingTop: 10,
           shadowColor: '#000',
           shadowOffset: { width: 0, height: -3 },
@@ -122,6 +125,7 @@ export default function MainNavigator() {
       <Stack.Screen name="RefundPolicy" component={RefundPolicyScreen} />
       <Stack.Screen name="ShippingPolicy" component={ShippingPolicyScreen} />
       <Stack.Screen name="MyProfile" component={MyProfileScreen} />
+      <Stack.Screen name="OrderTracking" component={OrderTrackingScreen} />
     </Stack.Navigator>
   );
 }

@@ -25,6 +25,7 @@ const oldInputRender = TextInput.render;
 TextInput.defaultProps = TextInput.defaultProps || {};
 TextInput.defaultProps.style = [{ fontFamily: 'Poppins_400Regular' }];
 
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AuthNavigator from './src/navigation/AuthNavigator';
 import MainNavigator from './src/navigation/MainNavigator';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
@@ -80,13 +81,15 @@ export default function App() {
   if (!fontsLoaded) return null;
 
   return (
-    <PaperProvider theme={theme}>
-      <AuthProvider>
-        <CartProvider>
-          <AppContent />
-          <FlashMessage position="top" />
-        </CartProvider>
-      </AuthProvider>
-    </PaperProvider>
+    <SafeAreaProvider>
+      <PaperProvider theme={theme}>
+        <AuthProvider>
+          <CartProvider>
+            <AppContent />
+            <FlashMessage position="top" />
+          </CartProvider>
+        </AuthProvider>
+      </PaperProvider>
+    </SafeAreaProvider>
   );
 }

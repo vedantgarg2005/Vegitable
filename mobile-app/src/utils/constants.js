@@ -31,6 +31,10 @@ export const ORDER_STATUS = {
 };
 
 // Animation Durations
+export const FREE_DELIVERY_THRESHOLD = 199;
+export const STANDARD_DELIVERY_FEE = 30;
+export const getDeliveryFee = (subtotal) => subtotal >= FREE_DELIVERY_THRESHOLD ? 0 : STANDARD_DELIVERY_FEE;
+
 export const ANIMATION_DURATION = {
   fast: 200,
   normal: 300,

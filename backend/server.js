@@ -46,6 +46,10 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/newdelhis
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
   
+  socket.on('join', (userId) => {
+    socket.join(userId);
+  });
+
   socket.on('join-room', (room) => {
     socket.join(room);
   });
