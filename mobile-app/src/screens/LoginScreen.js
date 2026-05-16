@@ -93,12 +93,7 @@ const LoginScreen = ({ navigation }) => {
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <LinearGradient
-        colors={[colors.gradientStart, colors.gradientMid, colors.gradientEnd]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[styles.gradient, { paddingTop: insets.top }]}
-      >
+      <View style={[styles.gradient, { paddingTop: insets.top, backgroundColor: colors.navy }]}>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
           {/* Hero */}
@@ -250,7 +245,7 @@ const LoginScreen = ({ navigation }) => {
           </View>
 
         </ScrollView>
-      </LinearGradient>
+      </View>
 
       <Snackbar
         visible={snackbarVisible}

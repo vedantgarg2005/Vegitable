@@ -47,10 +47,8 @@ const ProfileScreen = ({ navigation }) => {
   );
 
   const headerContent = (
-    <LinearGradient
-      colors={[colors.gradientStart, colors.gradientMid, colors.gradientEnd]}
-      start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-      style={[styles.header, { paddingTop: insets.top + vs(20) }]}
+    <View
+      style={[styles.header, { paddingTop: insets.top + vs(20), backgroundColor: colors.navy }]}
     >
       <View style={styles.avatarWrap}>
         {user
@@ -61,7 +59,7 @@ const ProfileScreen = ({ navigation }) => {
       </View>
       <Text style={styles.userName}>{user?.name || 'Welcome, Guest!'}</Text>
       <Text style={styles.userSub}>{user?.email || user?.phone || 'Sign in to access your profile'}</Text>
-    </LinearGradient>
+    </View>
   );
 
   if (!user) {
@@ -74,7 +72,7 @@ const ProfileScreen = ({ navigation }) => {
             <LinearGradient
               colors={[colors.gradientStart, colors.gradientEnd]}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-              style={styles.signInGradient}
+              style={[styles.signInGradient, { borderRadius: borderRadius.xs }]}
             >
               <Text style={styles.signInBtnText}>Sign In to Continue</Text>
               <Ionicons name="arrow-forward" size={rs(18)} color="#fff" />
@@ -148,8 +146,8 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#fff',
   },
-  userName: { fontSize: ms(20), fontWeight: '800', color: '#FFFFFF', marginBottom: vs(4) },
-  userSub: { fontSize: ms(14), color: 'rgba(255,255,255,0.85)' },
+  userName: { fontSize: ms(20), fontWeight: '800', color: '#FFFFFF', marginBottom: vs(4), fontFamily: 'Poppins_800ExtraBold' },
+  userSub: { fontSize: ms(14), color: 'rgba(255,255,255,0.85)', fontFamily: 'Poppins_400Regular' },
 
   content: { padding: rs(16) },
 
@@ -161,11 +159,13 @@ const styles = StyleSheet.create({
     marginBottom: vs(16),
     justifyContent: 'space-around',
     alignItems: 'center',
-    marginTop: vs(-20),
+    marginTop: vs(-24),
+    marginHorizontal: rs(4),
+    ...shadows.medium,
   },
   statItem: { alignItems: 'center', flex: 1 },
-  statNumber: { fontSize: ms(17), fontWeight: '800', color: colors.primary, marginBottom: vs(2) },
-  statLabel: { fontSize: ms(12), color: colors.placeholder, fontWeight: '500' },
+  statNumber: { fontSize: ms(17), fontWeight: '800', color: colors.primary, marginBottom: vs(2), fontFamily: 'Poppins_800ExtraBold' },
+  statLabel: { fontSize: ms(12), color: colors.placeholder, fontWeight: '500', fontFamily: 'Poppins_500Medium' },
   statDivider: { width: 1, height: rs(40), backgroundColor: colors.divider },
 
   menuCard: {
@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: rs(12),
   },
-  menuText: { flex: 1, fontSize: ms(15), color: colors.text, fontWeight: '500' },
+  menuText: { flex: 1, fontSize: ms(15), color: colors.text, fontWeight: '500', fontFamily: 'Poppins_500Medium' },
   menuBadge: {
     backgroundColor: colors.accentLight,
     paddingHorizontal: rs(8),

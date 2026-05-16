@@ -83,13 +83,9 @@ export default function OrdersScreen({ navigation }) {
     return (
       <View style={styles.container}>
         <StatusBar barStyle="light-content" />
-        <LinearGradient
-          colors={[colors.gradientStart, colors.gradientMid, colors.gradientEnd]}
-          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-          style={[styles.header, { paddingTop: insets.top + vs(12) }]}
-        >
+        <View style={[styles.header, { paddingTop: insets.top + vs(12), backgroundColor: colors.navy }]}>
           <Text style={styles.headerTitle}>My Orders</Text>
-        </LinearGradient>
+        </View>
         <View style={styles.centered}>
           <Text style={styles.emptyEmoji}>🧾</Text>
           <Text style={styles.emptyTitle}>Sign in to view orders</Text>
@@ -111,18 +107,14 @@ export default function OrdersScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
-      <LinearGradient
-        colors={[colors.gradientStart, colors.gradientMid, colors.gradientEnd]}
-        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-        style={[styles.header, { paddingTop: insets.top + vs(12) }]}
-      >
+      <View style={[styles.header, { paddingTop: insets.top + vs(12), backgroundColor: colors.navy }]}>
         <Text style={styles.headerTitle}>My Orders</Text>
         {orders.length > 0 && (
           <View style={styles.headerBadge}>
             <Text style={styles.headerBadgeText}>{orders.length}</Text>
           </View>
         )}
-      </LinearGradient>
+      </View>
 
       <FlatList
         data={orders}
@@ -193,7 +185,7 @@ const styles = StyleSheet.create({
   orderTotalLabel: { fontSize: ms(14), color: colors.textSecondary },
   orderTotalValue: { fontSize: ms(17), fontWeight: '800', color: colors.primary },
 
-  trackBtn: { borderRadius: borderRadius.sm, overflow: 'hidden' },
+  trackBtn: { borderRadius: borderRadius.sm, overflow: 'hidden', backgroundColor: colors.primary },
   trackBtnGradient: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     paddingVertical: vs(11), gap: rs(6),

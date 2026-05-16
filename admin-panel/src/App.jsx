@@ -11,7 +11,6 @@ import Users from './pages/Users';
 import Analytics from './pages/Analytics';
 import Referrals from './pages/Referrals';
 import Products from './pages/Products';
-import Settings from './pages/Settings';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -47,7 +46,6 @@ function AppContent() {
         <Route path="users" element={<Users />} />
         <Route path="analytics" element={<Analytics />} />
         <Route path="referrals" element={<Referrals />} />
-        <Route path="settings" element={<Settings />} />
       </Route>
     </Routes>
   );

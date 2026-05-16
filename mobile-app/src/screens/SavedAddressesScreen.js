@@ -52,6 +52,9 @@ export default function SavedAddressesScreen({ navigation }) {
     try {
       const res = await authFetch('/', { method: 'POST', body: JSON.stringify(form) });
       const data = await res.json();
+      if (!res.ok) {
+        Alert.alert('Error', data?.message || 'Could not save address.'); return;
+      }
       setAddresses(Array.isArray(data) ? data : []);
       setModalVisible(false);
     } catch { Alert.alert('Error', 'Could not save address.'); }
@@ -66,6 +69,7 @@ export default function SavedAddressesScreen({ navigation }) {
           try {
             const res = await authFetch(`/${id}`, { method: 'DELETE' });
             const data = await res.json();
+            if (!res.ok) { Alert.alert('Error', data?.message || 'Could not delete address.'); return; }
             setAddresses(Array.isArray(data) ? data : []);
           } catch { Alert.alert('Error', 'Could not delete address.'); }
         },
@@ -77,6 +81,7 @@ export default function SavedAddressesScreen({ navigation }) {
     try {
       const res = await authFetch(`/${id}`, { method: 'PUT', body: JSON.stringify({ isDefault: true }) });
       const data = await res.json();
+      if (!res.ok) { Alert.alert('Error', data?.message || 'Could not update address.'); return; }
       setAddresses(Array.isArray(data) ? data : []);
     } catch { Alert.alert('Error', 'Could not update address.'); }
   };

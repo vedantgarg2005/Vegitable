@@ -49,7 +49,7 @@ const CheckoutScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
 
   const authFetch = useCallback(async (path, options = {}) => {
-    const token = await AsyncStorage.getItem('userToken');
+    const token = await AsyncStorage.getItem('token');
     return fetch(`${API_BASE_URL}/addresses${path}`, {
       ...options,
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, ...options.headers },
@@ -78,6 +78,7 @@ const CheckoutScreen = ({ navigation, route }) => {
     try {
       const res = await authFetch('/', { method: 'POST', body: JSON.stringify(form) });
       const data = await res.json();
+      if (!res.ok) { Alert.alert('Error', data?.message || 'Could not save address.'); return; }
       const list = Array.isArray(data) ? data : [];
       setAddresses(list);
       const newest = list[list.length - 1];
@@ -103,25 +104,49 @@ const CheckoutScreen = ({ navigation, route }) => {
     }
     setLoading(true);
     try {
-      const userToken = await AsyncStorage.getItem('userToken');
-      const deliveryAddress = `${selectedAddr.address}${selectedAddr.landmark ? ', Near ' + selectedAddr.landmark : ''}, ${selectedAddr.city}${selectedAddr.pincode ? ' - ' + selectedAddr.pincode : ''}`;
-      await axios.post(`${API_BASE_URL}/orders`, {
-        items: cartItems,
-        deliveryAddress,
-        phone: forSomeoneElse ? recipientPhone : user?.phone,
-        recipientName: forSomeoneElse ? recipientName : null,
-        isGift: forSomeoneElse,
-        paymentMethod,
-        instructions,
-        discount: { amount: discount, promoCode: couponCode },
-      }, { headers: { Authorization: `Bearer ${userToken}` } });
+      const userToken = await AsyncStorage.getItem('token');
+
+      const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+      const payload = {
+        orderType: 'delivery',
+        items: cartItems.map(item => ({
+          menuItem: item._id || item.id,
+          quantity: item.quantity,
+          price: item.price,
+          specialInstructions: instructions || '',
+        })),
+        pricing: {
+          subtotal,
+          discount: discount || 0,
+        },
+        payment: {
+          method: paymentMethod,
+        },
+        delivery: {
+          address: {
+            street: selectedAddr.address,
+            landmark: selectedAddr.landmark || '',
+            city: selectedAddr.city,
+            pincode: selectedAddr.pincode || '',
+          },
+          instructions: instructions || '',
+        },
+        ...(couponCode ? { promoCode: { code: couponCode, discount } } : {}),
+        ...(forSomeoneElse ? { recipientName, recipientPhone, isGift: true } : {}),
+      };
+
+      await axios.post(`${API_BASE_URL}/orders`, payload, {
+        headers: { Authorization: `Bearer ${userToken}` },
+      });
 
       clearCart();
       Alert.alert('Order Placed! 🎉', 'Your order has been placed successfully.', [
         { text: 'Track Order', onPress: () => navigation.navigate('Orders') },
       ]);
-    } catch {
-      Alert.alert('Error', 'Failed to place order. Please try again.');
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Failed to place order. Please try again.';
+      Alert.alert('Error', msg);
     } finally {
       setLoading(false);
     }

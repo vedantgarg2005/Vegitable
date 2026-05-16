@@ -1,13 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, FlatList, StyleSheet, TouchableOpacity,
-  ScrollView, StatusBar, Dimensions,
+  ScrollView, StatusBar, Dimensions, Modal, ActivityIndicator, Alert,
 } from 'react-native';
 import { Text, Searchbar } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Location from 'expo-location';
 import { colors, spacing, shadows, borderRadius, ms, rs, vs } from '../utils/theme';
+import { API_BASE_URL } from '../utils/constants';
+import { useAuth } from '../context/AuthContext';
 
 const { width: W } = Dimensions.get('window');
 
@@ -29,11 +33,80 @@ const categories = [
   { label: 'Desserts', icon: '🍦' },
 ];
 
+const TYPE_ICONS = { home: 'home-outline', work: 'briefcase-outline', other: 'location-outline' };
+
 const HomeScreen = ({ navigation }) => {
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [pureVeg, setPureVeg] = useState(false);
   const insets = useSafeAreaInsets();
+
+  // Delivery address
+  const [addresses, setAddresses] = useState([]);
+  const [selectedAddress, setSelectedAddress] = useState(null);
+  const [addrModalVisible, setAddrModalVisible] = useState(false);
+  const [locLoading, setLocLoading] = useState(false);
+  const isFetchingRef = useRef(false);
+
+  const authFetch = useCallback(async (path, options = {}) => {
+    const token = await AsyncStorage.getItem('token');
+    return fetch(`${API_BASE_URL}/addresses${path}`, {
+      ...options,
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, ...options.headers },
+    });
+  }, []);
+
+  const loadAddresses = useCallback(async () => {
+    if (!user) return;
+    try {
+      const res = await authFetch('/');
+      const data = await res.json();
+      const list = Array.isArray(data) ? data : [];
+      setAddresses(list);
+      if (!selectedAddress) {
+        const def = list.find(a => a.isDefault) || list[0];
+        if (def) setSelectedAddress(def);
+      }
+    } catch {}
+  }, [user, authFetch]);
+
+  useEffect(() => { loadAddresses(); }, [loadAddresses]);
+
+  // Re-load when screen comes back into focus
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', loadAddresses);
+    return unsubscribe;
+  }, [navigation, loadAddresses]);
+
+  const useCurrentLocation = async () => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
+    setLocLoading(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'Allow location access to use this feature.');
+        return;
+      }
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const [place] = await Location.reverseGeocodeAsync({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
+      if (place) {
+        const label = [place.name, place.street, place.district, place.city].filter(Boolean).join(', ');
+        setSelectedAddress({ _id: 'current', type: 'other', address: label, city: place.city || '', isCurrentLocation: true });
+        setAddrModalVisible(false);
+      }
+    } catch {
+      Alert.alert('Error', 'Could not fetch your location.');
+    } finally {
+      setLocLoading(false);
+      isFetchingRef.current = false;
+    }
+  };
+
+  const deliveryLabel = selectedAddress
+    ? `${selectedAddress.address}${selectedAddress.city ? ', ' + selectedAddress.city : ''}`
+    : 'Select delivery address';
 
   const filteredItems = mockMenuItems.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -85,6 +158,16 @@ const HomeScreen = ({ navigation }) => {
         end={{ x: 1, y: 1 }}
         style={[styles.headerGradient, { paddingTop: insets.top + vs(12) }]}
       >
+        {/* Deliver To Row */}
+        <TouchableOpacity style={styles.deliverRow} onPress={() => setAddrModalVisible(true)} activeOpacity={0.8}>
+          <Ionicons name="location" size={rs(16)} color="rgba(255,255,255,0.9)" />
+          <View style={styles.deliverTextWrap}>
+            <Text style={styles.deliverLabel}>Deliver to</Text>
+            <Text style={styles.deliverAddress} numberOfLines={1}>{deliveryLabel}</Text>
+          </View>
+          <Ionicons name="chevron-down" size={rs(16)} color="rgba(255,255,255,0.9)" />
+        </TouchableOpacity>
+
         <View style={styles.headerTop}>
           <View>
             <Text style={styles.greeting}>Good day! 👋</Text>
@@ -156,12 +239,82 @@ const HomeScreen = ({ navigation }) => {
           </View>
         }
       />
+
+      {/* Address Picker Modal */}
+      <Modal visible={addrModalVisible} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Choose Delivery Address</Text>
+              <TouchableOpacity onPress={() => setAddrModalVisible(false)}>
+                <Ionicons name="close" size={rs(22)} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Current Location */}
+            <TouchableOpacity style={styles.locBtn} onPress={useCurrentLocation} disabled={locLoading} activeOpacity={0.8}>
+              <View style={styles.locIconWrap}>
+                {locLoading
+                  ? <ActivityIndicator size="small" color={colors.primary} />
+                  : <Ionicons name="navigate" size={rs(18)} color={colors.primary} />}
+              </View>
+              <View>
+                <Text style={styles.locBtnTitle}>Use Current Location</Text>
+                <Text style={styles.locBtnSub}>Auto-detect via GPS</Text>
+              </View>
+            </TouchableOpacity>
+
+            {addresses.length > 0 && (
+              <>
+                <Text style={styles.savedLabel}>Saved Addresses</Text>
+                {addresses.map(addr => (
+                  <TouchableOpacity
+                    key={addr._id}
+                    style={[styles.addrOption, selectedAddress?._id === addr._id && styles.addrOptionActive]}
+                    onPress={() => { setSelectedAddress(addr); setAddrModalVisible(false); }}
+                    activeOpacity={0.8}
+                  >
+                    <View style={[styles.addrOptionIcon, selectedAddress?._id === addr._id && styles.addrOptionIconActive]}>
+                      <Ionicons name={TYPE_ICONS[addr.type] || 'location-outline'} size={rs(16)} color={selectedAddress?._id === addr._id ? '#fff' : colors.textSecondary} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.addrOptionType}>{addr.type?.toUpperCase()}</Text>
+                      <Text style={styles.addrOptionText} numberOfLines={2}>
+                        {addr.address}{addr.city ? `, ${addr.city}` : ''}
+                      </Text>
+                    </View>
+                    {selectedAddress?._id === addr._id && <Ionicons name="checkmark-circle" size={rs(20)} color={colors.primary} />}
+                  </TouchableOpacity>
+                ))}
+              </>
+            )}
+
+            <TouchableOpacity
+              style={styles.manageBtn}
+              onPress={() => { setAddrModalVisible(false); navigation.navigate('SavedAddresses'); }}
+            >
+              <Ionicons name="add-circle-outline" size={rs(18)} color={colors.primary} />
+              <Text style={styles.manageBtnText}>Manage / Add Addresses</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
+
+  // Deliver to bar
+  deliverRow: {
+    flexDirection: 'row', alignItems: 'center', gap: rs(8),
+    backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: borderRadius.md,
+    paddingHorizontal: rs(12), paddingVertical: vs(8), marginBottom: vs(12),
+  },
+  deliverTextWrap: { flex: 1 },
+  deliverLabel: { fontSize: ms(10), color: 'rgba(255,255,255,0.75)', fontWeight: '600', letterSpacing: 0.5 },
+  deliverAddress: { fontSize: ms(13), color: '#fff', fontWeight: '700' },
 
   headerGradient: {
     paddingHorizontal: spacing.md,
@@ -311,6 +464,51 @@ const styles = StyleSheet.create({
   emptyEmoji: { fontSize: ms(56), marginBottom: vs(12) },
   emptyTitle: { fontSize: ms(18), fontWeight: '700', color: colors.text, marginBottom: vs(6) },
   emptySubtitle: { fontSize: ms(14), color: colors.placeholder },
+
+  // Address picker modal
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
+  modalSheet: {
+    backgroundColor: colors.surface, borderTopLeftRadius: rs(24), borderTopRightRadius: rs(24),
+    padding: rs(20), paddingBottom: vs(36), maxHeight: '80%',
+  },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: vs(16) },
+  modalTitle: { fontSize: ms(17), fontWeight: '700', color: colors.text },
+
+  locBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: rs(12),
+    padding: rs(14), borderRadius: borderRadius.md,
+    backgroundColor: colors.primarySurface, marginBottom: vs(16),
+  },
+  locIconWrap: {
+    width: rs(40), height: rs(40), borderRadius: rs(12),
+    backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center',
+  },
+  locBtnTitle: { fontSize: ms(14), fontWeight: '700', color: colors.primary },
+  locBtnSub: { fontSize: ms(12), color: colors.textSecondary, marginTop: vs(1) },
+
+  savedLabel: { fontSize: ms(12), fontWeight: '700', color: colors.placeholder, letterSpacing: 0.5, marginBottom: vs(8) },
+
+  addrOption: {
+    flexDirection: 'row', alignItems: 'center', gap: rs(12),
+    padding: rs(12), borderRadius: borderRadius.sm,
+    borderWidth: 1.5, borderColor: colors.border,
+    backgroundColor: colors.background, marginBottom: vs(8),
+  },
+  addrOptionActive: { borderColor: colors.primary, backgroundColor: colors.primarySurface },
+  addrOptionIcon: {
+    width: rs(36), height: rs(36), borderRadius: rs(10),
+    backgroundColor: colors.surfaceAlt, justifyContent: 'center', alignItems: 'center',
+  },
+  addrOptionIconActive: { backgroundColor: colors.primary },
+  addrOptionType: { fontSize: ms(11), fontWeight: '700', color: colors.text, letterSpacing: 0.5 },
+  addrOptionText: { fontSize: ms(13), color: colors.textSecondary, marginTop: vs(1) },
+
+  manageBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: rs(8),
+    paddingVertical: vs(14), justifyContent: 'center',
+    borderTopWidth: 1, borderTopColor: colors.divider, marginTop: vs(4),
+  },
+  manageBtnText: { fontSize: ms(14), color: colors.primary, fontWeight: '700' },
 });
 
 export default HomeScreen;

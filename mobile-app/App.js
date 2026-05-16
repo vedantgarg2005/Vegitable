@@ -5,6 +5,25 @@ import { Provider as PaperProvider } from 'react-native-paper';
 import FlashMessage from 'react-native-flash-message';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SplashScreen from 'expo-splash-screen';
+import { Text, TextInput } from 'react-native';
+import {
+  useFonts,
+  Poppins_400Regular,
+  Poppins_500Medium,
+  Poppins_600SemiBold,
+  Poppins_700Bold,
+  Poppins_800ExtraBold,
+  Poppins_900Black,
+} from '@expo-google-fonts/poppins';
+
+// Override default Text font globally
+const oldTextRender = Text.render;
+Text.defaultProps = Text.defaultProps || {};
+Text.defaultProps.style = [{ fontFamily: 'Poppins_400Regular' }];
+
+const oldInputRender = TextInput.render;
+TextInput.defaultProps = TextInput.defaultProps || {};
+TextInput.defaultProps.style = [{ fontFamily: 'Poppins_400Regular' }];
 
 import AuthNavigator from './src/navigation/AuthNavigator';
 import MainNavigator from './src/navigation/MainNavigator';
@@ -49,6 +68,17 @@ function AppContent() {
 }
 
 export default function App() {
+  const [fontsLoaded] = useFonts({
+    Poppins_400Regular,
+    Poppins_500Medium,
+    Poppins_600SemiBold,
+    Poppins_700Bold,
+    Poppins_800ExtraBold,
+    Poppins_900Black,
+  });
+
+  if (!fontsLoaded) return null;
+
   return (
     <PaperProvider theme={theme}>
       <AuthProvider>
