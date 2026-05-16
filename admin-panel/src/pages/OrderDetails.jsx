@@ -150,6 +150,184 @@ function OrderDetails() {
     });
   };
 
+  const handlePrintSlips = () => {
+    const o = displayOrder;
+    const total = o.pricing.subtotal + o.pricing.deliveryFee - (o.pricing.discount || 0);
+    const now = new Date(o.createdAt);
+    const dateStr = now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+
+    const row = (label, value, bold = false) =>
+      `<tr>
+        <td style="padding:5px 4px;border-bottom:1px solid #eee;${bold ? 'font-weight:700;font-size:15px' : ''}">${label}</td>
+        <td style="padding:5px 4px;border-bottom:1px solid #eee;text-align:right;${bold ? 'font-weight:700;font-size:15px' : ''}">${value}</td>
+      </tr>`;
+
+    const customerSlip = `
+      <div class="slip">
+        <div class="header">
+          <div class="brand">🍽️ NDS Restaurant</div>
+          <div class="slip-label">CUSTOMER BILL</div>
+          <div class="meta">${dateStr} &nbsp;|&nbsp; ${timeStr}</div>
+        </div>
+        <div class="divider"></div>
+        <table class="info-table">
+          <tr><td class="label">Order No.</td><td class="value">#${o.orderNumber}</td></tr>
+          <tr><td class="label">Name</td><td class="value">${o.customer.name}</td></tr>
+          <tr><td class="label">Phone</td><td class="value">${o.customer.phone}</td></tr>
+          <tr><td class="label">Type</td><td class="value type-badge">${o.orderType.toUpperCase()}</td></tr>
+          ${o.orderType === 'delivery' ? `<tr><td class="label">Address</td><td class="value">${o.delivery.address.street},<br>${o.delivery.address.city} – ${o.delivery.address.pincode}</td></tr>` : ''}
+        </table>
+        <div class="divider dashed"></div>
+        <table class="items-table">
+          <thead>
+            <tr>
+              <th style="text-align:left">Item</th>
+              <th style="text-align:center">Qty</th>
+              <th style="text-align:right">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${o.items.map(item => `
+              <tr>
+                <td>${item.menuItem.name}${item.addOns?.length ? '<div class="addon">+ ' + item.addOns.map(a => a.name).join(', ') + '</div>' : ''}</td>
+                <td style="text-align:center">${item.quantity}</td>
+                <td style="text-align:right">&#8377;${item.price * item.quantity}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+        <div class="divider dashed"></div>
+        <table class="totals-table">
+          ${row('Subtotal', '&#8377;' + o.pricing.subtotal)}
+          ${row('Delivery Fee', '&#8377;' + o.pricing.deliveryFee)}
+          ${o.pricing.discount > 0 ? `<tr><td style="padding:5px 4px;border-bottom:1px solid #eee;color:#16a34a">Discount</td><td style="padding:5px 4px;border-bottom:1px solid #eee;text-align:right;color:#16a34a">-&#8377;${o.pricing.discount}</td></tr>` : ''}
+          ${row('TOTAL', '&#8377;' + total, true)}
+        </table>
+        <div class="divider"></div>
+        <div class="payment-row">
+          <span>Payment: <b>${o.payment.method.toUpperCase()}</b></span>
+          <span class="paid-badge">${o.payment.status.toUpperCase()}</span>
+        </div>
+        ${o.payment.transactionId ? `<div class="txn">Txn ID: ${o.payment.transactionId}</div>` : ''}
+        <div class="footer">Thank you for dining with us! 🙏<br><span>Visit again soon</span></div>
+      </div>`;
+
+    const chefSlip = `
+      <div class="slip chef">
+        <div class="header">
+          <div class="brand">👨‍🍳 KITCHEN ORDER</div>
+          <div class="slip-label">CHEF COPY</div>
+          <div class="meta">${dateStr} &nbsp;|&nbsp; ${timeStr}</div>
+        </div>
+        <div class="divider"></div>
+        <table class="info-table">
+          <tr><td class="label">Order No.</td><td class="value order-num">#${o.orderNumber}</td></tr>
+          <tr><td class="label">Type</td><td class="value type-badge">${o.orderType.toUpperCase()}</td></tr>
+          ${o.orderType === 'delivery' && o.delivery?.instructions ? `<tr><td class="label">Note</td><td class="value note">${o.delivery.instructions}</td></tr>` : ''}
+        </table>
+        <div class="divider dashed"></div>
+        <table class="chef-items">
+          <thead>
+            <tr>
+              <th style="text-align:left">Item</th>
+              <th style="text-align:right">Qty</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${o.items.map(item => `
+              <tr>
+                <td>${item.menuItem.name}${item.addOns?.length ? '<div class="addon">+ ' + item.addOns.map(a => a.name).join(', ') + '</div>' : ''}</td>
+                <td class="qty-big">${item.quantity}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+        <div class="divider"></div>
+        <div class="status-box">STATUS: ${o.status.current.replace(/_/g, ' ').toUpperCase()}</div>
+        <div class="footer">Prepare with care 🔥</div>
+      </div>`;
+
+    const styles = `
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: 'Inter', sans-serif; background: #f3f4f6; }
+      .slip {
+        width: 320px; margin: 0 auto; background: #fff;
+        padding: 24px 20px; border-radius: 8px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+      }
+      .slip.chef { border-top: 5px solid #f97316; }
+      .slip:not(.chef) { border-top: 5px solid #2563eb; }
+      .header { text-align: center; margin-bottom: 12px; }
+      .brand { font-size: 18px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px; }
+      .slip-label {
+        display: inline-block; font-size: 11px; font-weight: 700;
+        letter-spacing: 2px; padding: 2px 10px; border-radius: 20px;
+        background: #eff6ff; color: #2563eb; margin-bottom: 4px;
+      }
+      .chef .slip-label { background: #fff7ed; color: #f97316; }
+      .meta { font-size: 11px; color: #6b7280; }
+      .divider { border: none; border-top: 1.5px solid #e5e7eb; margin: 12px 0; }
+      .divider.dashed { border-top-style: dashed; border-color: #d1d5db; }
+      .info-table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-bottom: 4px; }
+      .info-table td { padding: 3px 2px; vertical-align: top; }
+      .info-table .label { color: #6b7280; width: 80px; }
+      .info-table .value { font-weight: 600; color: #111827; }
+      .info-table .order-num { font-size: 15px; font-weight: 700; }
+      .info-table .note { color: #dc2626; font-weight: 600; }
+      .type-badge {
+        display: inline-block; font-size: 10px; font-weight: 700;
+        padding: 1px 8px; border-radius: 20px;
+        background: #dcfce7; color: #16a34a;
+      }
+      .items-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+      .items-table th { font-size: 11px; color: #6b7280; font-weight: 600; padding: 4px 2px; border-bottom: 1.5px solid #e5e7eb; }
+      .items-table td { padding: 6px 2px; border-bottom: 1px solid #f3f4f6; color: #111827; }
+      .addon { font-size: 10.5px; color: #6b7280; margin-top: 2px; }
+      .totals-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+      .payment-row { display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; margin-top: 10px; }
+      .paid-badge {
+        font-size: 10px; font-weight: 700; padding: 2px 8px;
+        border-radius: 20px; background: #dcfce7; color: #16a34a;
+      }
+      .txn { font-size: 10.5px; color: #9ca3af; margin-top: 4px; }
+      .footer { text-align: center; margin-top: 16px; font-size: 12px; color: #6b7280; line-height: 1.6; }
+      .footer span { font-size: 11px; }
+      .chef-items { width: 100%; border-collapse: collapse; font-size: 14px; }
+      .chef-items th { font-size: 11px; color: #6b7280; font-weight: 600; padding: 4px 2px; border-bottom: 1.5px solid #e5e7eb; }
+      .chef-items td { padding: 8px 2px; border-bottom: 1px solid #f3f4f6; }
+      .qty-big { text-align: right; font-size: 26px; font-weight: 800; color: #f97316; }
+      .status-box {
+        text-align: center; font-size: 13px; font-weight: 700;
+        letter-spacing: 1.5px; padding: 8px; border-radius: 6px;
+        background: #fff7ed; color: #f97316; border: 1.5px dashed #f97316;
+        margin-top: 4px;
+      }
+      @media print {
+        body { background: #fff; }
+        .slip { box-shadow: none; border-radius: 0; }
+        .page { page-break-after: always; display: flex; justify-content: center; align-items: flex-start; padding: 20px; min-height: 100vh; }
+        .page:last-child { page-break-after: avoid; }
+      }
+    `;
+
+    const win = window.open('', '_blank', 'width=420,height=700');
+    win.document.write(`
+      <!DOCTYPE html><html><head>
+        <meta charset="UTF-8">
+        <title>Slips — ${o.orderNumber}</title>
+        <style>${styles}</style>
+      </head><body>
+        <div class="page" style="display:flex;justify-content:center;align-items:flex-start;padding:24px;min-height:100vh;background:#f3f4f6">
+          ${customerSlip}
+        </div>
+        <div class="page" style="display:flex;justify-content:center;align-items:flex-start;padding:24px;min-height:100vh;background:#f3f4f6">
+          ${chefSlip}
+        </div>
+        <script>window.onload = () => { window.print(); }<\/script>
+      </body></html>`);
+    win.document.close();
+  };
+
   const statusOptions = ['placed', 'confirmed', 'preparing', 'ready', 'picked_up', 'out_for_delivery', 'delivered', 'cancelled'];
   const statusColors = {
     placed: 'bg-blue-100 text-blue-800',
@@ -191,6 +369,12 @@ function OrderDetails() {
             className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
           >
             Add Charge
+          </button>
+          <button
+            onClick={handlePrintSlips}
+            className="bg-gray-800 text-white px-4 py-2 rounded-lg hover:bg-gray-900"
+          >
+            🖨️ Print Slips
           </button>
         </div>
       </div>

@@ -29,19 +29,25 @@ import { colors } from '../utils/theme';
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
-function TabIcon({ name, color, size, badgeCount }) {
+function TabIcon({ name, color, size, badgeCount, focused }) {
   return (
-    <View>
+    <View style={{ alignItems: 'center' }}>
+      {focused && (
+        <View style={{
+          position: 'absolute', top: -10,
+          width: 4, height: 4, borderRadius: 2,
+          backgroundColor: colors.primary,
+        }} />
+      )}
       <Ionicons name={name} size={size} color={color} />
       {badgeCount > 0 && (
         <Badge
           style={{
             position: 'absolute',
-            top: -6,
-            right: -6,
+            top: -6, right: -8,
             backgroundColor: colors.error,
           }}
-          size={18}
+          size={16}
         >
           {badgeCount}
         </Badge>
@@ -74,29 +80,31 @@ function MainTabs() {
             iconName = focused ? 'person' : 'person-outline';
           }
 
-          return <TabIcon name={iconName} color={color} size={size} badgeCount={badgeCount} />;
+          return <TabIcon name={iconName} color={color} size={size} badgeCount={badgeCount} focused={focused} />;
         },
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: '#999999',
         tabBarStyle: {
-          backgroundColor: colors.navy,
-          borderTopWidth: 0,
+          backgroundColor: '#fff',
+          borderTopWidth: 1,
+          borderTopColor: colors.divider,
           height: 62 + insets.bottom,
           paddingBottom: insets.bottom + 4,
           paddingTop: 10,
           shadowColor: '#000',
-          shadowOffset: { width: 0, height: -3 },
-          shadowOpacity: 0.3,
-          shadowRadius: 10,
-          elevation: 16,
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.08,
+          shadowRadius: 8,
+          elevation: 12,
         },
         tabBarLabelStyle: {
           fontSize: 10,
           fontWeight: '700',
-          letterSpacing: 0.5,
+          letterSpacing: 0.3,
           marginTop: -2,
           fontFamily: 'Poppins_700Bold',
         },
+        tabBarInactiveTintColor: '#AAAAAA',
         tabBarActiveBackgroundColor: 'transparent',
         tabBarInactiveBackgroundColor: 'transparent',
         headerShown: false,

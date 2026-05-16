@@ -77,13 +77,26 @@ const CartScreen = ({ navigation }) => {
         <>
           <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
-            {/* Free delivery progress */}
+            {/* Free delivery progress bar — Swiggy style */}
             {deliveryFee > 0 && (
               <View style={styles.progressCard}>
-                <Ionicons name="bicycle-outline" size={rs(18)} color={colors.primary} />
-                <Text style={styles.progressText}>
-                  Add <Text style={styles.progressAmount}>₹{(FREE_DELIVERY_THRESHOLD - total).toFixed(0)}</Text> more for FREE delivery
-                </Text>
+                <View style={styles.progressTop}>
+                  <Ionicons name="bicycle-outline" size={rs(16)} color={colors.primary} />
+                  <Text style={styles.progressText}>
+                    Add <Text style={styles.progressAmount}>₹{(FREE_DELIVERY_THRESHOLD - total).toFixed(0)}</Text> more for FREE delivery
+                  </Text>
+                </View>
+                <View style={styles.progressBarBg}>
+                  <View style={[styles.progressBarFill, { width: `${Math.min((total / FREE_DELIVERY_THRESHOLD) * 100, 100)}%` }]} />
+                </View>
+              </View>
+            )}
+
+            {/* Savings banner */}
+            {discount > 0 && (
+              <View style={styles.savingsBanner}>
+                <Ionicons name="pricetag" size={rs(14)} color={colors.success} />
+                <Text style={styles.savingsText}>You're saving <Text style={styles.savingsAmount}>₹{discount.toFixed(0)}</Text> on this order 🎉</Text>
               </View>
             )}
 
@@ -236,9 +249,6 @@ const styles = StyleSheet.create({
   scrollContent: { padding: rs(16) },
 
   progressCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: rs(10),
     backgroundColor: colors.primarySurface,
     borderRadius: borderRadius.sm,
     padding: rs(12),
@@ -246,8 +256,33 @@ const styles = StyleSheet.create({
     borderLeftWidth: 3,
     borderLeftColor: colors.primary,
   },
-  progressText: { fontSize: ms(13), color: colors.text, flex: 1, fontFamily: 'Poppins_400Regular' },
-  progressAmount: { fontWeight: '800', color: colors.primary, fontFamily: 'Poppins_800ExtraBold' },
+  progressTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: rs(8),
+    marginBottom: vs(8),
+  },
+  progressText: { fontSize: ms(13), color: colors.text, flex: 1 },
+  progressAmount: { fontWeight: '800', color: colors.primary },
+  progressBarBg: {
+    height: vs(4), backgroundColor: colors.border,
+    borderRadius: borderRadius.full, overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%', backgroundColor: colors.primary,
+    borderRadius: borderRadius.full,
+  },
+  savingsBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: rs(8),
+    backgroundColor: colors.successLight,
+    borderRadius: borderRadius.sm,
+    padding: rs(12),
+    marginBottom: vs(12),
+    borderLeftWidth: 3,
+    borderLeftColor: colors.success,
+  },
+  savingsText: { fontSize: ms(13), color: colors.text, flex: 1 },
+  savingsAmount: { fontWeight: '800', color: colors.success },
 
   sectionCard: {
     backgroundColor: colors.surface,
