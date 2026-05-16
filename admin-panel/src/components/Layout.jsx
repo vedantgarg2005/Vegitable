@@ -1,0 +1,158 @@
+import { useState } from 'react';
+import { Outlet, Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import {
+  LayoutDashboard,
+  ShoppingBag,
+  Store,
+  Users,
+  BarChart3,
+  Gift,
+  LogOut,
+  Menu,
+  X,
+  Bell,
+  Search,
+  Settings
+} from 'lucide-react';
+
+const Layout = () => {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { user, logout } = useAuth();
+  const location = useLocation();
+
+  const navigation = [
+    { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+    { name: 'Orders', href: '/orders', icon: ShoppingBag },
+    { name: 'Menu', href: '/menu', icon: Store },
+    { name: 'Users', href: '/users', icon: Users },
+    { name: 'Analytics', href: '/analytics', icon: BarChart3 },
+    { name: 'Referrals', href: '/referrals', icon: Gift },
+    { name: 'Settings', href: '/settings', icon: Settings },
+  ];
+
+  const isActive = (path) => location.pathname === path;
+
+  return (
+    <div className="flex h-screen bg-slate-100">
+      {/* Mobile sidebar overlay */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-40 lg:hidden">
+          <div className="fixed inset-0 bg-black bg-opacity-60" onClick={() => setSidebarOpen(false)} />
+        </div>
+      )}
+
+      {/* Sidebar */}
+      <div className={`fixed inset-y-0 left-0 z-50 w-64 shadow-2xl transform ${
+        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+      } transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0`}
+        style={{ background: 'linear-gradient(180deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%)' }}
+      >
+        <div className="flex items-center justify-between h-16 px-6 border-b border-white/10">
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 bg-primary-500 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-sm">🍔</span>
+            </div>
+            <h1 className="text-lg font-bold text-white">FoodAdmin</h1>
+          </div>
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="lg:hidden p-2 rounded-md text-white/60 hover:text-white"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <nav className="mt-6 px-3">
+          <div className="space-y-1">
+            {navigation.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  className={`group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all ${
+                    isActive(item.href)
+                      ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/30'
+                      : 'text-white/70 hover:bg-white/10 hover:text-white'
+                  }`}
+                  onClick={() => setSidebarOpen(false)}
+                >
+                  <Icon className={`mr-3 h-5 w-5 ${
+                    isActive(item.href) ? 'text-white' : 'text-white/50 group-hover:text-white'
+                  }`} />
+                  {item.name}
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
+
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
+          <div className="flex items-center mb-3">
+            <div className="flex-shrink-0">
+              <div className="h-9 w-9 bg-primary-500 rounded-full flex items-center justify-center shadow-lg">
+                <span className="text-sm font-bold text-white">
+                  {user?.name?.charAt(0) || 'A'}
+                </span>
+              </div>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-semibold text-white">{user?.name || 'Admin'}</p>
+              <p className="text-xs text-white/50">{user?.email}</p>
+            </div>
+          </div>
+          <button
+            onClick={logout}
+            className="w-full flex items-center px-3 py-2 text-sm font-medium text-white/70 rounded-lg hover:bg-white/10 hover:text-white transition-all"
+          >
+            <LogOut className="mr-3 h-4 w-4" />
+            Sign out
+          </button>
+        </div>
+      </div>
+
+      {/* Main content */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Top header */}
+        <header className="bg-white shadow-sm border-b border-slate-200">
+          <div className="flex items-center justify-between h-16 px-6">
+            <div className="flex items-center">
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="lg:hidden p-2 rounded-md text-gray-500 hover:text-gray-700"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+              
+              <div className="ml-4 lg:ml-0 flex-1 max-w-lg">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search..."
+                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-primary-400 focus:border-transparent focus:bg-white transition-all"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-4">
+              <button className="p-2 text-gray-500 hover:text-primary-500 relative transition-colors">
+                <Bell className="h-5 w-5" />
+                <span className="absolute top-1 right-1 h-2 w-2 bg-primary-500 rounded-full"></span>
+              </button>
+            </div>
+          </div>
+        </header>
+
+        {/* Page content */}
+        <main className="flex-1 overflow-y-auto">
+          <Outlet />
+        </main>
+      </div>
+    </div>
+  );
+};
+
+export default Layout;
