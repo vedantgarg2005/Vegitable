@@ -43,7 +43,7 @@ router.post('/', auth, async (req, res) => {
       return res.status(400).json({ message: 'Order must have at least one item' });
     }
 
-    const deliveryFee = calculateDeliveryFee(subtotal);
+    const deliveryFee = orderType === 'delivery' ? calculateDeliveryFee(subtotal) : 0;
     const discount = pricing?.discount || 0;
     const total = subtotal + deliveryFee - discount;
 
@@ -114,24 +114,23 @@ router.patch('/:id/status', auth, async (req, res) => {
   try {
     const { status, note } = req.body;
     const order = await Order.findById(req.params.id);
-    
-    order.orderStatus = status;
-    order.timeline.push({ status, note });
-    
+    if (!order) return res.status(404).json({ message: 'Order not found' });
+
+    order.status.current = status;
+    order.status.history.push({ status, note, timestamp: new Date() });
+
     if (status === 'delivered') {
       order.actualDeliveryTime = new Date();
-      // Free up the delivery agent
       await Fleet.findOneAndUpdate(
         { currentOrder: order._id },
         { status: 'available', currentOrder: null }
       );
     }
-    
+
     await order.save();
-    
-    // Emit real-time update
-    req.io.to(req.params.id).emit('order-status-update', { orderId: req.params.id, status });
-    
+
+    if (req.io) req.io.to(req.params.id).emit('order-status-update', { orderId: req.params.id, status });
+
     res.json(order);
   } catch (error) {
     res.status(400).json({ message: error.message });

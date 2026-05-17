@@ -22,6 +22,7 @@ import RefundPolicyScreen from '../screens/RefundPolicyScreen';
 import ShippingPolicyScreen from '../screens/ShippingPolicyScreen';
 import MyProfileScreen from '../screens/MyProfileScreen';
 import OrderTrackingScreen from '../screens/OrderTrackingScreen';
+import WalletScreen from '../screens/WalletScreen';
 
 import { useCart } from '../context/CartContext';
 import { colors } from '../utils/theme';
@@ -35,7 +36,7 @@ function TabIcon({ name, color, size, badgeCount, focused }) {
       {focused && (
         <View style={{
           position: 'absolute', top: -10,
-          width: 4, height: 4, borderRadius: 2,
+          width: 24, height: 3, borderRadius: 2,
           backgroundColor: colors.primary,
         }} />
       )}
@@ -67,15 +68,13 @@ function MainTabs() {
           let iconName;
           let badgeCount = 0;
 
-          if (route.name === 'Home') {
-            iconName = focused ? 'home' : 'home-outline';
+          if (route.name === 'Explore') {
+            iconName = focused ? 'compass' : 'compass-outline';
           } else if (route.name === 'Menu') {
             iconName = focused ? 'restaurant' : 'restaurant-outline';
           } else if (route.name === 'Cart') {
             iconName = focused ? 'bag' : 'bag-outline';
             badgeCount = itemCount;
-          } else if (route.name === 'Orders') {
-            iconName = focused ? 'receipt' : 'receipt-outline';
           } else if (route.name === 'Profile') {
             iconName = focused ? 'person' : 'person-outline';
           }
@@ -110,18 +109,17 @@ function MainTabs() {
         headerShown: false,
       })}
     >
-      <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen name="Menu" component={MenuScreen} />
-      <Tab.Screen name="Cart" component={CartScreen} />
-      <Tab.Screen name="Orders" component={OrdersScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
+      <Tab.Screen name="Explore" component={HomeScreen} />
+      <Tab.Screen name="Menu" component={MenuScreen} options={{ tabBarStyle: { display: 'none' } }} />
+      <Tab.Screen name="Cart" component={CartScreen} options={{ tabBarStyle: { display: 'none' } }} />
+      <Tab.Screen name="Profile" component={ProfileScreen} options={{ tabBarStyle: { display: 'none' } }} />
     </Tab.Navigator>
   );
 }
 
 export default function MainNavigator() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator screenOptions={{ headerShown: false, gestureEnabled: true }}>
       <Stack.Screen name="MainTabs" component={MainTabs} />
       <Stack.Screen name="MenuItemDetail" component={MenuItemDetailScreen} />
       <Stack.Screen name="Checkout" component={CheckoutScreen} />
@@ -134,6 +132,7 @@ export default function MainNavigator() {
       <Stack.Screen name="ShippingPolicy" component={ShippingPolicyScreen} />
       <Stack.Screen name="MyProfile" component={MyProfileScreen} />
       <Stack.Screen name="OrderTracking" component={OrderTrackingScreen} />
+      <Stack.Screen name="Wallet" component={WalletScreen} />
     </Stack.Navigator>
   );
 }

@@ -59,7 +59,7 @@ export default function OrdersScreen({ navigation }) {
 
         <View style={styles.orderTotalRow}>
           <Text style={styles.orderTotalLabel}>Order Total</Text>
-          <Text style={styles.orderTotalValue}>₹{item.totalAmount}</Text>
+          <Text style={styles.orderTotalValue}>₹{item.pricing?.total ?? item.totalAmount ?? 0}</Text>
         </View>
 
         <TouchableOpacity

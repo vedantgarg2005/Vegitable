@@ -6,9 +6,9 @@ const getApiBaseUrl = () => {
     // Use LAN IP for both Android and physical iOS devices
     // iOS Simulator can use localhost, but physical devices need the LAN IP
     if (Platform.OS === 'android') {
-      return 'http://192.168.1.6:5000/api';
+      return 'http://192.168.1.8:5000/api';
     }
-    return 'http://192.168.1.6:5000/api'; // Use LAN IP for physical iOS device too
+    return 'http://192.168.1.8:5000/api'; // Use LAN IP for physical iOS device too
   }
   return 'https://your-production-api.com/api';
 };
@@ -17,6 +17,13 @@ export const API_BASE_URL = getApiBaseUrl();
 
 // App Constants
 export const APP_NAME = 'New Delhi Sweets';
+export const PICKUP_ADDRESS = {
+  name: 'New Delhi Sweets',
+  line1: '123, Chandni Chowk',
+  line2: 'Old Delhi, New Delhi - 110006',
+  landmark: 'Near Fatehpuri Mosque',
+  phone: '+91 98765 43210',
+};
 export const CURRENCY = '₹';
 
 // Order status constants matching backend enum

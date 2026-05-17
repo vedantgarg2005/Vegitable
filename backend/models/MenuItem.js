@@ -12,6 +12,7 @@ const menuItemSchema = new mongoose.Schema({
   price: { type: Number, required: true },
   originalPrice: Number, // For discounts
   images: [String],
+  image: { type: String, default: '' },
   ingredients: [String],
   nutritionalInfo: {
     calories: Number,

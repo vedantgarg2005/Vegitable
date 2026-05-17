@@ -2,6 +2,19 @@ const express = require('express');
 const PromoCode = require('../models/PromoCode');
 const router = express.Router();
 
+// Get active promo codes (public)
+router.get('/active', async (req, res) => {
+  try {
+    const promos = await PromoCode.find({
+      isActive: true,
+      expiryDate: { $gt: new Date() },
+    }).select('code discountType discountValue minOrderAmount maxDiscount expiryDate');
+    res.json(promos);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Validate promo code
 router.post('/validate', async (req, res) => {
   try {

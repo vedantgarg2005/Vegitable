@@ -1,6 +1,22 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Notifications from 'expo-notifications';
 import { api } from './api';
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+  }),
+});
+
+async function registerPushToken() {
+  const { status } = await Notifications.requestPermissionsAsync();
+  if (status !== 'granted') return;
+  const token = (await Notifications.getExpoPushTokenAsync()).data;
+  await api.post('/auth/device-token', { token });
+}
 
 const AuthContext = createContext();
 
@@ -30,9 +46,9 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const login = async (email, password) => {
+  const login = async (phone, password) => {
     try {
-      const response = await api.post('/auth/login', { email, password });
+      const response = await api.post('/auth/login', { phone, password });
       const { token, user: userData } = response.data;
       
       if (userData.role !== 'delivery_partner') {
@@ -44,6 +60,7 @@ export const AuthProvider = ({ children }) => {
       
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       setUser(userData);
+      await registerPushToken();
       
       return { success: true };
     } catch (error) {

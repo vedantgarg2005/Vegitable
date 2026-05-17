@@ -200,9 +200,9 @@ router.post('/complete-registration', async (req, res) => {
 // Login (keep for backward compatibility)
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, phone, password } = req.body;
     
-    const user = await User.findOne({ email });
+    const user = await User.findOne(phone ? { phone } : { email });
     if (!user || !(await user.comparePassword(password))) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
@@ -240,6 +240,29 @@ router.put('/profile', auth, async (req, res) => {
     const updates = req.body;
     const user = await User.findByIdAndUpdate(req.userId, updates, { new: true }).select('-password');
     res.json(user);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Register device token for push notifications
+router.post('/device-token', auth, async (req, res) => {
+  try {
+    const { token } = req.body;
+    if (!token) return res.status(400).json({ message: 'Token is required' });
+    await User.findByIdAndUpdate(req.userId, { $addToSet: { deviceTokens: token } });
+    res.json({ message: 'Token saved' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Remove device token on logout
+router.delete('/device-token', auth, async (req, res) => {
+  try {
+    const { token } = req.body;
+    await User.findByIdAndUpdate(req.userId, { $pull: { deviceTokens: token } });
+    res.json({ message: 'Token removed' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

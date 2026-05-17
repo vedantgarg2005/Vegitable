@@ -8,6 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
+import { authAPI } from '../services/api';
 import { colors, shadows, borderRadius, ms, rs, vs } from '../utils/theme';
 
 const Field = ({ label, icon, value, onChangeText, keyboardType, editable = true }) => (
@@ -37,8 +38,13 @@ const MyProfileScreen = ({ navigation }) => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [confirmText, setConfirmText] = useState('');
 
-  const handleSave = () => {
-    Alert.alert('Profile Updated', 'Your profile has been saved successfully.');
+  const handleSave = async () => {
+    try {
+      await authAPI.updateProfile({ name, email, phone });
+      Alert.alert('Profile Updated', 'Your profile has been saved successfully.');
+    } catch {
+      Alert.alert('Error', 'Failed to update profile.');
+    }
   };
 
   const handleDeleteAccount = () => {

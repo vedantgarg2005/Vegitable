@@ -24,6 +24,7 @@ const ProfileScreen = ({ navigation }) => {
   const menuItems = [
     { title: 'My Profile', icon: 'person-circle-outline', badge: null, onPress: () => navigation.navigate('MyProfile') },
     { title: 'My Orders', icon: 'receipt-outline', badge: null, onPress: () => navigation.navigate('Orders') },
+    { title: 'My Wallet', icon: 'wallet-outline', badge: null, onPress: () => navigation.navigate('Wallet') },
     { title: 'Refer & Earn ₹75', icon: 'gift-outline', badge: '₹75', onPress: () => navigation.navigate('Referral') },
     { title: 'Saved Addresses', icon: 'location-outline', badge: null, onPress: () => navigation.navigate('SavedAddresses') },
     { title: 'Notifications', icon: 'notifications-outline', badge: null, onPress: () => navigation.navigate('Notifications') },
@@ -48,17 +49,23 @@ const ProfileScreen = ({ navigation }) => {
 
   const headerContent = (
     <View
-      style={[styles.header, { paddingTop: insets.top + vs(20), backgroundColor: colors.navy }]}
+      style={[styles.header, { paddingTop: insets.top + vs(8), backgroundColor: colors.navy }]}
     >
-      <View style={styles.avatarWrap}>
-        {user
-          ? <Avatar.Text size={rs(76)} label={user.name?.charAt(0) || 'U'} style={styles.avatar} color={colors.primary} />
-          : <Avatar.Icon size={rs(76)} icon="account" style={styles.avatar} color={colors.primary} />
-        }
-        <View style={styles.onlineDot} />
+      <TouchableOpacity style={styles.backBtn} onPress={() => navigation.navigate('Explore')} activeOpacity={0.7}>
+        <Ionicons name="arrow-back" size={rs(22)} color="#fff" />
+      </TouchableOpacity>
+      <View style={styles.headerRow}>
+        <View style={styles.avatarWrap}>
+          {user
+            ? <Avatar.Text size={rs(54)} label={user.name?.charAt(0) || 'U'} style={styles.avatar} color={colors.primary} />
+            : <Avatar.Icon size={rs(54)} icon="account" style={styles.avatar} color={colors.primary} />
+          }
+        </View>
+        <View style={styles.headerInfo}>
+          <Text style={styles.userName}>{user?.name || 'Welcome, Guest!'}</Text>
+          <Text style={styles.userSub}>{user?.email || user?.phone || 'Sign in to access your profile'}</Text>
+        </View>
       </View>
-      <Text style={styles.userName}>{user?.name || 'Welcome, Guest!'}</Text>
-      <Text style={styles.userSub}>{user?.email || user?.phone || 'Sign in to access your profile'}</Text>
     </View>
   );
 
@@ -92,23 +99,6 @@ const ProfileScreen = ({ navigation }) => {
       {headerContent}
 
       <View style={styles.content}>
-        {/* Stats */}
-        <View style={[styles.statsCard, shadows.medium]}>
-          {[
-            { num: String(orderCount), label: 'Orders', icon: 'receipt-outline' },
-            { num: '4.8', label: 'Rating', icon: 'star-outline' },
-          ].map((s, i) => (
-            <React.Fragment key={i}>
-              {i > 0 && <View style={styles.statDivider} />}
-              <View style={styles.statItem}>
-                <Ionicons name={s.icon} size={rs(18)} color={colors.primary} style={{ marginBottom: vs(4) }} />
-                <Text style={styles.statNumber}>{s.num}</Text>
-                <Text style={styles.statLabel}>{s.label}</Text>
-              </View>
-            </React.Fragment>
-          ))}
-        </View>
-
         {/* Menu */}
         <View style={[styles.menuCard, shadows.small]}>
           {menuItems.map((item, i) => <MenuItem key={i} item={item} />)}
@@ -128,12 +118,27 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
 
   header: {
-    paddingBottom: vs(32),
-    alignItems: 'center',
+    paddingBottom: vs(20),
+    paddingHorizontal: rs(16),
     borderBottomLeftRadius: rs(32),
     borderBottomRightRadius: rs(32),
+    flexDirection: 'column',
   },
-  avatarWrap: { position: 'relative', marginBottom: vs(12) },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: rs(12),
+    marginTop: vs(12),
+  },
+  backBtn: {
+    padding: rs(6),
+    alignSelf: 'flex-start',
+  },
+  headerInfo: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  avatarWrap: { position: 'relative' },
   avatar: { backgroundColor: '#FFFFFF' },
   onlineDot: {
     position: 'absolute',
@@ -146,8 +151,8 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#fff',
   },
-  userName: { fontSize: ms(20), fontWeight: '800', color: '#FFFFFF', marginBottom: vs(4), fontFamily: 'Poppins_800ExtraBold' },
-  userSub: { fontSize: ms(14), color: 'rgba(255,255,255,0.85)', fontFamily: 'Poppins_400Regular' },
+  userName: { fontSize: ms(20), fontWeight: '800', color: '#FFFFFF', marginBottom: vs(4), fontFamily: 'Poppins_800ExtraBold', textAlign: 'left' },
+  userSub: { fontSize: ms(14), color: 'rgba(255,255,255,0.85)', fontFamily: 'Poppins_400Regular', textAlign: 'left' },
 
   content: { padding: rs(16) },
 

@@ -71,18 +71,28 @@ app.use((req, res, next) => {
 });
 
 // Routes
+const adminRouter = require('./routes/admin');
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/menu', require('./routes/menu'));
-app.use('/api/orders', require('./routes/orders'));
+app.use('/api/orders', (req, res, next) => {
+  // Block new delivery orders when delivery is globally disabled
+  if (req.method === 'POST' && req.path === '/' && req.body?.orderType === 'delivery') {
+    if (!adminRouter.getDeliveryEnabled()) {
+      return res.status(503).json({ message: 'Delivery is currently unavailable. Please try takeaway or dine-in.' });
+    }
+  }
+  next();
+}, require('./routes/orders'));
 app.use('/api/reviews', require('./routes/reviews'));
 app.use('/api/fleet', require('./routes/fleet'));
 app.use('/api/promo', require('./routes/promo'));
 app.use('/api/reservations', require('./routes/reservations'));
-app.use('/api/admin', require('./routes/admin'));
+app.use('/api/admin', adminRouter);
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/addresses', require('./routes/addresses'));
 app.use('/api/search', require('./routes/search'));
 app.use('/api/tracking', require('./routes/tracking'));
+app.use('/api/wallet', require('./routes/wallet'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {

@@ -10,11 +10,14 @@ function OrderDetails() {
   const queryClient = useQueryClient();
   const [showAddItem, setShowAddItem] = useState(false);
   const [showAddCharge, setShowAddCharge] = useState(false);
+  const [showRefund, setShowRefund] = useState(false);
   const [selectedItem, setSelectedItem] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [chargeType, setChargeType] = useState('delivery');
   const [chargeAmount, setChargeAmount] = useState('');
   const [chargeDescription, setChargeDescription] = useState('');
+  const [refundAmount, setRefundAmount] = useState('');
+  const [refundReason, setRefundReason] = useState('');
 
   // Mock order data
   const mockOrder = {
@@ -121,6 +124,23 @@ function OrderDetails() {
     },
     onError: () => toast.error('Failed to add charge'),
   });
+
+  const refundMutation = useMutation({
+    mutationFn: (data) => ordersAPI.refundOrder(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['order', id]);
+      toast.success('Refund issued successfully');
+      setShowRefund(false);
+      setRefundAmount('');
+      setRefundReason('');
+    },
+    onError: () => toast.error('Failed to issue refund'),
+  });
+
+  const handleRefund = () => {
+    const parsed = refundAmount ? parseFloat(refundAmount) : null;
+    refundMutation.mutate({ amount: parsed, reason: refundReason || 'Refund by admin' });
+  };
 
   const updateStatusMutation = useMutation({
     mutationFn: (statusData) => ordersAPI.updateOrderStatus(id, statusData),
@@ -376,6 +396,17 @@ function OrderDetails() {
           >
             🖨️ Print Slips
           </button>
+          {displayOrder.payment.status !== 'refunded' && (
+            <button
+              onClick={() => {
+                setRefundAmount(String(displayOrder.pricing.subtotal + displayOrder.pricing.deliveryFee - (displayOrder.pricing.discount || 0)));
+                setShowRefund(true);
+              }}
+              className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"
+            >
+              💸 Refund
+            </button>
+          )}
         </div>
       </div>
 
@@ -531,10 +562,12 @@ function OrderDetails() {
                 <span>Subtotal:</span>
                 <span>₹{displayOrder.pricing.subtotal}</span>
               </div>
-              <div className="flex justify-between">
-                <span>Delivery Fee:</span>
-                <span>₹{displayOrder.pricing.deliveryFee}</span>
-              </div>
+              {displayOrder.orderType === 'delivery' && (
+                <div className="flex justify-between">
+                  <span>Delivery Fee:</span>
+                  <span>₹{displayOrder.pricing.deliveryFee}</span>
+                </div>
+              )}
               {displayOrder.pricing.discount > 0 && (
                 <div className="flex justify-between text-green-600">
                   <span>Discount:</span>
@@ -572,9 +605,61 @@ function OrderDetails() {
                 </div>
               )}
             </div>
+            {displayOrder.payment.status === 'refunded' && (
+              <div className="mt-3 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 font-medium text-center">
+                ✅ Refund Issued
+              </div>
+            )}
           </div>
         </div>
       </div>
+
+      {/* Refund Modal */}
+      {showRefund && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-96">
+            <h3 className="text-lg font-semibold mb-1">Issue Refund</h3>
+            <p className="text-sm text-gray-500 mb-4">Amount will be credited to the customer's wallet.</p>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Refund Amount (₹)</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={refundAmount}
+                  onChange={(e) => setRefundAmount(e.target.value)}
+                  className="w-full border rounded-lg px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Reason</label>
+                <input
+                  type="text"
+                  value={refundReason}
+                  onChange={(e) => setRefundReason(e.target.value)}
+                  placeholder="e.g. Wrong item delivered"
+                  className="w-full border rounded-lg px-3 py-2"
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleRefund}
+                  disabled={!refundAmount || refundMutation.isLoading}
+                  className="flex-1 bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 disabled:opacity-50"
+                >
+                  {refundMutation.isLoading ? 'Processing...' : 'Confirm Refund'}
+                </button>
+                <button
+                  onClick={() => setShowRefund(false)}
+                  className="flex-1 border border-gray-300 py-2 rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Add Item Modal */}
       {showAddItem && (

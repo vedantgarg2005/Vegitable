@@ -8,6 +8,8 @@ const Products = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [formData, setFormData] = useState({ name: '', description: '', price: '', category: '', preparationTime: 30, isActive: true });
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState('');
   const queryClient = useQueryClient();
 
   const { data: menuData, isLoading } = useQuery({
@@ -25,6 +27,8 @@ const Products = () => {
       toast.success('Product created successfully');
       setShowModal(false);
       setFormData({ name: '', description: '', price: '', category: '', preparationTime: 30, isActive: true });
+      setImageFile(null);
+      setImagePreview('');
     },
     onError: () => toast.error('Failed to create product'),
   });
@@ -36,6 +40,8 @@ const Products = () => {
       toast.success('Product updated successfully');
       setShowModal(false);
       setEditingItem(null);
+      setImageFile(null);
+      setImagePreview('');
     },
     onError: () => toast.error('Failed to update product'),
   });
@@ -51,11 +57,21 @@ const Products = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (createMutation.isPending || updateMutation.isPending) return;
+    const payload = { ...formData };
+    if (imageFile) payload.image = imageFile;
     if (editingItem) {
-      updateMutation.mutate({ id: editingItem._id, data: formData });
+      updateMutation.mutate({ id: editingItem._id, data: payload });
     } else {
-      createMutation.mutate(formData);
+      createMutation.mutate(payload);
     }
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
   };
 
   const handleEdit = (item) => {
@@ -68,6 +84,8 @@ const Products = () => {
       preparationTime: item.preparationTime,
       isActive: item.isActive
     });
+    setImageFile(null);
+    setImagePreview(item.image || '');
     setShowModal(true);
   };
 
@@ -112,7 +130,9 @@ const Products = () => {
             <button
               onClick={() => {
                 setEditingItem(null);
-                setFormData({ name: '', description: '', price: '', category: '', isAvailable: true });
+                setFormData({ name: '', description: '', price: '', category: '', preparationTime: 30, isActive: true });
+                setImageFile(null);
+                setImagePreview('');
                 setShowModal(true);
               }}
               className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
@@ -126,6 +146,7 @@ const Products = () => {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Image</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
@@ -141,6 +162,13 @@ const Products = () => {
               ) : (
                 menuData?.menuItems?.map((item) => (
                   <tr key={item._id}>
+                    <td className="px-6 py-4">
+                      {item.image ? (
+                        <img src={item.image} alt={item.name} className="w-12 h-12 object-cover rounded-lg" />
+                      ) : (
+                        <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-xs">No img</div>
+                      )}
+                    </td>
                     <td className="px-6 py-4">
                       <div>
                         <div className="font-medium">{item.name}</div>
@@ -241,12 +269,29 @@ const Products = () => {
                 />
                 Active
               </label>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Product Image</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="w-full border rounded-lg px-3 py-2 text-sm"
+                />
+                {imagePreview && (
+                  <img
+                    src={imagePreview.startsWith('blob:') ? imagePreview : imagePreview}
+                    alt="preview"
+                    className="mt-2 h-24 w-24 object-cover rounded-lg"
+                  />
+                )}
+              </div>
               <div className="flex gap-2">
                 <button
                   type="submit"
-                  className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"
+                  disabled={createMutation.isPending || updateMutation.isPending}
+                  className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {editingItem ? 'Update' : 'Create'}
+                  {createMutation.isPending || updateMutation.isPending ? 'Saving...' : editingItem ? 'Update' : 'Create'}
                 </button>
                 <button
                   type="button"

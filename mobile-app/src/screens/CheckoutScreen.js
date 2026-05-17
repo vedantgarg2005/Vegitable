@@ -15,8 +15,6 @@ import { useCart } from '../context/CartContext';
 
 const PAYMENT_OPTIONS = [
   { id: 'cash', label: 'Cash on Delivery', icon: 'cash-outline', desc: 'Pay when your order arrives' },
-  { id: 'card', label: 'Credit / Debit Card', icon: 'card-outline', desc: 'Visa, Mastercard, RuPay' },
-  { id: 'upi', label: 'UPI', icon: 'phone-portrait-outline', desc: 'GPay, PhonePe, Paytm' },
 ];
 
 const ADDRESS_TYPES = ['home', 'work', 'other'];
@@ -26,10 +24,20 @@ const EMPTY_FORM = { type: 'home', address: '', landmark: '', city: '', pincode:
 const CheckoutScreen = ({ navigation, route }) => {
   const { user } = useAuth();
   const { items: cartItems, clearCart } = useCart();
-  const { grandTotal = 0, deliveryFee = 0, discount = 0, couponCode = '', instructions = '' } = route?.params || {};
+  const { grandTotal = 0, deliveryFee = 0, discount = 0, couponCode = '', instructions = '', orderType = 'delivery' } = route?.params || {};
 
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [loading, setLoading] = useState(false);
+  const [deliveryAvailable, setDeliveryAvailable] = useState(true);
+
+  useEffect(() => {
+    if (orderType === 'delivery') {
+      fetch(`${API_BASE_URL}/admin/delivery-status`)
+        .then(r => r.json())
+        .then(d => setDeliveryAvailable(d.deliveryEnabled ?? true))
+        .catch(() => {});
+    }
+  }, [orderType]);
 
   // Saved addresses
   const [addresses, setAddresses] = useState([]);
@@ -90,9 +98,11 @@ const CheckoutScreen = ({ navigation, route }) => {
   };
 
   const placeOrder = async () => {
-    const selectedAddr = addresses.find(a => a._id === selectedAddressId);
-    if (!selectedAddr) {
-      Alert.alert('No Address', 'Please select or add a delivery address.'); return;
+    if (orderType === 'delivery') {
+      const selectedAddr = addresses.find(a => a._id === selectedAddressId);
+      if (!selectedAddr) {
+        Alert.alert('No Address', 'Please select or add a delivery address.'); return;
+      }
     }
     if (forSomeoneElse) {
       if (!recipientName.trim() || !recipientPhone.trim()) {
@@ -109,7 +119,7 @@ const CheckoutScreen = ({ navigation, route }) => {
       const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
       const payload = {
-        orderType: 'delivery',
+        orderType,
         items: cartItems.map(item => ({
           menuItem: item._id || item.id,
           quantity: item.quantity,
@@ -123,15 +133,17 @@ const CheckoutScreen = ({ navigation, route }) => {
         payment: {
           method: paymentMethod,
         },
-        delivery: {
-          address: {
-            street: selectedAddr.address,
-            landmark: selectedAddr.landmark || '',
-            city: selectedAddr.city,
-            pincode: selectedAddr.pincode || '',
+        ...(orderType === 'delivery' ? {
+          delivery: {
+            address: {
+              street: addresses.find(a => a._id === selectedAddressId)?.address || '',
+              landmark: addresses.find(a => a._id === selectedAddressId)?.landmark || '',
+              city: addresses.find(a => a._id === selectedAddressId)?.city || '',
+              pincode: addresses.find(a => a._id === selectedAddressId)?.pincode || '',
+            },
+            instructions: instructions || '',
           },
-          instructions: instructions || '',
-        },
+        } : {}),
         ...(couponCode ? { promoCode: { code: couponCode, discount } } : {}),
         ...(forSomeoneElse ? { recipientName, recipientPhone, isGift: true } : {}),
       };
@@ -187,7 +199,33 @@ const CheckoutScreen = ({ navigation, route }) => {
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
+        {/* Delivery unavailable banner */}
+        {orderType === 'delivery' && !deliveryAvailable && (
+          <View style={styles.deliveryBanner}>
+            <Ionicons name="warning" size={rs(18)} color="#fff" />
+            <Text style={styles.deliveryBannerText}>
+              Delivery is currently unavailable. Please go back and choose Takeaway.
+            </Text>
+          </View>
+        )}
+
+        {/* Order Type Badge */}
+        <View style={[styles.section, shadows.small]}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionIconWrap}>
+              <Ionicons name={orderType === 'delivery' ? 'bicycle' : 'storefront'} size={rs(18)} color={colors.primary} />
+            </View>
+            <View>
+              <Text style={styles.sectionTitle}>{orderType === 'delivery' ? 'Home Delivery' : 'Self Pickup'}</Text>
+              <Text style={{ fontSize: ms(12), color: colors.placeholder, marginTop: vs(1) }}>
+                {orderType === 'delivery' ? 'Order will be delivered to your address' : 'Collect your order from the restaurant'}
+              </Text>
+            </View>
+          </View>
+        </View>
+
         {/* Delivery Address */}
+        {orderType === 'delivery' && (
         <View style={[styles.section, shadows.small]}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionIconWrap}>
@@ -246,6 +284,7 @@ const CheckoutScreen = ({ navigation, route }) => {
             </>
           )}
         </View>
+        )}
 
         {/* Order for Someone Else */}
         <View style={[styles.section, shadows.small]}>
@@ -331,12 +370,14 @@ const CheckoutScreen = ({ navigation, route }) => {
             <Text style={styles.summaryLabel}>Subtotal</Text>
             <Text style={styles.summaryValue}>₹{(grandTotal - deliveryFee + discount).toFixed(2)}</Text>
           </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Delivery Fee</Text>
-            {deliveryFee === 0
-              ? <Text style={styles.freeText}>FREE</Text>
-              : <Text style={styles.summaryValue}>₹{deliveryFee}</Text>}
-          </View>
+          {orderType === 'delivery' && (
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Delivery Fee</Text>
+              {deliveryFee === 0
+                ? <Text style={styles.freeText}>FREE</Text>
+                : <Text style={styles.summaryValue}>₹{deliveryFee}</Text>}
+            </View>
+          )}
           {discount > 0 && (
             <View style={styles.summaryRow}>
               <Text style={[styles.summaryLabel, { color: colors.success }]}>Discount</Text>
@@ -350,15 +391,15 @@ const CheckoutScreen = ({ navigation, route }) => {
           </View>
         </View>
 
-        <View style={{ height: vs(100) }} />
+        <View style={{ height: vs(20) }} />
       </ScrollView>
 
       {/* Place Order Button */}
       <View style={[styles.footer, { paddingBottom: insets.bottom + vs(12) }]}>
         <TouchableOpacity
-          style={[styles.placeOrderBtn, loading && styles.btnDisabled]}
+          style={[styles.placeOrderBtn, (loading || (orderType === 'delivery' && !deliveryAvailable)) && styles.btnDisabled]}
           onPress={placeOrder}
-          disabled={loading}
+          disabled={loading || (orderType === 'delivery' && !deliveryAvailable)}
           activeOpacity={0.88}
         >
           <LinearGradient
@@ -581,6 +622,16 @@ const styles = StyleSheet.create({
   },
   placeOrderBtn: { borderRadius: borderRadius.md, overflow: 'hidden' },
   btnDisabled: { opacity: 0.6 },
+
+  deliveryBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: rs(10),
+    backgroundColor: colors.error,
+    borderRadius: borderRadius.md,
+    padding: rs(14),
+    marginBottom: vs(12),
+  },
+  deliveryBannerText: { flex: 1, fontSize: ms(13), color: '#fff', fontWeight: '600', lineHeight: ms(19) },
+
   placeOrderGradient: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingVertical: vs(15), paddingHorizontal: rs(20),

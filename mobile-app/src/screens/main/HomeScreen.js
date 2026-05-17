@@ -2,13 +2,24 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, FlatList, ScrollView, StyleSheet, TouchableOpacity,
   StatusBar, ActivityIndicator, Dimensions, Animated, TextInput,
+  Modal, Alert,
 } from 'react-native';
+import Reanimated, {
+  useSharedValue, useAnimatedStyle, withRepeat, withSequence,
+  withTiming, withDelay, Easing,
+} from 'react-native-reanimated';
 import { Text } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Location from 'expo-location';
 import { menuAPI } from '../../services/api';
 import { useCart } from '../../context/CartContext';
+import { useAuth } from '../../context/AuthContext';
 import { colors, shadows, borderRadius, ms, rs, vs } from '../../utils/theme';
+import { API_BASE_URL } from '../../utils/constants';
+
+const TYPE_ICONS = { home: 'home-outline', work: 'briefcase-outline', other: 'location-outline' };
 
 const { width: W } = Dimensions.get('window');
 
@@ -27,6 +38,58 @@ const OFFERS = [
   { id: '2', title: 'Buy 1 Get 1 FREE', subtitle: 'On all large pizzas today', bg: ['#0F3460', '#1A1A2E'], emoji: '🍕' },
   { id: '3', title: 'Free Delivery', subtitle: 'On orders above ₹299', bg: ['#2E7D32', '#1B5E20'], emoji: '🛵' },
 ];
+
+function WelcomeBanner({ user }) {
+  const translateY = useSharedValue(0);
+  const rotate = useSharedValue(0);
+
+  useEffect(() => {
+    translateY.value = withRepeat(
+      withSequence(
+        withTiming(-10, { duration: 800, easing: Easing.inOut(Easing.sin) }),
+        withTiming(0, { duration: 800, easing: Easing.inOut(Easing.sin) }),
+      ),
+      -1,
+      false,
+    );
+    rotate.value = withRepeat(
+      withSequence(
+        withDelay(400, withTiming(8, { duration: 600, easing: Easing.inOut(Easing.sin) })),
+        withTiming(-8, { duration: 600, easing: Easing.inOut(Easing.sin) }),
+        withTiming(0, { duration: 400 }),
+      ),
+      -1,
+      false,
+    );
+  }, []);
+
+  const glassStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: translateY.value },
+      { rotate: `${rotate.value}deg` },
+    ],
+  }));
+
+  const firstName = user?.name?.split(' ')[0] || 'Guest';
+
+  return (
+    <View style={styles.welcomeCard}>
+      <View style={styles.welcomeTop}>
+        <Text style={styles.welcomeGreeting}>Welcome,</Text>
+        <Text style={styles.welcomeName}>{firstName} 👋</Text>
+      </View>
+      <View style={styles.welcomeBottom}>
+        <View>
+          <Text style={styles.helloText}>Hello</Text>
+          <Text style={styles.summerText}>Summer</Text>
+        </View>
+        <Reanimated.View style={glassStyle}>
+          <Text style={styles.juiceGlass}>🥤</Text>
+        </Reanimated.View>
+      </View>
+    </View>
+  );
+}
 
 // Swiggy-style horizontal food card
 function FoodCard({ item, onPress, onAdd, qty }) {
@@ -103,16 +166,82 @@ function FoodCard({ item, onPress, onAdd, qty }) {
 }
 
 export default function HomeScreen({ navigation }) {
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [foodItems, setFoodItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [bannerIndex, setBannerIndex] = useState(0);
-  const { addToCart, updateQuantity, items: cartItems, itemCount } = useCart();
+  const [orderType, setOrderType] = useState('delivery');
+  const { addToCart, updateQuantity, items: cartItems, itemCount, total } = useCart();
   const insets = useSafeAreaInsets();
   const bannerRef = useRef(null);
   const searchRef = useRef(null);
   const BANNER_W = W - rs(32);
+
+  // Address state
+  const [addresses, setAddresses] = useState([]);
+  const [selectedAddress, setSelectedAddress] = useState(null);
+  const [addrModalVisible, setAddrModalVisible] = useState(false);
+  const [locLoading, setLocLoading] = useState(false);
+  const isFetchingRef = useRef(false);
+
+  const authFetch = useCallback(async (path, options = {}) => {
+    const token = await AsyncStorage.getItem('token');
+    return fetch(`${API_BASE_URL}/addresses${path}`, {
+      ...options,
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, ...options.headers },
+    });
+  }, []);
+
+  const loadAddresses = useCallback(async () => {
+    if (!user) return;
+    try {
+      const res = await authFetch('/');
+      const data = await res.json();
+      const list = Array.isArray(data) ? data : [];
+      setAddresses(list);
+      if (!selectedAddress) {
+        const def = list.find(a => a.isDefault) || list[0];
+        if (def) setSelectedAddress(def);
+      }
+    } catch {}
+  }, [user, authFetch]);
+
+  useEffect(() => { loadAddresses(); }, [loadAddresses]);
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', loadAddresses);
+    return unsubscribe;
+  }, [navigation, loadAddresses]);
+
+  const useCurrentLocation = async () => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
+    setLocLoading(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'Allow location access to use this feature.');
+        return;
+      }
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const [place] = await Location.reverseGeocodeAsync({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
+      if (place) {
+        const label = [place.name, place.street, place.district, place.city].filter(Boolean).join(', ');
+        setSelectedAddress({ _id: 'current', type: 'other', address: label, city: place.city || '', isCurrentLocation: true });
+        setAddrModalVisible(false);
+      }
+    } catch {
+      Alert.alert('Error', 'Could not fetch your location.');
+    } finally {
+      setLocLoading(false);
+      isFetchingRef.current = false;
+    }
+  };
+
+  const deliveryLabel = selectedAddress
+    ? selectedAddress.address
+    : 'Select address';
 
   const getQty = (itemId) => cartItems.find(i => (i._id || i.id) === itemId)?.quantity || 0;
 
@@ -159,8 +288,11 @@ export default function HomeScreen({ navigation }) {
     </View>
   );
 
-  const ListHeader = (
+  const ListHeader = () => (
     <>
+      {/* Welcome + Summer Banner */}
+      <WelcomeBanner user={user} />
+
       {/* Offer Banners */}
       <FlatList
         ref={bannerRef}
@@ -230,12 +362,12 @@ export default function HomeScreen({ navigation }) {
       <View style={[styles.header, { paddingTop: insets.top + vs(10) }]}>
         {/* Location row */}
         <View style={styles.headerTop}>
-          <TouchableOpacity style={styles.locationRow} activeOpacity={0.7}>
+          <TouchableOpacity style={styles.locationRow} activeOpacity={0.7} onPress={() => setAddrModalVisible(true)}>
             <Ionicons name="location" size={rs(18)} color={colors.primary} />
             <View>
               <Text style={styles.deliverTo}>DELIVER TO</Text>
               <View style={styles.locationValueRow}>
-                <Text style={styles.locationText} numberOfLines={1}>Home</Text>
+                <Text style={styles.locationText} numberOfLines={1}>{deliveryLabel}</Text>
                 <Ionicons name="chevron-down" size={rs(14)} color="#fff" />
               </View>
             </View>
@@ -249,7 +381,7 @@ export default function HomeScreen({ navigation }) {
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.headerIconBtn}
-              onPress={() => navigation.navigate('Cart')}
+              onPress={() => navigation.navigate('Cart', { orderType })}
             >
               <Ionicons name="bag-outline" size={rs(22)} color="#fff" />
               {itemCount > 0 && (
@@ -259,6 +391,27 @@ export default function HomeScreen({ navigation }) {
               )}
             </TouchableOpacity>
           </View>
+        </View>
+
+        {/* Delivery / Pickup toggle */}
+        <View style={styles.orderTypeRow}>
+          {['delivery', 'pickup'].map(type => (
+            <TouchableOpacity
+              key={type}
+              style={[styles.orderTypeBtn, orderType === type && styles.orderTypeBtnActive]}
+              onPress={() => setOrderType(type)}
+              activeOpacity={0.8}
+            >
+              <Ionicons
+                name={type === 'delivery' ? 'bicycle-outline' : 'storefront-outline'}
+                size={rs(14)}
+                color={orderType === type ? colors.primary : 'rgba(255,255,255,0.7)'}
+              />
+              <Text style={[styles.orderTypeBtnText, orderType === type && styles.orderTypeBtnTextActive]}>
+                {type === 'delivery' ? 'Delivery' : 'Pickup'}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
 
         {/* Search bar */}
@@ -296,8 +449,7 @@ export default function HomeScreen({ navigation }) {
               }}
             />
           );
-        }
-        )}
+        }}
         keyExtractor={item => item._id}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
@@ -317,19 +469,81 @@ export default function HomeScreen({ navigation }) {
       {/* Floating cart bar — like Swiggy */}
       {itemCount > 0 && (
         <TouchableOpacity
-          style={[styles.floatingCart, { bottom: insets.bottom + vs(16) }]}
-          onPress={() => navigation.navigate('Cart')}
+          style={[styles.floatingCart, { bottom: 0 }]}
+          onPress={() => navigation.navigate('Cart', { orderType })}
           activeOpacity={0.92}
         >
           <View style={styles.floatingCartLeft}>
             <View style={styles.floatingCartBadge}>
               <Text style={styles.floatingCartBadgeText}>{itemCount}</Text>
             </View>
-            <Text style={styles.floatingCartLabel}>item{itemCount > 1 ? 's' : ''} added</Text>
+            <Text style={styles.floatingCartLabel}>item{itemCount > 1 ? 's' : ''}</Text>
           </View>
-          <Text style={styles.floatingCartAction}>View Cart →</Text>
+          <View style={styles.floatingCartRight}>
+            <Text style={styles.floatingCartTotal}>₹{total}</Text>
+            <Text style={styles.floatingCartAction}>View Cart →</Text>
+          </View>
         </TouchableOpacity>
       )}
+
+      {/* Address Picker Modal */}
+      <Modal visible={addrModalVisible} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Choose Delivery Address</Text>
+              <TouchableOpacity onPress={() => setAddrModalVisible(false)}>
+                <Ionicons name="close" size={rs(22)} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity style={styles.locBtn} onPress={useCurrentLocation} disabled={locLoading} activeOpacity={0.8}>
+              <View style={styles.locIconWrap}>
+                {locLoading
+                  ? <ActivityIndicator size="small" color={colors.primary} />
+                  : <Ionicons name="navigate" size={rs(18)} color={colors.primary} />}
+              </View>
+              <View>
+                <Text style={styles.locBtnTitle}>Use Current Location</Text>
+                <Text style={styles.locBtnSub}>Auto-detect via GPS</Text>
+              </View>
+            </TouchableOpacity>
+
+            {addresses.length > 0 && (
+              <>
+                <Text style={styles.savedLabel}>Saved Addresses</Text>
+                {addresses.map(addr => (
+                  <TouchableOpacity
+                    key={addr._id}
+                    style={[styles.addrOption, selectedAddress?._id === addr._id && styles.addrOptionActive]}
+                    onPress={() => { setSelectedAddress(addr); setAddrModalVisible(false); }}
+                    activeOpacity={0.8}
+                  >
+                    <View style={[styles.addrOptionIcon, selectedAddress?._id === addr._id && styles.addrOptionIconActive]}>
+                      <Ionicons name={TYPE_ICONS[addr.type] || 'location-outline'} size={rs(16)} color={selectedAddress?._id === addr._id ? '#fff' : colors.textSecondary} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.addrOptionType}>{addr.type?.toUpperCase()}</Text>
+                      <Text style={styles.addrOptionText} numberOfLines={2}>
+                        {addr.address}{addr.city ? `, ${addr.city}` : ''}
+                      </Text>
+                    </View>
+                    {selectedAddress?._id === addr._id && <Ionicons name="checkmark-circle" size={rs(20)} color={colors.primary} />}
+                  </TouchableOpacity>
+                ))}
+              </>
+            )}
+
+            <TouchableOpacity
+              style={styles.manageBtn}
+              onPress={() => { setAddrModalVisible(false); navigation.navigate('SavedAddresses'); }}
+            >
+              <Ionicons name="add-circle-outline" size={rs(18)} color={colors.primary} />
+              <Text style={styles.manageBtnText}>Manage / Add Addresses</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -374,6 +588,69 @@ const styles = StyleSheet.create({
     gap: rs(8),
   },
   searchInput: { flex: 1, fontSize: ms(13), color: colors.text },
+
+  // Order type toggle
+  orderTypeRow: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderRadius: borderRadius.full,
+    padding: rs(3),
+    marginBottom: vs(10),
+    alignSelf: 'flex-start',
+  },
+  orderTypeBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: rs(5),
+    paddingHorizontal: rs(14), paddingVertical: vs(6),
+    borderRadius: borderRadius.full,
+  },
+  orderTypeBtnActive: { backgroundColor: '#fff' },
+  orderTypeBtnText: { fontSize: ms(13), fontWeight: '700', color: 'rgba(255,255,255,0.7)' },
+  orderTypeBtnTextActive: { color: colors.primary },
+
+  // Welcome Banner
+  welcomeCard: {
+    marginHorizontal: rs(16),
+    marginTop: vs(16),
+    marginBottom: vs(4),
+    backgroundColor: colors.navy,
+    borderRadius: borderRadius.lg,
+    padding: rs(18),
+    ...shadows.medium,
+  },
+  welcomeTop: {
+    marginBottom: vs(10),
+  },
+  welcomeGreeting: {
+    fontSize: ms(13),
+    color: 'rgba(255,255,255,0.6)',
+    fontWeight: '600',
+    letterSpacing: 0.5,
+  },
+  welcomeName: {
+    fontSize: ms(20),
+    fontWeight: '800',
+    color: '#fff',
+    marginTop: vs(2),
+  },
+  welcomeBottom: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  helloText: {
+    fontSize: ms(14),
+    color: 'rgba(255,255,255,0.55)',
+    fontWeight: '600',
+  },
+  summerText: {
+    fontSize: ms(28),
+    fontWeight: '900',
+    color: colors.primary,
+    letterSpacing: -0.5,
+  },
+  juiceGlass: {
+    fontSize: ms(64),
+  },
 
   // Banners
   bannerListContent: { paddingHorizontal: rs(16), gap: rs(12), paddingVertical: vs(16) },
@@ -496,6 +773,47 @@ const styles = StyleSheet.create({
     paddingHorizontal: rs(10),
   },
 
+  // Address modal
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
+  modalSheet: {
+    backgroundColor: colors.surface, borderTopLeftRadius: rs(24), borderTopRightRadius: rs(24),
+    padding: rs(20), paddingBottom: vs(36), maxHeight: '80%',
+  },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: vs(16) },
+  modalTitle: { fontSize: ms(17), fontWeight: '700', color: colors.text },
+  locBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: rs(12),
+    padding: rs(14), borderRadius: borderRadius.md,
+    backgroundColor: colors.primarySurface, marginBottom: vs(16),
+  },
+  locIconWrap: {
+    width: rs(40), height: rs(40), borderRadius: rs(12),
+    backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center',
+  },
+  locBtnTitle: { fontSize: ms(14), fontWeight: '700', color: colors.primary },
+  locBtnSub: { fontSize: ms(12), color: colors.textSecondary, marginTop: vs(1) },
+  savedLabel: { fontSize: ms(12), fontWeight: '700', color: colors.placeholder, letterSpacing: 0.5, marginBottom: vs(8) },
+  addrOption: {
+    flexDirection: 'row', alignItems: 'center', gap: rs(12),
+    padding: rs(12), borderRadius: borderRadius.sm,
+    borderWidth: 1.5, borderColor: colors.border,
+    backgroundColor: colors.background, marginBottom: vs(8),
+  },
+  addrOptionActive: { borderColor: colors.primary, backgroundColor: colors.primarySurface },
+  addrOptionIcon: {
+    width: rs(36), height: rs(36), borderRadius: rs(10),
+    backgroundColor: colors.surfaceAlt, justifyContent: 'center', alignItems: 'center',
+  },
+  addrOptionIconActive: { backgroundColor: colors.primary },
+  addrOptionType: { fontSize: ms(11), fontWeight: '700', color: colors.text, letterSpacing: 0.5 },
+  addrOptionText: { fontSize: ms(13), color: colors.textSecondary, marginTop: vs(1) },
+  manageBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: rs(8),
+    paddingVertical: vs(14), justifyContent: 'center',
+    borderTopWidth: 1, borderTopColor: colors.divider, marginTop: vs(4),
+  },
+  manageBtnText: { fontSize: ms(14), color: colors.primary, fontWeight: '700' },
+
   loader: { marginVertical: vs(30) },
   emptyContainer: { alignItems: 'center', paddingVertical: vs(60), paddingHorizontal: rs(32) },
   emptyEmoji: { fontSize: ms(56), marginBottom: vs(12) },
@@ -504,11 +822,10 @@ const styles = StyleSheet.create({
 
   // Floating cart bar — Swiggy style
   floatingCart: {
-    position: 'absolute', left: rs(16), right: rs(16),
+    position: 'absolute', left: 0, right: 0,
     backgroundColor: colors.primary,
-    borderRadius: borderRadius.md,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingVertical: vs(14), paddingHorizontal: rs(16),
+    paddingVertical: vs(8), paddingHorizontal: rs(16),
     ...shadows.large,
   },
   floatingCartLeft: { flexDirection: 'row', alignItems: 'center', gap: rs(10) },
@@ -519,5 +836,7 @@ const styles = StyleSheet.create({
   },
   floatingCartBadgeText: { color: '#fff', fontSize: ms(12), fontWeight: '800' },
   floatingCartLabel: { color: '#fff', fontSize: ms(14), fontWeight: '600' },
-  floatingCartAction: { color: '#fff', fontSize: ms(14), fontWeight: '800' },
+  floatingCartRight: { alignItems: 'flex-end' },
+  floatingCartTotal: { color: '#fff', fontSize: ms(14), fontWeight: '800' },
+  floatingCartAction: { color: 'rgba(255,255,255,0.8)', fontSize: ms(11), fontWeight: '600' },
 });

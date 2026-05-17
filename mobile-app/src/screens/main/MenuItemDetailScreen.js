@@ -1,11 +1,12 @@
 import React, { useState, useCallback } from 'react';
-import { View, ScrollView, StyleSheet, TouchableOpacity, StatusBar } from 'react-native';
+import { View, ScrollView, StyleSheet, TouchableOpacity, StatusBar, Image } from 'react-native';
 import { Text } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCart } from '../../context/CartContext';
 import { colors, spacing, shadows, borderRadius, ms, rs, vs } from '../../utils/theme';
+import { API_BASE_URL } from '../../services/api';
 
 export default function MenuItemDetailScreen({ route, navigation }) {
   const { item } = route.params;
@@ -35,7 +36,11 @@ export default function MenuItemDetailScreen({ route, navigation }) {
           <Ionicons name="arrow-back" size={rs(22)} color="#fff" />
         </TouchableOpacity>
         <View style={styles.heroEmojiWrap}>
-          <Text style={styles.heroEmoji}>{item.image || '🍽️'}</Text>
+          {item.image && item.image.startsWith('/uploads') ? (
+            <Image source={{ uri: `${API_BASE_URL.replace('/api', '')}${item.image}` }} style={styles.heroImage} resizeMode="cover" />
+          ) : (
+            <Text style={styles.heroEmoji}>{item.image || '🍽️'}</Text>
+          )}
         </View>
       </LinearGradient>
 
@@ -128,8 +133,10 @@ const styles = StyleSheet.create({
     width: rs(120), height: rs(120), borderRadius: rs(60),
     backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center', alignItems: 'center',
+    overflow: 'hidden',
   },
   heroEmoji: { fontSize: ms(64) },
+  heroImage: { width: rs(120), height: rs(120), borderRadius: rs(60) },
 
   scrollContent: { padding: spacing.md },
 

@@ -1,12 +1,19 @@
-import { Dimensions } from 'react-native';
+import { Dimensions, PixelRatio } from 'react-native';
 import { DefaultTheme } from 'react-native-paper';
 
-const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
+const getWindow = () => Dimensions.get('window');
 
-export const rs = (size) => Math.round((SCREEN_W / 390) * size);
-export const vs = (size) => Math.round((SCREEN_H / 844) * size);
-export const ms = (size, factor = 0.5) => size + (rs(size) - size) * factor;
-export const { width: W, height: H } = { width: SCREEN_W, height: SCREEN_H };
+export const rs = (size) => {
+  const { width } = getWindow();
+  return Math.round((width / 390) * size);
+};
+export const vs = (size) => {
+  const { height } = getWindow();
+  return Math.round((height / 844) * size);
+};
+export const ms = (size, factor = 0.5) => Math.round(size + (rs(size) - size) * factor);
+export const W = getWindow().width;
+export const H = getWindow().height;
 
 export const colors = {
   // Domino's Brand
@@ -61,12 +68,12 @@ export const colors = {
 };
 
 export const spacing = {
-  xs: rs(4),
-  sm: rs(8),
-  md: rs(16),
-  lg: rs(24),
-  xl: rs(32),
-  xxl: rs(48),
+  get xs() { return rs(4); },
+  get sm() { return rs(8); },
+  get md() { return rs(16); },
+  get lg() { return rs(24); },
+  get xl() { return rs(32); },
+  get xxl() { return rs(48); },
 };
 
 export const fonts = {

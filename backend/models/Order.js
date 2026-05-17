@@ -5,7 +5,7 @@ const orderSchema = new mongoose.Schema({
   customer: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   orderType: { 
     type: String, 
-    enum: ['delivery', 'takeaway', 'dine_in'], 
+    enum: ['delivery', 'pickup', 'takeaway', 'dine_in'], 
     required: true 
   },
   items: [{

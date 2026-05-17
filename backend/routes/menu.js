@@ -2,6 +2,8 @@ const express = require('express');
 const MenuItem = require('../models/MenuItem');
 const { auth, adminAuth } = require('../middleware/auth');
 const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
 const router = express.Router();
 
@@ -12,7 +14,7 @@ const storage = multer.diskStorage({
   }
 });
 
-const upload = multer({ storage });
+const upload = multer({ storage, limits: { files: 1 } });
 
 // Get all menu items
 router.get('/', async (req, res) => {
@@ -70,6 +72,12 @@ router.put('/:id', adminAuth, upload.single('image'), async (req, res) => {
   try {
     const updates = { ...req.body };
     if (req.file) {
+      // Delete old image
+      const existing = await MenuItem.findById(req.params.id);
+      if (existing?.image) {
+        const oldPath = path.join(__dirname, '..', existing.image);
+        fs.unlink(oldPath, () => {});
+      }
       updates.image = `/uploads/${req.file.filename}`;
     }
     

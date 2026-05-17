@@ -33,6 +33,15 @@ const userSchema = new mongoose.Schema({
     dietary: [{ type: String, enum: ['vegetarian', 'vegan', 'jain', 'gluten_free'] }],
     spiceLevel: { type: String, enum: ['mild', 'medium', 'spicy'], default: 'medium' }
   },
+  wallet: {
+    balance: { type: Number, default: 0 },
+    transactions: [{
+      type: { type: String, enum: ['credit', 'debit'], required: true },
+      amount: { type: Number, required: true },
+      description: { type: String },
+      createdAt: { type: Date, default: Date.now }
+    }]
+  },
   loyaltyPoints: { type: Number, default: 0 },
   isActive: { type: Boolean, default: true },
   lastLogin: Date,

@@ -107,6 +107,7 @@ function Orders() {
         >
           <option value="">All Types</option>
           <option value="delivery">Delivery</option>
+          <option value="pickup">Pickup</option>
           <option value="takeaway">Takeaway</option>
           <option value="dine_in">Dine In</option>
         </select>

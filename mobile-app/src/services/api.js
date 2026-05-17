@@ -2,9 +2,11 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../utils/constants';
 
+export { API_BASE_URL };
+
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 20000,
 });
 
 api.interceptors.request.use(async (config) => {
@@ -50,10 +52,9 @@ export const orderAPI = {
 };
 
 export const walletAPI = {
-  getWalletData: () => api.get('/wallet/balance'),
-  addMoney: (data) => api.post('/wallet/add-money', data),
-  makePayment: (data) => api.post('/wallet/pay', data),
-  getTransactions: () => api.get('/wallet/transactions'),
+  getWallet: () => api.get('/wallet'),
+  addMoney: (data) => api.post('/wallet/add', data),
+  deduct: (data) => api.post('/wallet/deduct', data),
 };
 
 export const reviewAPI = {

@@ -15,6 +15,12 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
+  Settings,
+  Truck,
+  Star,
+  Megaphone,
+  UserCheck,
+  Wallet,
 } from 'lucide-react';
 
 const Layout = () => {
@@ -30,6 +36,13 @@ const Layout = () => {
     { name: 'Users', href: '/users', icon: Users },
     { name: 'Analytics', href: '/analytics', icon: BarChart3 },
     { name: 'Referrals', href: '/referrals', icon: Gift },
+    { name: 'Delivery Control', href: '/delivery-control', icon: Truck },
+    { name: 'Delivery Partners', href: '/delivery-partners', icon: UserCheck },
+    { name: 'Reviews', href: '/reviews', icon: Star },
+    { name: 'Campaigns', href: '/campaigns', icon: Megaphone },
+    { name: 'Notifications', href: '/notifications', icon: Bell },
+    { name: 'Wallet', href: '/wallet', icon: Wallet },
+    { name: 'Settings', href: '/settings', icon: Settings },
   ];
 
   const isActive = (path) => location.pathname === path;

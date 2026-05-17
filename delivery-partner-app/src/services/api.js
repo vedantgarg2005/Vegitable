@@ -1,12 +1,9 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform } from 'react-native';
 
 const getBaseUrl = () => {
   if (__DEV__) {
-    return Platform.OS === 'android'
-      ? 'http://192.168.1.6:5000/api'
-      : 'http://localhost:5000/api';
+    return 'http://192.168.1.8:5000/api';
   }
   return 'https://your-production-api.com/api';
 };

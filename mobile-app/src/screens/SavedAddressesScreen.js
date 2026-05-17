@@ -22,6 +22,7 @@ export default function SavedAddressesScreen({ navigation }) {
   const [saving, setSaving] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [editingId, setEditingId] = useState(null);
 
   const authFetch = useCallback(async (path, options = {}) => {
     const token = await AsyncStorage.getItem('token');
@@ -42,7 +43,12 @@ export default function SavedAddressesScreen({ navigation }) {
 
   useEffect(() => { loadAddresses(); }, [loadAddresses]);
 
-  const openAdd = () => { setForm(EMPTY_FORM); setModalVisible(true); };
+  const openAdd = () => { setEditingId(null); setForm(EMPTY_FORM); setModalVisible(true); };
+  const openEdit = (item) => {
+    setEditingId(item._id);
+    setForm({ type: item.type, address: item.address, landmark: item.landmark || '', city: item.city, pincode: item.pincode || '', isDefault: item.isDefault });
+    setModalVisible(true);
+  };
 
   const saveAddress = async () => {
     if (!form.address.trim() || !form.city.trim()) {
@@ -50,7 +56,9 @@ export default function SavedAddressesScreen({ navigation }) {
     }
     setSaving(true);
     try {
-      const res = await authFetch('/', { method: 'POST', body: JSON.stringify(form) });
+      const res = editingId
+        ? await authFetch(`/${editingId}`, { method: 'PUT', body: JSON.stringify(form) })
+        : await authFetch('/', { method: 'POST', body: JSON.stringify(form) });
       const data = await res.json();
       if (!res.ok) {
         Alert.alert('Error', data?.message || 'Could not save address.'); return;
@@ -141,6 +149,9 @@ export default function SavedAddressesScreen({ navigation }) {
                     <Ionicons name="star-outline" size={rs(18)} color={colors.accent} />
                   </TouchableOpacity>
                 )}
+                <TouchableOpacity onPress={() => openEdit(item)} style={styles.actionBtn}>
+                  <Ionicons name="pencil-outline" size={rs(18)} color={colors.primary} />
+                </TouchableOpacity>
                 <TouchableOpacity onPress={() => deleteAddress(item._id)} style={styles.actionBtn}>
                   <Ionicons name="trash-outline" size={rs(18)} color={colors.error} />
                 </TouchableOpacity>
@@ -155,7 +166,7 @@ export default function SavedAddressesScreen({ navigation }) {
         <View style={styles.modalOverlay}>
           <View style={styles.modalSheet}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Add New Address</Text>
+              <Text style={styles.modalTitle}>{editingId ? 'Edit Address' : 'Add New Address'}</Text>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
                 <Ionicons name="close" size={rs(22)} color={colors.text} />
               </TouchableOpacity>
@@ -214,7 +225,7 @@ export default function SavedAddressesScreen({ navigation }) {
               >
                 {saving
                   ? <ActivityIndicator color="#fff" size="small" />
-                  : <Text style={styles.saveBtnText}>Save Address</Text>}
+                  : <Text style={styles.saveBtnText}>{editingId ? 'Update Address' : 'Save Address'}</Text>}
               </LinearGradient>
             </TouchableOpacity>
           </View>

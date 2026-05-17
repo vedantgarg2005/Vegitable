@@ -1,7 +1,9 @@
 const express = require('express');
+const { Expo } = require('expo-server-sdk');
 const Notification = require('../models/Notification');
 const User = require('../models/User');
 const router = express.Router();
+const expo = new Expo();
 
 // Send push notification
 const sendPushNotification = async (userId, title, message, data = {}) => {
@@ -9,19 +11,25 @@ const sendPushNotification = async (userId, title, message, data = {}) => {
     const user = await User.findById(userId);
     if (!user || !user.deviceTokens.length) return;
 
-    // Save notification to database
-    const notification = new Notification({
+    const notification = await new Notification({
       user: userId,
       title,
       message,
       type: data.type || 'general',
       data
-    });
-    await notification.save();
+    }).save();
 
-    // Here you would integrate with FCM/APNS
-    console.log(`Push notification sent to ${user.name}: ${title}`);
-    
+    const messages = user.deviceTokens
+      .filter(token => Expo.isExpoPushToken(token))
+      .map(token => ({ to: token, title, body: message, data, sound: 'default' }));
+
+    if (messages.length) {
+      const chunks = expo.chunkPushNotifications(messages);
+      for (const chunk of chunks) {
+        await expo.sendPushNotificationsAsync(chunk);
+      }
+    }
+
     return notification;
   } catch (error) {
     console.error('Push notification error:', error);

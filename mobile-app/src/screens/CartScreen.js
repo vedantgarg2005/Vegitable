@@ -1,24 +1,71 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View, ScrollView, StyleSheet, Alert, TextInput,
-  TouchableOpacity, StatusBar,
+  TouchableOpacity, StatusBar, Modal, FlatList,
 } from 'react-native';
 import { Text, Divider } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCart } from '../context/CartContext';
 import { colors, shadows, borderRadius, ms, rs, vs } from '../utils/theme';
-import api from '../services/api';
-import { FREE_DELIVERY_THRESHOLD, STANDARD_DELIVERY_FEE, getDeliveryFee } from '../utils/constants';
+import api, { menuAPI } from '../services/api';
+import { FREE_DELIVERY_THRESHOLD, STANDARD_DELIVERY_FEE, getDeliveryFee, API_BASE_URL, PICKUP_ADDRESS } from '../utils/constants';
 
-const CartScreen = ({ navigation }) => {
-  const { items: cartItems, total, updateQuantity, removeFromCart } = useCart();
+const CartScreen = ({ navigation, route }) => {
+  const { items: cartItems, total, updateQuantity, removeFromCart, addToCart } = useCart();
+  const [orderType, setOrderType] = useState(route?.params?.orderType || 'delivery');
+  const [suggestedItems, setSuggestedItems] = useState([]);
   const [instructions, setInstructions] = useState('');
   const [couponCode, setCouponCode] = useState('');
   const [discount, setDiscount] = useState(0);
   const [couponApplied, setCouponApplied] = useState(false);
   const [couponError, setCouponError] = useState('');
+  const [deliveryAvailable, setDeliveryAvailable] = useState(true);
+  const [offersVisible, setOffersVisible] = useState(false);
+  const [availableCoupons, setAvailableCoupons] = useState([]);
+  const [modalCode, setModalCode] = useState('');
+  const [modalError, setModalError] = useState('');
+  const [showInstruction, setShowInstruction] = useState(false);
+  const instructionRef = useRef(null);
   const insets = useSafeAreaInsets();
+
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/admin/delivery-status`)
+      .then(r => r.json())
+      .then(d => setDeliveryAvailable(d.deliveryEnabled ?? true))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    menuAPI.getItems()
+      .then(res => setSuggestedItems(res.data || []))
+      .catch(() => {});
+  }, []);
+
+  const openOffers = async () => {
+    setModalCode('');
+    setModalError('');
+    try {
+      const res = await api.get('/promo/active');
+      setAvailableCoupons(res.data || []);
+    } catch { setAvailableCoupons([]); }
+    setOffersVisible(true);
+  };
+
+  const applyFromModal = async (code) => {
+    const codeToApply = (code || modalCode).trim();
+    if (!codeToApply) return;
+    try {
+      const res = await api.post('/promo/validate', { code: codeToApply, orderTotal: total });
+      setDiscount(res.data.discount || 0);
+      setCouponApplied(true);
+      setCouponError('');
+      setCouponCode(codeToApply);
+      setOffersVisible(false);
+    } catch (err) {
+      setModalError(err.response?.data?.message || 'Invalid or expired coupon');
+    }
+  };
 
   const updateQty = (itemId, qty) => {
     if (qty === 0) { removeFromCart(itemId); return; }
@@ -41,12 +88,12 @@ const CartScreen = ({ navigation }) => {
 
   const removeCoupon = () => { setCouponCode(''); setDiscount(0); setCouponApplied(false); setCouponError(''); };
 
-  const deliveryFee = getDeliveryFee(total);
+  const deliveryFee = orderType === 'pickup' ? 0 : getDeliveryFee(total);
   const grandTotal = Math.max(0, total + deliveryFee - discount);
 
   const proceedToCheckout = () => {
     if (cartItems.length === 0) { Alert.alert('Empty Cart', 'Please add items first'); return; }
-    navigation.navigate('Checkout', { instructions, discount, couponCode, grandTotal, deliveryFee });
+    navigation.navigate('Checkout', { instructions, discount, couponCode, grandTotal, deliveryFee, orderType });
   };
 
   return (
@@ -55,12 +102,28 @@ const CartScreen = ({ navigation }) => {
 
       {/* Dark header */}
       <View style={[styles.header, { paddingTop: insets.top + vs(10) }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={rs(22)} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>YOUR ORDER</Text>
-        <View style={styles.headerRight}>
+        <View style={styles.headerRow}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <Ionicons name="arrow-back" size={rs(22)} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>YOUR ORDER</Text>
           <Text style={styles.headerCount}>{cartItems.length} items</Text>
+        </View>
+        <View style={styles.orderTypeToggle}>
+          <TouchableOpacity
+            style={[styles.toggleBtn, orderType === 'delivery' && styles.toggleBtnActive]}
+            onPress={() => setOrderType('delivery')}
+          >
+            <Ionicons name="bicycle-outline" size={rs(14)} color={orderType === 'delivery' ? '#fff' : 'rgba(255,255,255,0.6)'} />
+            <Text style={[styles.toggleBtnText, orderType === 'delivery' && styles.toggleBtnTextActive]}>Delivery</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.toggleBtn, orderType === 'pickup' && styles.toggleBtnActive]}
+            onPress={() => setOrderType('pickup')}
+          >
+            <Ionicons name="bag-handle-outline" size={rs(14)} color={orderType === 'pickup' ? '#fff' : 'rgba(255,255,255,0.6)'} />
+            <Text style={[styles.toggleBtnText, orderType === 'pickup' && styles.toggleBtnTextActive]}>Pickup</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -77,7 +140,17 @@ const CartScreen = ({ navigation }) => {
         <>
           <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
-            {/* Free delivery progress bar — Swiggy style */}
+            {/* Delivery unavailable banner */}
+            {orderType === 'delivery' && !deliveryAvailable && (
+              <View style={styles.deliveryBanner}>
+                <Ionicons name="warning" size={rs(18)} color="#fff" />
+                <Text style={styles.deliveryBannerText}>
+                  Delivery is currently unavailable. You can still place a Takeaway order.
+                </Text>
+              </View>
+            )}
+
+            {/* Free delivery progress bar */}
             {deliveryFee > 0 && (
               <View style={styles.progressCard}>
                 <View style={styles.progressTop}>
@@ -111,10 +184,7 @@ const CartScreen = ({ navigation }) => {
                       <View style={[styles.vegBox, { borderColor: colors.tagVeg }]}>
                         <View style={[styles.vegDot, { backgroundColor: colors.tagVeg }]} />
                       </View>
-                      <View style={styles.itemInfo}>
-                        <Text style={styles.itemName}>{item.name}</Text>
-                        <Text style={styles.itemPrice}>₹{(item.price * item.quantity).toFixed(2)}</Text>
-                      </View>
+                      <Text style={styles.itemName}>{item.name}</Text>
                     </View>
                     <View style={styles.qtyControls}>
                       <TouchableOpacity style={styles.qtyBtn} onPress={() => updateQty(item.id, item.quantity - 1)}>
@@ -124,11 +194,75 @@ const CartScreen = ({ navigation }) => {
                       <TouchableOpacity style={[styles.qtyBtn, styles.qtyBtnFilled]} onPress={() => updateQty(item.id, item.quantity + 1)}>
                         <Ionicons name="add" size={rs(14)} color="#fff" />
                       </TouchableOpacity>
+                      <Text style={styles.itemPrice}>₹{(item.price * item.quantity).toFixed(2)}</Text>
                     </View>
                   </View>
                 </View>
               ))}
+
+              {/* Add more items | Instructions — side by side */}
+              <View style={styles.itemDivider} />
+              <View style={styles.cartBottomRow}>
+                <TouchableOpacity style={styles.addMoreBtn} onPress={() => navigation.navigate('Menu')}>
+                  <Ionicons name="add-circle-outline" size={rs(15)} color={colors.primary} />
+                  <Text style={styles.addMoreBtnText}>ADD MORE</Text>
+                </TouchableOpacity>
+                <View style={styles.cartBottomDivider} />
+                <TouchableOpacity style={styles.addInstructionBtn} onPress={() => setShowInstruction(v => !v)}>
+                  <Ionicons name="create-outline" size={rs(15)} color={colors.textSecondary} />
+                  <Text style={styles.addInstructionBtnText}>Add instruction</Text>
+                </TouchableOpacity>
+              </View>
+              {showInstruction && (
+                <TextInput
+                  ref={instructionRef}
+                  style={styles.instructionInlineInput}
+                  placeholder="E.g. less spicy, extra sauce..."
+                  placeholderTextColor={colors.placeholder}
+                  value={instructions}
+                  onChangeText={setInstructions}
+                  autoFocus
+                />
+              )}
             </View>
+
+            {/* Craving More */}
+            {suggestedItems.filter(i => !cartItems.find(c => c.id === (i._id || i.id))).length > 0 && (
+              <View style={[styles.sectionCard, shadows.small]}>
+                <Text style={styles.sectionTitle}>CRAVING MORE? 🤤</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.suggestList}>
+                  {suggestedItems
+                    .filter(i => !cartItems.find(c => c.id === (i._id || i.id)))
+                    .slice(0, 10)
+                    .map(item => {
+                      const cartItem = cartItems.find(c => c.id === (item._id || item.id));
+                      return (
+                        <View key={item._id || item.id} style={[styles.suggestCard, shadows.small]}>
+                          <Text style={styles.suggestEmoji}>{item.image || '🍕'}</Text>
+                          <Text style={styles.suggestName} numberOfLines={2}>{item.name}</Text>
+                          <Text style={styles.suggestPrice}>₹{item.price}</Text>
+                          {cartItem ? (
+                            <View style={styles.suggestStepper}>
+                              <TouchableOpacity onPress={() => updateQty(cartItem.id, cartItem.quantity - 1)}>
+                                <Ionicons name="remove" size={rs(14)} color={colors.primary} />
+                              </TouchableOpacity>
+                              <Text style={styles.suggestStepperCount}>{cartItem.quantity}</Text>
+                              <TouchableOpacity onPress={() => addToCart(item)}>
+                                <Ionicons name="add" size={rs(14)} color={colors.primary} />
+                              </TouchableOpacity>
+                            </View>
+                          ) : (
+                            <TouchableOpacity style={styles.suggestAddBtn} onPress={() => addToCart(item)}>
+                              <Text style={styles.suggestAddBtnText}>ADD</Text>
+                              <Ionicons name="add" size={rs(12)} color={colors.primary} />
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                      );
+                    })}
+                </ScrollView>
+              </View>
+            )}
 
             {/* Coupon */}
             <View style={[styles.sectionCard, shadows.small]}>
@@ -152,22 +286,33 @@ const CartScreen = ({ navigation }) => {
               </View>
               {couponApplied && <Text style={styles.couponSuccess}>✅ Coupon applied! Saved ₹{discount.toFixed(2)}</Text>}
               {!!couponError && <Text style={styles.couponError}>{couponError}</Text>}
+              {!couponApplied && (
+                <TouchableOpacity style={styles.viewOffersBtn} onPress={openOffers}>
+                  <Ionicons name="pricetag-outline" size={rs(14)} color={colors.primary} />
+                  <Text style={styles.viewOffersBtnText}>VIEW ALL OFFERS</Text>
+                  <Ionicons name="chevron-forward" size={rs(14)} color={colors.primary} />
+                </TouchableOpacity>
+              )}
             </View>
 
-            {/* Cooking Instructions */}
-            <View style={[styles.sectionCard, shadows.small]}>
-              <Text style={styles.sectionTitle}>COOKING INSTRUCTIONS</Text>
-              <TextInput
-                style={styles.instructionBox}
-                placeholder="E.g. Less spicy, extra cheese..."
-                placeholderTextColor={colors.placeholder}
-                value={instructions}
-                onChangeText={setInstructions}
-                multiline
-                numberOfLines={3}
-                textAlignVertical="top"
-              />
-            </View>
+
+            {/* Pickup address card */}
+            {orderType === 'pickup' && (
+              <View style={[styles.sectionCard, styles.pickupCard, shadows.small]}>
+                <View style={styles.pickupHeader}>
+                  <Ionicons name="location" size={rs(18)} color={colors.primary} />
+                  <Text style={styles.pickupSectionTitle}>PICKUP FROM</Text>
+                </View>
+                <Text style={styles.pickupName}>{PICKUP_ADDRESS.name}</Text>
+                <Text style={styles.pickupLine}>{PICKUP_ADDRESS.line1}</Text>
+                <Text style={styles.pickupLine}>{PICKUP_ADDRESS.line2}</Text>
+                <Text style={styles.pickupLandmark}>📍 {PICKUP_ADDRESS.landmark}</Text>
+                <View style={styles.pickupPhoneRow}>
+                  <Ionicons name="call-outline" size={rs(13)} color={colors.textSecondary} />
+                  <Text style={styles.pickupPhone}>{PICKUP_ADDRESS.phone}</Text>
+                </View>
+              </View>
+            )}
 
             {/* Bill */}
             <View style={[styles.sectionCard, shadows.small]}>
@@ -176,12 +321,14 @@ const CartScreen = ({ navigation }) => {
                 <Text style={styles.billLabel}>Item Total</Text>
                 <Text style={styles.billValue}>₹{Number(total).toFixed(2)}</Text>
               </View>
-              <View style={styles.billRow}>
-                <Text style={styles.billLabel}>Delivery Fee</Text>
-                {deliveryFee === 0
-                  ? <Text style={styles.freeText}>FREE 🎉</Text>
-                  : <Text style={styles.billValue}>₹{deliveryFee}</Text>}
-              </View>
+              {orderType === 'delivery' && (
+                <View style={styles.billRow}>
+                  <Text style={styles.billLabel}>Delivery Fee</Text>
+                  {deliveryFee === 0
+                    ? <Text style={styles.freeText}>FREE 🎉</Text>
+                    : <Text style={styles.billValue}>₹{deliveryFee}</Text>}
+                </View>
+              )}
               {discount > 0 && (
                 <View style={styles.billRow}>
                   <Text style={[styles.billLabel, { color: colors.success }]}>Coupon Discount</Text>
@@ -195,12 +342,17 @@ const CartScreen = ({ navigation }) => {
               </View>
             </View>
 
-            <View style={{ height: vs(100) }} />
+            <View style={{ height: vs(20) }} />
           </ScrollView>
 
           {/* Checkout Footer */}
           <View style={[styles.footer, { paddingBottom: insets.bottom + vs(8) }]}>
-            <TouchableOpacity style={styles.checkoutBtn} onPress={proceedToCheckout} activeOpacity={0.88}>
+            <TouchableOpacity
+              style={[styles.checkoutBtn, orderType === 'delivery' && !deliveryAvailable && styles.checkoutBtnDisabled]}
+              onPress={proceedToCheckout}
+              activeOpacity={0.88}
+              disabled={orderType === 'delivery' && !deliveryAvailable}
+            >
               <View style={styles.checkoutLeft}>
                 <Text style={styles.checkoutItemCount}>{cartItems.length} ITEMS</Text>
                 <Text style={styles.checkoutTotal}>₹{grandTotal.toFixed(2)}</Text>
@@ -211,6 +363,56 @@ const CartScreen = ({ navigation }) => {
           </View>
         </>
       )}
+      {/* Offers Modal */}
+      <Modal visible={offersVisible} animationType="slide" transparent onRequestClose={() => setOffersVisible(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setOffersVisible(false)} />
+        <View style={[styles.modalSheet, { paddingBottom: insets.bottom + vs(16) }]}>
+          <View style={styles.modalHandle} />
+          <Text style={styles.modalTitle}>AVAILABLE OFFERS</Text>
+
+          {/* Manual entry */}
+          <View style={styles.modalInputRow}>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Enter coupon code"
+              placeholderTextColor={colors.placeholder}
+              value={modalCode}
+              onChangeText={t => { setModalCode(t.toUpperCase()); setModalError(''); }}
+              autoCapitalize="characters"
+            />
+            <TouchableOpacity style={styles.modalApplyBtn} onPress={() => applyFromModal()}>
+              <Text style={styles.modalApplyBtnText}>APPLY</Text>
+            </TouchableOpacity>
+          </View>
+          {!!modalError && <Text style={styles.modalError}>{modalError}</Text>}
+
+          <FlatList
+            data={availableCoupons}
+            keyExtractor={item => item._id || item.code}
+            style={{ marginTop: vs(12) }}
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={<Text style={styles.noOffersText}>No offers available right now</Text>}
+            renderItem={({ item }) => (
+              <View style={styles.offerCard}>
+                <View style={styles.offerLeft}>
+                  <View style={styles.offerCodeBadge}>
+                    <Text style={styles.offerCode}>{item.code}</Text>
+                  </View>
+                  <Text style={styles.offerDesc}>
+                    {item.discountType === 'percentage'
+                      ? `${item.discountValue}% off${item.maxDiscount ? ` up to ₹${item.maxDiscount}` : ''}`
+                      : `Flat ₹${item.discountValue} off`}
+                    {item.minOrderAmount > 0 ? `  •  Min ₹${item.minOrderAmount}` : ''}
+                  </Text>
+                </View>
+                <TouchableOpacity style={styles.offerApplyBtn} onPress={() => applyFromModal(item.code)}>
+                  <Text style={styles.offerApplyBtnText}>APPLY</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          />
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -220,11 +422,14 @@ const styles = StyleSheet.create({
 
   header: {
     backgroundColor: colors.navy,
-    flexDirection: 'row',
-    alignItems: 'center',
     paddingHorizontal: rs(16),
     paddingBottom: vs(14),
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: rs(12),
+    marginBottom: vs(12),
   },
   backBtn: {
     width: rs(38), height: rs(38), borderRadius: rs(19),
@@ -232,8 +437,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
   },
   headerTitle: { flex: 1, fontSize: ms(16), fontWeight: '900', color: '#fff', letterSpacing: 1.5, fontFamily: 'Poppins_900Black' },
-  headerRight: {},
   headerCount: { fontSize: ms(13), color: 'rgba(255,255,255,0.7)', fontWeight: '600', fontFamily: 'Poppins_600SemiBold' },
+  orderTypeToggle: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderRadius: borderRadius.full,
+    padding: vs(3),
+  },
+  toggleBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: rs(6), paddingVertical: vs(7),
+    borderRadius: borderRadius.full,
+  },
+  toggleBtnActive: { backgroundColor: colors.primary },
+  toggleBtnText: { fontSize: ms(13), fontWeight: '700', color: 'rgba(255,255,255,0.6)', fontFamily: 'Poppins_700Bold' },
+  toggleBtnTextActive: { color: '#fff' },
 
   emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: rs(32) },
   emptyEmoji: { fontSize: ms(64), marginBottom: vs(16) },
@@ -304,15 +522,14 @@ const styles = StyleSheet.create({
     alignItems: 'center', paddingVertical: vs(10),
   },
   itemDivider: { height: 1, backgroundColor: colors.divider },
-  itemLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: rs(10) },
+  itemLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: rs(10), flexShrink: 1 },
   vegBox: {
     width: rs(14), height: rs(14), borderRadius: rs(2),
     borderWidth: 1.5, justifyContent: 'center', alignItems: 'center',
   },
   vegDot: { width: rs(6), height: rs(6), borderRadius: rs(3) },
-  itemInfo: { flex: 1 },
-  itemName: { fontSize: ms(14), fontWeight: '700', color: colors.text, marginBottom: vs(2), fontFamily: 'Poppins_700Bold' },
-  itemPrice: { fontSize: ms(13), color: colors.textSecondary, fontFamily: 'Poppins_400Regular' },
+  itemName: { fontSize: ms(14), fontWeight: '700', color: colors.text, fontFamily: 'Poppins_700Bold', flexShrink: 1 },
+  itemPrice: { fontSize: ms(13), fontWeight: '700', color: colors.primary, fontFamily: 'Poppins_700Bold', minWidth: rs(52), textAlign: 'right' },
 
   qtyControls: { flexDirection: 'row', alignItems: 'center', gap: rs(8) },
   qtyBtn: {
@@ -341,10 +558,97 @@ const styles = StyleSheet.create({
   couponSuccess: { marginTop: vs(8), color: colors.success, fontSize: ms(13), fontWeight: '600', fontFamily: 'Poppins_600SemiBold' },
   couponError: { marginTop: vs(8), color: colors.error, fontSize: ms(13), fontFamily: 'Poppins_400Regular' },
 
-  instructionBox: {
-    borderWidth: 1.5, borderColor: colors.border, borderRadius: borderRadius.xs,
-    padding: rs(12), fontSize: ms(14), color: colors.text,
-    backgroundColor: colors.background, minHeight: vs(75),
+  viewOffersBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: rs(6),
+    marginTop: vs(12), paddingVertical: vs(10),
+    borderTopWidth: 1, borderTopColor: colors.divider,
+  },
+  viewOffersBtnText: { flex: 1, fontSize: ms(13), fontWeight: '700', color: colors.primary, fontFamily: 'Poppins_700Bold' },
+
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)' },
+  modalSheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: borderRadius.lg,
+    borderTopRightRadius: borderRadius.lg,
+    paddingHorizontal: rs(16),
+    paddingTop: vs(12),
+    maxHeight: '75%',
+  },
+  modalHandle: {
+    width: rs(40), height: vs(4), borderRadius: borderRadius.full,
+    backgroundColor: colors.border, alignSelf: 'center', marginBottom: vs(16),
+  },
+  modalTitle: {
+    fontSize: ms(13), fontWeight: '800', color: colors.textSecondary,
+    letterSpacing: 1, marginBottom: vs(14), fontFamily: 'Poppins_800ExtraBold',
+  },
+  modalInputRow: { flexDirection: 'row', alignItems: 'center', gap: rs(10) },
+  modalInput: {
+    flex: 1, borderWidth: 1.5, borderColor: colors.border,
+    borderRadius: borderRadius.xs, paddingHorizontal: rs(12),
+    paddingVertical: vs(10), fontSize: ms(14), color: colors.text,
+    backgroundColor: colors.background, fontWeight: '700', letterSpacing: 1,
+  },
+  modalApplyBtn: {
+    backgroundColor: colors.primary, paddingHorizontal: rs(16),
+    paddingVertical: vs(11), borderRadius: borderRadius.xs,
+  },
+  modalApplyBtnText: { color: '#fff', fontWeight: '800', fontSize: ms(13), letterSpacing: 0.5, fontFamily: 'Poppins_800ExtraBold' },
+  modalError: { marginTop: vs(6), color: colors.error, fontSize: ms(12), fontFamily: 'Poppins_400Regular' },
+
+  offerCard: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingVertical: vs(12), borderBottomWidth: 1, borderBottomColor: colors.divider,
+    gap: rs(12),
+  },
+  offerLeft: { flex: 1, gap: vs(4) },
+  offerCodeBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.primarySurface,
+    borderWidth: 1.5, borderColor: colors.primary,
+    borderRadius: borderRadius.xs,
+    paddingHorizontal: rs(10), paddingVertical: vs(3),
+    borderStyle: 'dashed',
+  },
+  offerCode: { fontSize: ms(13), fontWeight: '800', color: colors.primary, letterSpacing: 1, fontFamily: 'Poppins_800ExtraBold' },
+  offerDesc: { fontSize: ms(12), color: colors.textSecondary, fontFamily: 'Poppins_400Regular' },
+  offerApplyBtn: {
+    borderWidth: 1.5, borderColor: colors.primary,
+    borderRadius: borderRadius.xs,
+    paddingHorizontal: rs(14), paddingVertical: vs(7),
+  },
+  offerApplyBtnText: { fontSize: ms(12), fontWeight: '800', color: colors.primary, fontFamily: 'Poppins_800ExtraBold' },
+  noOffersText: { textAlign: 'center', color: colors.placeholder, fontSize: ms(13), paddingVertical: vs(24), fontFamily: 'Poppins_400Regular' },
+
+  cartBottomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: vs(4),
+  },
+  addMoreBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: rs(5),
+    paddingVertical: vs(10), paddingRight: rs(12),
+  },
+  addMoreBtnText: {
+    fontSize: ms(12), fontWeight: '800', color: colors.primary,
+    fontFamily: 'Poppins_800ExtraBold',
+  },
+  cartBottomDivider: {
+    width: 1, height: vs(28), backgroundColor: colors.divider, marginHorizontal: rs(4),
+  },
+  addInstructionBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: rs(5),
+    paddingVertical: vs(10), paddingLeft: rs(4), flex: 1,
+  },
+  addInstructionBtnText: {
+    fontSize: ms(12), fontWeight: '600', color: colors.textSecondary,
+    fontFamily: 'Poppins_600SemiBold',
+  },
+  instructionInlineInput: {
+    borderTopWidth: 1, borderTopColor: colors.divider,
+    paddingVertical: vs(10), paddingHorizontal: rs(4),
+    fontSize: ms(13), color: colors.text,
+    fontFamily: 'Poppins_400Regular',
   },
 
   billRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: vs(10) },
@@ -352,6 +656,43 @@ const styles = StyleSheet.create({
   billValue: { fontSize: ms(14), color: colors.text, fontWeight: '600' },
   freeText: { fontSize: ms(14), color: colors.success, fontWeight: '700' },
   billDivider: { marginVertical: vs(10), backgroundColor: colors.divider },
+
+  suggestList: { gap: rs(10), paddingBottom: vs(4) },
+  suggestCard: {
+    width: rs(110),
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.sm,
+    padding: rs(10),
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  suggestEmoji: { fontSize: ms(32), marginBottom: vs(4) },
+  suggestName: { fontSize: ms(11), fontWeight: '700', color: colors.text, textAlign: 'center', marginBottom: vs(3), fontFamily: 'Poppins_700Bold' },
+  suggestPrice: { fontSize: ms(12), fontWeight: '800', color: colors.primary, marginBottom: vs(6), fontFamily: 'Poppins_800ExtraBold' },
+  suggestAddBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: rs(2),
+    borderWidth: 1.5, borderColor: colors.primary,
+    borderRadius: borderRadius.xs,
+    paddingHorizontal: rs(8), paddingVertical: vs(4),
+  },
+  suggestAddBtnText: { fontSize: ms(11), fontWeight: '800', color: colors.primary, fontFamily: 'Poppins_800ExtraBold' },
+  suggestStepper: {
+    flexDirection: 'row', alignItems: 'center', gap: rs(6),
+    borderWidth: 1.5, borderColor: colors.primary,
+    borderRadius: borderRadius.xs,
+    paddingHorizontal: rs(6), paddingVertical: vs(4),
+  },
+  suggestStepperCount: { fontSize: ms(12), fontWeight: '800', color: colors.primary, fontFamily: 'Poppins_800ExtraBold', minWidth: rs(12), textAlign: 'center' },
+  pickupCard: { borderLeftWidth: 3, borderLeftColor: colors.primary },
+  pickupHeader: { flexDirection: 'row', alignItems: 'center', gap: rs(6), marginBottom: vs(8) },
+  pickupSectionTitle: { fontSize: ms(11), fontWeight: '800', color: colors.textSecondary, letterSpacing: 1, fontFamily: 'Poppins_800ExtraBold' },
+  pickupName: { fontSize: ms(14), fontWeight: '800', color: colors.text, marginBottom: vs(2), fontFamily: 'Poppins_800ExtraBold' },
+  pickupLine: { fontSize: ms(13), color: colors.textSecondary, lineHeight: vs(20) },
+  pickupLandmark: { fontSize: ms(12), color: colors.textSecondary, marginTop: vs(4) },
+  pickupPhoneRow: { flexDirection: 'row', alignItems: 'center', gap: rs(6), marginTop: vs(8) },
+  pickupPhone: { fontSize: ms(13), color: colors.textSecondary, fontWeight: '600' },
+
   grandTotalLabel: { fontSize: ms(15), fontWeight: '800', color: colors.text, letterSpacing: 0.5, fontFamily: 'Poppins_800ExtraBold' },
   grandTotalValue: { fontSize: ms(17), fontWeight: '900', color: colors.primary, fontFamily: 'Poppins_900Black' },
 
@@ -369,6 +710,17 @@ const styles = StyleSheet.create({
     paddingVertical: vs(14),
     paddingHorizontal: rs(16),
   },
+  checkoutBtnDisabled: { backgroundColor: colors.placeholder },
+
+  deliveryBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: rs(10),
+    backgroundColor: colors.error,
+    borderRadius: borderRadius.sm,
+    padding: rs(12),
+    marginBottom: vs(12),
+  },
+  deliveryBannerText: { flex: 1, fontSize: ms(13), color: '#fff', fontWeight: '600' },
+
   checkoutLeft: { flex: 1 },
   checkoutItemCount: { fontSize: ms(11), color: 'rgba(255,255,255,0.8)', fontWeight: '700', letterSpacing: 0.5, fontFamily: 'Poppins_700Bold' },
   checkoutTotal: { fontSize: ms(16), fontWeight: '900', color: '#fff', fontFamily: 'Poppins_900Black' },

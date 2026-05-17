@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { View, ScrollView, StyleSheet, TouchableOpacity, StatusBar, Alert, TextInput } from 'react-native';
+import React from 'react';
+import { View, ScrollView, StyleSheet, StatusBar } from 'react-native';
 import { Text, ActivityIndicator } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,25 +7,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useWallet } from '../context/WalletContext';
 import { colors, spacing, shadows, borderRadius, ms, rs, vs } from '../utils/theme';
 
-const QUICK_AMOUNTS = [50, 100, 200, 500];
-
 export default function WalletScreen() {
-  const { balance, transactions, loading, addMoney } = useWallet();
-  const [amount, setAmount] = useState('');
-  const [addingMoney, setAddingMoney] = useState(false);
+  const { balance, transactions, loading } = useWallet();
   const insets = useSafeAreaInsets();
-
-  const handleAddMoney = useCallback(async () => {
-    const parsed = parseFloat(amount);
-    if (!amount || parsed <= 0) {
-      Alert.alert('Invalid Amount', 'Please enter a valid amount');
-      return;
-    }
-    setAddingMoney(true);
-    const result = await addMoney(parsed, 'card');
-    if (result.success) setAmount('');
-    setAddingMoney(false);
-  }, [amount, addMoney]);
 
   const formatDate = (dateString) =>
     new Date(dateString).toLocaleDateString('en-IN', {
@@ -60,63 +44,6 @@ export default function WalletScreen() {
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
-        {/* Add Money */}
-        <View style={[styles.card, shadows.small]}>
-          <View style={styles.cardHeader}>
-            <View style={styles.cardIconWrap}>
-              <Ionicons name="add-circle-outline" size={rs(18)} color={colors.primary} />
-            </View>
-            <Text style={styles.cardTitle}>Add Money</Text>
-          </View>
-
-          <View style={styles.quickAmounts}>
-            {QUICK_AMOUNTS.map(amt => (
-              <TouchableOpacity
-                key={amt}
-                style={[styles.quickAmtBtn, amount === String(amt) && styles.quickAmtBtnActive]}
-                onPress={() => setAmount(String(amt))}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.quickAmtText, amount === String(amt) && styles.quickAmtTextActive]}>
-                  ₹{amt}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <View style={styles.inputRow}>
-            <View style={styles.inputWrap}>
-              <Text style={styles.inputPrefix}>₹</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter amount"
-                placeholderTextColor={colors.placeholder}
-                value={amount}
-                onChangeText={setAmount}
-                keyboardType="numeric"
-              />
-            </View>
-          </View>
-
-          <TouchableOpacity
-            style={[styles.addBtn, addingMoney && styles.addBtnDisabled]}
-            onPress={handleAddMoney}
-            disabled={addingMoney}
-            activeOpacity={0.88}
-          >
-            <LinearGradient
-              colors={[colors.gradientStart, colors.gradientEnd]}
-              start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-              style={styles.addBtnGradient}
-            >
-              {addingMoney
-                ? <ActivityIndicator size="small" color="#fff" />
-                : <Text style={styles.addBtnText}>Add Money</Text>
-              }
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
-
         {/* Transactions */}
         <View style={[styles.card, shadows.small]}>
           <View style={styles.cardHeader}>
@@ -148,7 +75,7 @@ export default function WalletScreen() {
                     />
                   </View>
                   <View style={styles.txnInfo}>
-                    <Text style={styles.txnType}>{isCredit ? 'Money Added' : 'Payment'}</Text>
+                    <Text style={styles.txnType}>{isCredit ? 'Refund' : 'Payment'}</Text>
                     <Text style={styles.txnDate}>{formatDate(txn.createdAt)}</Text>
                   </View>
                   <Text style={[styles.txnAmount, { color: isCredit ? colors.success : colors.error }]}>
@@ -197,34 +124,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
   },
   cardTitle: { fontSize: ms(15), fontWeight: '700', color: colors.text },
-
-  quickAmounts: { flexDirection: 'row', gap: rs(8), marginBottom: vs(14) },
-  quickAmtBtn: {
-    flex: 1, paddingVertical: vs(8),
-    borderRadius: borderRadius.sm,
-    borderWidth: 1.5, borderColor: colors.border,
-    alignItems: 'center',
-    backgroundColor: colors.background,
-  },
-  quickAmtBtnActive: { borderColor: colors.primary, backgroundColor: colors.primarySurface },
-  quickAmtText: { fontSize: ms(13), fontWeight: '700', color: colors.textSecondary },
-  quickAmtTextActive: { color: colors.primary },
-
-  inputRow: { marginBottom: vs(14) },
-  inputWrap: {
-    flexDirection: 'row', alignItems: 'center',
-    borderWidth: 1.5, borderColor: colors.border,
-    borderRadius: borderRadius.sm,
-    backgroundColor: colors.background,
-    paddingHorizontal: rs(14),
-  },
-  inputPrefix: { fontSize: ms(16), fontWeight: '700', color: colors.text, marginRight: rs(4) },
-  input: { flex: 1, fontSize: ms(15), color: colors.text, paddingVertical: vs(12) },
-
-  addBtn: { borderRadius: borderRadius.md, overflow: 'hidden' },
-  addBtnDisabled: { opacity: 0.6 },
-  addBtnGradient: { paddingVertical: vs(14), alignItems: 'center', justifyContent: 'center' },
-  addBtnText: { color: '#fff', fontSize: ms(15), fontWeight: '700' },
 
   txnItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: vs(12), gap: rs(12) },
   txnItemBorder: { borderBottomWidth: 1, borderBottomColor: colors.divider },
