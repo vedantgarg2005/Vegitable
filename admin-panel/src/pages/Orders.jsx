@@ -99,7 +99,7 @@ function Orders() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-xl shadow-sm p-4 mb-4 flex gap-3 items-center">
+      <div className="bg-white rounded-xl shadow-sm p-4 mb-4 flex flex-wrap gap-3 items-center">
         <select
           value={filters.orderType}
           onChange={(e) => setFilters({ ...filters, orderType: e.target.value, page: 1 })}

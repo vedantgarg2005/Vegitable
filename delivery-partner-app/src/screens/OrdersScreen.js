@@ -59,6 +59,11 @@ export default function OrdersScreen({ navigation }) {
         </Text>
         <Text style={styles.amount}>₹{item.pricing?.total}</Text>
         <View style={styles.actions}>
+          {current === 'assigned' && (
+            <TouchableOpacity style={styles.btn} onPress={() => updateStatus(item._id, 'picked_up')}>
+              <Text style={styles.btnText}>Picked Up</Text>
+            </TouchableOpacity>
+          )}
           {current === 'picked_up' && (
             <TouchableOpacity style={styles.btn} onPress={() => updateStatus(item._id, 'out_for_delivery')}>
               <Text style={styles.btnText}>Out for Delivery</Text>

@@ -3,7 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StatusBar } from 'expo-status-bar';
-import { AuthProvider } from './src/services/AuthContext';
+import { AuthProvider, useAuth } from './src/services/AuthContext';
 import LoginScreen from './src/screens/LoginScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import OrdersScreen from './src/screens/OrdersScreen';
@@ -39,28 +39,35 @@ function TabNavigator() {
   );
 }
 
+function RootNavigator() {
+  const { user, loading } = useAuth();
+
+  if (loading) return null;
+
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      {user ? (
+        <>
+          <Stack.Screen name="Main" component={TabNavigator} />
+          <Stack.Screen
+            name="OrderDetails"
+            component={OrderDetailsScreen}
+            options={{ headerShown: true, title: 'Order Details' }}
+          />
+        </>
+      ) : (
+        <Stack.Screen name="Login" component={LoginScreen} />
+      )}
+    </Stack.Navigator>
+  );
+}
+
 export default function App() {
   return (
     <AuthProvider>
       <NavigationContainer>
         <StatusBar style="auto" />
-        <Stack.Navigator initialRouteName="Login">
-          <Stack.Screen 
-            name="Login" 
-            component={LoginScreen} 
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen 
-            name="Main" 
-            component={TabNavigator} 
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen 
-            name="OrderDetails" 
-            component={OrderDetailsScreen}
-            options={{ title: 'Order Details' }}
-          />
-        </Stack.Navigator>
+        <RootNavigator />
       </NavigationContainer>
     </AuthProvider>
   );

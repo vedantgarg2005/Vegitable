@@ -18,7 +18,7 @@ const io = socketIo(server, {
 
 // Security middleware
 app.use(helmet());
-app.use(cors());
+app.use(cors({ origin: '*', methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] }));
 
 // Rate limiting
 const limiter = rateLimit({

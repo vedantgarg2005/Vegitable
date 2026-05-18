@@ -15,7 +15,6 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
-  Settings,
   Truck,
   Star,
   Megaphone,
@@ -42,7 +41,6 @@ const Layout = () => {
     { name: 'Campaigns', href: '/campaigns', icon: Megaphone },
     { name: 'Notifications', href: '/notifications', icon: Bell },
     { name: 'Wallet', href: '/wallet', icon: Wallet },
-    { name: 'Settings', href: '/settings', icon: Settings },
   ];
 
   const isActive = (path) => location.pathname === path;
@@ -172,17 +170,17 @@ const Layout = () => {
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         <header className="bg-white shadow-sm border-b border-slate-200">
-          <div className="flex items-center justify-between h-16 px-6">
-            <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between h-16 px-3 sm:px-6">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
               {/* Mobile menu toggle */}
               <button
                 onClick={() => setMobileOpen(true)}
-                className="lg:hidden p-2 rounded-md text-gray-500 hover:text-gray-700"
+                className="lg:hidden p-2 rounded-md text-gray-500 hover:text-gray-700 flex-shrink-0"
               >
                 <Menu className="h-5 w-5" />
               </button>
 
-              <div className="flex-1 max-w-lg">
+              <div className="flex-1 min-w-0 max-w-lg">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <input

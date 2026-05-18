@@ -39,16 +39,28 @@ router.post('/agent', auth, async (req, res) => {
   }
 });
 
+// Auto-create fleet record if missing
+async function getOrCreateFleet(userId) {
+  let fleet = await Fleet.findOne({ driver: userId });
+  if (!fleet) {
+    fleet = new Fleet({
+      driver: userId,
+      vehicleType: 'bike',
+      vehicleNumber: 'PENDING',
+      licenseNumber: 'PENDING',
+    });
+    await fleet.save();
+  }
+  return fleet;
+}
+
 // Update agent location
 router.patch('/location', auth, async (req, res) => {
   try {
     const { latitude, longitude } = req.body;
-    const fleet = await Fleet.findOne({ driver: req.userId });
-    if (!fleet) return res.status(404).json({ message: 'Fleet record not found' });
-    
+    const fleet = await getOrCreateFleet(req.userId);
     fleet.currentLocation = { latitude, longitude, lastUpdated: new Date() };
     await fleet.save();
-    
     res.json(fleet);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -59,12 +71,9 @@ router.patch('/location', auth, async (req, res) => {
 router.patch('/status', auth, async (req, res) => {
   try {
     const { status } = req.body;
-    const fleet = await Fleet.findOne({ driver: req.userId });
-    if (!fleet) return res.status(404).json({ message: 'Fleet record not found' });
-    
+    const fleet = await getOrCreateFleet(req.userId);
     fleet.status = status;
     await fleet.save();
-    
     res.json(fleet);
   } catch (error) {
     res.status(400).json({ message: error.message });

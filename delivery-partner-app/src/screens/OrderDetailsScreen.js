@@ -8,6 +8,7 @@ import { io } from 'socket.io-client';
 import { orderService, SOCKET_URL } from '../services/api';
 
 const STATUS_FLOW = {
+  assigned: { next: 'picked_up', label: 'Mark Picked Up' },
   picked_up: { next: 'out_for_delivery', label: 'Out for Delivery' },
   out_for_delivery: { next: 'delivered', label: 'Mark Delivered' },
 };

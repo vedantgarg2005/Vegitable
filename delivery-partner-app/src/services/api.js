@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const getBaseUrl = () => {
   if (__DEV__) {
-    return 'http://192.168.1.8:5000/api';
+    return 'http://192.168.1.6:5000/api';
   }
   return 'https://your-production-api.com/api';
 };
@@ -13,7 +13,7 @@ export const SOCKET_URL = BASE_URL.replace('/api', '');
 
 export const api = axios.create({
   baseURL: BASE_URL,
-  timeout: 10000,
+  timeout: 30000,
 });
 
 // Attach JWT token to every request

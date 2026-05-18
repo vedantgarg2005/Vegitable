@@ -44,7 +44,7 @@ function Users() {
 
       <div className="bg-white rounded-lg shadow">
         <div className="p-6 border-b">
-          <div className="flex gap-4">
+          <div className="flex flex-wrap gap-4">
             <input
               type="text"
               placeholder="Search users..."

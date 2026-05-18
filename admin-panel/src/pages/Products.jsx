@@ -105,8 +105,8 @@ const Products = () => {
 
       <div className="bg-white rounded-lg shadow">
         <div className="p-6 border-b">
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex gap-4">
+          <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
+            <div className="flex flex-wrap gap-4">
               <input
                 type="text"
                 placeholder="Search products..."

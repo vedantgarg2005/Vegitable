@@ -114,7 +114,7 @@ function Wallet() {
                     {user.wallet?.transactions?.length || 0}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       <button
                         onClick={() => openModal(user, 'credit')}
                         className="flex items-center gap-1 px-3 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200"

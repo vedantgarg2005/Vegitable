@@ -15,6 +15,7 @@ import { fleetService, locationService, SOCKET_URL } from '../services/api';
 export default function HomeScreen() {
   const [isOnline, setIsOnline] = useState(false);
   const [location, setLocation] = useState(null);
+  const [incomingOrder, setIncomingOrder] = useState(null);
   const [stats, setStats] = useState({
     todayEarnings: 0,
     todayDeliveries: 0,
@@ -22,6 +23,7 @@ export default function HomeScreen() {
   });
   const { user } = useAuth();
   const socketRef = useRef(null);
+  const locationWatchRef = useRef(null);
 
   useEffect(() => {
     requestLocationPermission();
@@ -32,19 +34,14 @@ export default function HomeScreen() {
     if (user?._id) socketRef.current.emit('join', user._id);
 
     socketRef.current.on('new-assignment', (order) => {
-      Alert.alert(
-        '🛵 New Order Assigned!',
-        `Order #${order.orderNumber}\n${order.delivery?.address?.street}, ${order.delivery?.address?.city}\nTotal: ₹${order.pricing?.total}`,
-        [{ text: 'OK', onPress: loadStats }]
-      );
+      setIncomingOrder(order);
+      loadStats();
     });
 
     return () => socketRef.current?.disconnect();
   }, [user?._id]);
 
   useEffect(() => {
-    let locationSubscription;
-    
     if (isOnline) {
       startLocationTracking();
     } else {
@@ -52,9 +49,8 @@ export default function HomeScreen() {
     }
 
     return () => {
-      if (locationSubscription) {
-        locationSubscription.remove();
-      }
+      locationWatchRef.current?.remove();
+      locationWatchRef.current = null;
     };
   }, [isOnline]);
 
@@ -72,12 +68,11 @@ export default function HomeScreen() {
       await locationService.updateLocation(location);
       await fleetService.updateStatus('available');
       
-      // Start watching position
-      const subscription = await Location.watchPositionAsync(
+      locationWatchRef.current = await Location.watchPositionAsync(
         {
           accuracy: Location.Accuracy.High,
-          timeInterval: 30000, // Update every 30 seconds
-          distanceInterval: 100, // Update every 100 meters
+          timeInterval: 30000,
+          distanceInterval: 100,
         },
         (newLocation) => {
           setLocation(newLocation);
@@ -155,9 +150,25 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      <TouchableOpacity style={styles.refreshButton} onPress={loadStats}>
-        <Text style={styles.refreshButtonText}>Refresh Stats</Text>
-      </TouchableOpacity>
+      {incomingOrder ? (
+        <View style={styles.orderCard}>
+          <Text style={styles.orderTitle}>🛵 New Order!</Text>
+          <Text style={styles.orderText}>Order #{incomingOrder.orderNumber}</Text>
+          <Text style={styles.orderText}>
+            {incomingOrder.delivery?.address?.street}, {incomingOrder.delivery?.address?.city}
+          </Text>
+          <Text style={styles.orderAmount}>₹{incomingOrder.pricing?.total}</Text>
+          <TouchableOpacity style={styles.dismissButton} onPress={() => setIncomingOrder(null)}>
+            <Text style={styles.dismissText}>Dismiss</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <View style={styles.waitingCard}>
+          <Text style={styles.waitingText}>
+            {isOnline ? '⏳ Waiting for orders...' : '📴 Go online to receive orders'}
+          </Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -236,15 +247,55 @@ const styles = StyleSheet.create({
     marginTop: 5,
     textAlign: 'center',
   },
-  refreshButton: {
-    backgroundColor: '#FF6B35',
-    padding: 15,
+  orderCard: {
+    backgroundColor: '#fff',
+    padding: 20,
     borderRadius: 10,
+    elevation: 4,
+    shadowColor: '#FF6B35',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    borderLeftWidth: 4,
+    borderLeftColor: '#FF6B35',
+  },
+  orderTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FF6B35',
+    marginBottom: 8,
+  },
+  orderText: {
+    fontSize: 14,
+    color: '#333',
+    marginBottom: 4,
+  },
+  orderAmount: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 8,
+  },
+  dismissButton: {
+    marginTop: 12,
+    backgroundColor: '#FF6B35',
+    padding: 10,
+    borderRadius: 8,
     alignItems: 'center',
   },
-  refreshButtonText: {
+  dismissText: {
     color: '#fff',
+    fontWeight: '600',
+  },
+  waitingCard: {
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    elevation: 2,
+  },
+  waitingText: {
     fontSize: 16,
-    fontWeight: 'bold',
+    color: '#666',
   },
 });
