@@ -47,6 +47,7 @@ const menuItemSchema = new mongoose.Schema({
   },
   tags: [String], // e.g., "popular", "chef_special", "new"
   isActive: { type: Boolean, default: true },
+  isBestseller: { type: Boolean, default: false },
   sortOrder: { type: Number, default: 0 }
 }, {
   timestamps: true

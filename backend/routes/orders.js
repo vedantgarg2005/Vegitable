@@ -161,6 +161,10 @@ router.post('/:id/items', auth, async (req, res) => {
       return res.status(404).json({ message: 'Order not found' });
     }
 
+    if (order.status.current === 'delivered') {
+      return res.status(400).json({ message: 'Cannot add items to a delivered order' });
+    }
+
     const newItem = {
       menuItem,
       quantity,
@@ -195,6 +199,10 @@ router.post('/:id/charges', auth, async (req, res) => {
     
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
+    }
+
+    if (order.status.current === 'delivered') {
+      return res.status(400).json({ message: 'Cannot add charges to a delivered order' });
     }
 
     // Add charge based on type

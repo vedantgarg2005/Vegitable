@@ -93,6 +93,7 @@ app.use('/api/addresses', require('./routes/addresses'));
 app.use('/api/search', require('./routes/search'));
 app.use('/api/tracking', require('./routes/tracking'));
 app.use('/api/wallet', require('./routes/wallet'));
+app.use('/api/payment', require('./routes/payment'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {

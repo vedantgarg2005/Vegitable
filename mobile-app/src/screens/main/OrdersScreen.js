@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { orderAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { useWallet } from '../../context/WalletContext';
 import { colors, spacing, shadows, borderRadius, ms, rs, vs } from '../../utils/theme';
 
 const STATUS_CONFIG = {
@@ -18,23 +19,38 @@ const STATUS_CONFIG = {
 
 export default function OrdersScreen({ navigation }) {
   const { user } = useAuth();
+  const { fetchWallet } = useWallet();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const insets = useSafeAreaInsets();
+
+  const fetchOrders = useCallback(() => {
+    return orderAPI.getOrders()
+      .then(res => setOrders(res.data))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (user) {
-      orderAPI.getOrders()
-        .then(res => setOrders(res.data))
-        .catch(() => {})
-        .finally(() => setLoading(false));
+      fetchOrders().finally(() => setLoading(false));
     } else {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, fetchOrders]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchOrders();
+    setRefreshing(false);
+  }, [fetchOrders]);
 
   const handleTrack = useCallback((orderId) => {
     navigation.navigate('OrderTracking', { orderId });
+  }, [navigation]);
+
+  const handleRate = useCallback((order) => {
+    navigation.navigate('Review', { orderId: order._id, items: order.items });
   }, [navigation]);
 
   const renderOrder = useCallback(({ item }) => {
@@ -62,20 +78,32 @@ export default function OrdersScreen({ navigation }) {
           <Text style={styles.orderTotalValue}>₹{item.pricing?.total ?? item.totalAmount ?? 0}</Text>
         </View>
 
-        <TouchableOpacity
-          style={styles.trackBtn}
-          onPress={() => handleTrack(item._id)}
-          activeOpacity={0.85}
-        >
-          <LinearGradient
-            colors={[colors.gradientStart, colors.gradientEnd]}
-            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-            style={styles.trackBtnGradient}
+        <View style={styles.orderActions}>
+          <TouchableOpacity
+            style={styles.trackBtn}
+            onPress={() => handleTrack(item._id)}
+            activeOpacity={0.85}
           >
-            <Ionicons name="navigate-outline" size={rs(16)} color="#fff" />
-            <Text style={styles.trackBtnText}>Track Order</Text>
-          </LinearGradient>
-        </TouchableOpacity>
+            <LinearGradient
+              colors={[colors.gradientStart, colors.gradientEnd]}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+              style={styles.trackBtnGradient}
+            >
+              <Ionicons name="navigate-outline" size={rs(16)} color="#fff" />
+              <Text style={styles.trackBtnText}>Track Order</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+          {status === 'delivered' && (
+            <TouchableOpacity
+              style={styles.rateBtn}
+              onPress={() => handleRate(item)}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="star-outline" size={rs(16)} color={colors.primary} />
+              <Text style={styles.rateBtnText}>Rate</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     );
   }, [handleTrack]);
@@ -91,7 +119,7 @@ export default function OrdersScreen({ navigation }) {
           <Text style={styles.emptyEmoji}>🧾</Text>
           <Text style={styles.emptyTitle}>Sign in to view orders</Text>
           <Text style={styles.emptySubtitle}>Your order history will appear here after signing in</Text>
-          <TouchableOpacity style={styles.signInBtn} onPress={() => navigation.navigate('Auth')} activeOpacity={0.88}>
+          <TouchableOpacity style={styles.signInBtn} onPress={() => navigation.navigate('Login')} activeOpacity={0.88}>
             <LinearGradient
               colors={[colors.gradientStart, colors.gradientEnd]}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
@@ -123,6 +151,8 @@ export default function OrdersScreen({ navigation }) {
         keyExtractor={item => item._id}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
         ListEmptyComponent={
           !loading && (
             <View style={styles.centered}>
@@ -186,12 +216,19 @@ const styles = StyleSheet.create({
   orderTotalLabel: { fontSize: ms(14), color: colors.textSecondary },
   orderTotalValue: { fontSize: ms(17), fontWeight: '800', color: colors.primary },
 
-  trackBtn: { borderRadius: borderRadius.sm, overflow: 'hidden', backgroundColor: colors.primary },
+  orderActions: { flexDirection: 'row', gap: rs(10) },
+  trackBtn: { flex: 1, borderRadius: borderRadius.sm, overflow: 'hidden', backgroundColor: colors.primary },
   trackBtnGradient: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     paddingVertical: vs(11), gap: rs(6),
   },
   trackBtnText: { color: '#fff', fontSize: ms(14), fontWeight: '700' },
+  rateBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: rs(5),
+    borderWidth: 1.5, borderColor: colors.primary, borderRadius: borderRadius.sm,
+    paddingHorizontal: rs(16), paddingVertical: vs(11),
+  },
+  rateBtnText: { color: colors.primary, fontSize: ms(14), fontWeight: '700' },
 
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: rs(32), marginTop: vs(60) },
   emptyEmoji: { fontSize: ms(56), marginBottom: vs(12) },

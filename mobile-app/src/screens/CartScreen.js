@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, ScrollView, StyleSheet, Alert, TextInput,
-  TouchableOpacity, StatusBar, Modal, FlatList,
+  TouchableOpacity, StatusBar, Modal, FlatList, Image,
 } from 'react-native';
 import { Text, Divider } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,6 +21,10 @@ const CartScreen = ({ navigation, route }) => {
   const [couponApplied, setCouponApplied] = useState(false);
   const [couponError, setCouponError] = useState('');
   const [deliveryAvailable, setDeliveryAvailable] = useState(true);
+
+  useEffect(() => {
+    if (!deliveryAvailable && orderType === 'delivery') setOrderType('pickup');
+  }, [deliveryAvailable]);
   const [offersVisible, setOffersVisible] = useState(false);
   const [availableCoupons, setAvailableCoupons] = useState([]);
   const [modalCode, setModalCode] = useState('');
@@ -111,11 +115,14 @@ const CartScreen = ({ navigation, route }) => {
         </View>
         <View style={styles.orderTypeToggle}>
           <TouchableOpacity
-            style={[styles.toggleBtn, orderType === 'delivery' && styles.toggleBtnActive]}
-            onPress={() => setOrderType('delivery')}
+            style={[styles.toggleBtn, orderType === 'delivery' && styles.toggleBtnActive, !deliveryAvailable && styles.toggleBtnDisabled]}
+            onPress={() => deliveryAvailable && setOrderType('delivery')}
+            activeOpacity={deliveryAvailable ? 0.8 : 1}
           >
             <Ionicons name="bicycle-outline" size={rs(14)} color={orderType === 'delivery' ? '#fff' : 'rgba(255,255,255,0.6)'} />
-            <Text style={[styles.toggleBtnText, orderType === 'delivery' && styles.toggleBtnTextActive]}>Delivery</Text>
+            <Text style={[styles.toggleBtnText, orderType === 'delivery' && styles.toggleBtnTextActive]}>
+              {deliveryAvailable ? 'Delivery' : 'Unavailable'}
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.toggleBtn, orderType === 'pickup' && styles.toggleBtnActive]}
@@ -238,7 +245,15 @@ const CartScreen = ({ navigation, route }) => {
                       const cartItem = cartItems.find(c => c.id === (item._id || item.id));
                       return (
                         <View key={item._id || item.id} style={[styles.suggestCard, shadows.small]}>
-                          <Text style={styles.suggestEmoji}>{item.image || '🍕'}</Text>
+                          {item.image && item.image.startsWith('/uploads') ? (
+                            <Image
+                              source={{ uri: `${API_BASE_URL.replace('/api', '')}${item.image}` }}
+                              style={styles.suggestImage}
+                              resizeMode="cover"
+                            />
+                          ) : (
+                            <Text style={styles.suggestEmoji}>{item.image || '🍕'}</Text>
+                          )}
                           <Text style={styles.suggestName} numberOfLines={2}>{item.name}</Text>
                           <Text style={styles.suggestPrice}>₹{item.price}</Text>
                           {cartItem ? (
@@ -450,6 +465,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.full,
   },
   toggleBtnActive: { backgroundColor: colors.primary },
+  toggleBtnDisabled: { opacity: 0.45 },
   toggleBtnText: { fontSize: ms(13), fontWeight: '700', color: 'rgba(255,255,255,0.6)', fontFamily: 'Poppins_700Bold' },
   toggleBtnTextActive: { color: '#fff' },
 
@@ -668,6 +684,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   suggestEmoji: { fontSize: ms(32), marginBottom: vs(4) },
+  suggestImage: { width: rs(110), height: rs(70), borderRadius: borderRadius.sm, marginBottom: vs(4) },
   suggestName: { fontSize: ms(11), fontWeight: '700', color: colors.text, textAlign: 'center', marginBottom: vs(3), fontFamily: 'Poppins_700Bold' },
   suggestPrice: { fontSize: ms(12), fontWeight: '800', color: colors.primary, marginBottom: vs(6), fontFamily: 'Poppins_800ExtraBold' },
   suggestAddBtn: {

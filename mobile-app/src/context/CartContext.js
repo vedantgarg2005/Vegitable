@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { showMessage } from 'react-native-flash-message';
+import { API_BASE_URL } from '../utils/constants';
 
 const CartContext = createContext();
 
@@ -90,9 +91,12 @@ export function CartProvider({ children }) {
       if (cartData) {
         dispatch({ type: 'SET_CART', payload: JSON.parse(cartData) });
       }
-    } catch (error) {
-      console.log('Error loading cart:', error);
-    }
+      const res = await fetch(`${API_BASE_URL}/admin/restaurant-status`);
+      const data = await res.json();
+      if (!(data.isOpen ?? true)) {
+        dispatch({ type: 'CLEAR_CART' });
+      }
+    } catch {}
   };
 
   const addToCart = (item) => {

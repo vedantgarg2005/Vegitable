@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, FlatList, ScrollView, StyleSheet, TouchableOpacity,
   StatusBar, ActivityIndicator, Dimensions, Animated, TextInput,
-  Modal, Alert,
+  Modal, Alert, Image,
 } from 'react-native';
 import Reanimated, {
   useSharedValue, useAnimatedStyle, withRepeat, withSequence,
@@ -73,26 +73,41 @@ function WelcomeBanner({ user }) {
   const firstName = user?.name?.split(' ')[0] || 'Guest';
 
   return (
-    <View style={styles.welcomeCard}>
+    <View style={styles.welcomeCard} >
       <View style={styles.welcomeTop}>
-        <Text style={styles.welcomeGreeting}>Welcome,</Text>
-        <Text style={styles.welcomeName}>{firstName} 👋</Text>
+        <Text style={styles.welcomeGreeting}>Welcome, <Text style={styles.welcomeName}>{firstName} 👋</Text></Text>
       </View>
       <View style={styles.welcomeBottom}>
         <View>
           <Text style={styles.helloText}>Hello</Text>
           <Text style={styles.summerText}>Summer</Text>
         </View>
-        <Reanimated.View style={glassStyle}>
-          <Text style={styles.juiceGlass}>🥤</Text>
-        </Reanimated.View>
+        <View style={styles.glassRow}>
+          <Reanimated.View style={[glassStyle, { marginTop: vs(10) }]}>
+            <Text style={styles.juiceGlass}>🥤</Text>
+          </Reanimated.View>
+          <Reanimated.View style={glassStyle}>
+            <Text style={styles.juiceGlass}>🥤</Text>
+          </Reanimated.View>
+          <Reanimated.View style={[glassStyle, { marginTop: vs(6) }]}>
+            <Text style={styles.juiceGlass}>🥤</Text>
+          </Reanimated.View>
+        </View>
       </View>
     </View>
   );
 }
 
 // Swiggy-style horizontal food card
-function FoodCard({ item, onPress, onAdd, qty }) {
+function formatTime12(time24) {
+  if (!time24) return '';
+  const [h, m] = time24.split(':').map(Number);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 || 12;
+  return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
+}
+
+function FoodCard({ item, onPress, onAdd, qty, isOpen, nextAvailableLabel }) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const handleAdd = () => {
@@ -105,61 +120,61 @@ function FoodCard({ item, onPress, onAdd, qty }) {
 
   return (
     <TouchableOpacity style={[styles.foodCard, shadows.small]} onPress={onPress} activeOpacity={0.92}>
-      {/* Image / Emoji area */}
+      {/* Info on left */}
+      <View style={styles.foodInfo}>
+        <View style={[styles.vegBox, { borderColor: item.isVeg !== false ? colors.tagVeg : colors.tagNonVeg }]}>
+          <View style={[styles.vegDot, { backgroundColor: item.isVeg !== false ? colors.tagVeg : colors.tagNonVeg }]} />
+        </View>
+        {item.isBestseller && (
+          <View style={styles.bestsellerTag}>
+            <Text style={styles.bestsellerTagText}>⭐ Bestseller</Text>
+          </View>
+        )}
+        <Text style={styles.foodName} numberOfLines={1}>{item.name}</Text>
+        <Text style={styles.foodDesc} numberOfLines={2}>{item.description}</Text>
+        <Text style={styles.foodPrice}>₹{item.price}</Text>
+      </View>
+
+      {/* Image + Add button on right */}
       <View style={styles.foodImageWrap}>
         <View style={styles.foodImageBg}>
-          <Text style={styles.foodEmoji}>{item.image || '🍕'}</Text>
+          {item.image && item.image.startsWith('/uploads') ? (
+            <Image
+              source={{ uri: `${API_BASE_URL.replace('/api', '')}${item.image}` }}
+              style={styles.foodImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <Text style={styles.foodEmoji}>{item.image || '🍕'}</Text>
+          )}
         </View>
-        {/* Bestseller badge */}
         {item.ratings?.average >= 4.2 && (
           <View style={styles.bestsellerBadge}>
             <Text style={styles.bestsellerText}>⭐ BESTSELLER</Text>
           </View>
         )}
-        {/* Veg/Non-veg dot */}
-        <View style={[styles.vegBox, { borderColor: item.isVeg !== false ? colors.tagVeg : colors.tagNonVeg }]}>
-          <View style={[styles.vegDot, { backgroundColor: item.isVeg !== false ? colors.tagVeg : colors.tagNonVeg }]} />
-        </View>
-      </View>
-
-      {/* Info */}
-      <View style={styles.foodInfo}>
-        <Text style={styles.foodName} numberOfLines={1}>{item.name}</Text>
-        <Text style={styles.foodDesc} numberOfLines={2}>{item.description}</Text>
-
-        {item.ratings?.average != null && (
-          <View style={styles.ratingRow}>
-            <View style={styles.ratingBadge}>
-              <Ionicons name="star" size={rs(10)} color="#fff" />
-              <Text style={styles.ratingText}>{item.ratings.average.toFixed(1)}</Text>
-            </View>
-            {item.ratings?.count > 0 && (
-              <Text style={styles.ratingCount}>{item.ratings.count} ratings</Text>
-            )}
-          </View>
-        )}
-
-        <View style={styles.foodFooter}>
-          <Text style={styles.foodPrice}>₹{item.price}</Text>
-          <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-            {qty > 0 ? (
-              <View style={styles.qtyControl}>
-                <TouchableOpacity style={styles.qtyBtn} onPress={() => onAdd(-1)}>
-                  <Ionicons name="remove" size={rs(14)} color={colors.primary} />
-                </TouchableOpacity>
-                <Text style={styles.qtyText}>{qty}</Text>
-                <TouchableOpacity style={[styles.qtyBtn, styles.qtyBtnFilled]} onPress={handleAdd}>
-                  <Ionicons name="add" size={rs(14)} color="#fff" />
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <TouchableOpacity style={styles.addBtn} onPress={handleAdd} activeOpacity={0.8}>
-                <Text style={styles.addBtnText}>ADD</Text>
-                <Ionicons name="add" size={rs(13)} color={colors.primary} />
+        <Animated.View style={[styles.addBtnWrap, { transform: [{ scale: scaleAnim }] }]}>
+          {qty > 0 ? (
+            <View style={styles.qtyControl}>
+              <TouchableOpacity style={styles.qtyBtn} onPress={() => onAdd(-1)}>
+                <Ionicons name="remove" size={rs(14)} color={colors.primary} />
               </TouchableOpacity>
-            )}
-          </Animated.View>
-        </View>
+              <Text style={styles.qtyText}>{qty}</Text>
+              <TouchableOpacity style={[styles.qtyBtn, styles.qtyBtnFilled]} onPress={handleAdd}>
+                <Ionicons name="add" size={rs(14)} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          ) : isOpen ? (
+            <TouchableOpacity style={styles.addBtn} onPress={handleAdd} activeOpacity={0.8}>
+              <Text style={styles.addBtnText}>ADD</Text>
+              <Ionicons name="add" size={rs(13)} color={colors.primary} />
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.closedTag}>
+              <Text style={styles.closedTagText}>{nextAvailableLabel}</Text>
+            </View>
+          )}
+        </Animated.View>
       </View>
     </TouchableOpacity>
   );
@@ -173,6 +188,7 @@ export default function HomeScreen({ navigation }) {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [bannerIndex, setBannerIndex] = useState(0);
   const [orderType, setOrderType] = useState('delivery');
+  const [deliveryAvailable, setDeliveryAvailable] = useState(true);
   const { addToCart, updateQuantity, items: cartItems, itemCount, total } = useCart();
   const insets = useSafeAreaInsets();
   const bannerRef = useRef(null);
@@ -207,6 +223,30 @@ export default function HomeScreen({ navigation }) {
       }
     } catch {}
   }, [user, authFetch]);
+
+  const [restaurantOpen, setRestaurantOpen] = useState(true);
+  const [restaurantHours, setRestaurantHours] = useState(null);
+  const [nextOpenTime, setNextOpenTime] = useState(null);
+
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/admin/delivery-status`)
+      .then(r => r.json())
+      .then(d => {
+        const enabled = d.deliveryEnabled ?? true;
+        setDeliveryAvailable(enabled);
+        if (!enabled) setOrderType('pickup');
+      })
+      .catch(() => {});
+
+    fetch(`${API_BASE_URL}/admin/restaurant-status`)
+      .then(r => r.json())
+      .then(d => {
+        setRestaurantOpen(d.isOpen ?? true);
+        if (d.openTime && d.closeTime) setRestaurantHours(`${d.openTime} – ${d.closeTime}`);
+        if (d.nextOpenTime) setNextOpenTime(d.nextOpenTime);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => { loadAddresses(); }, [loadAddresses]);
   useEffect(() => {
@@ -245,6 +285,11 @@ export default function HomeScreen({ navigation }) {
 
   const getQty = (itemId) => cartItems.find(i => (i._id || i.id) === itemId)?.quantity || 0;
 
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [itemQty, setItemQty] = useState(1);
+
+  const [refreshing, setRefreshing] = useState(false);
+
   const loadMenu = useCallback(async () => {
     try {
       setLoading(true);
@@ -260,11 +305,17 @@ export default function HomeScreen({ navigation }) {
     }
   }, [selectedCategory, searchQuery]);
 
-  useEffect(() => { loadMenu(); }, [selectedCategory]);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([loadMenu(), loadAddresses()]);
+    setRefreshing(false);
+  }, [loadMenu, loadAddresses]);
+
+  useEffect(() => { loadMenu(); }, [loadMenu]);
   useEffect(() => {
     const t = setTimeout(loadMenu, 400);
     return () => clearTimeout(t);
-  }, [searchQuery]);
+  }, [loadMenu]);
 
   // Auto-scroll banners
   useEffect(() => {
@@ -293,6 +344,38 @@ export default function HomeScreen({ navigation }) {
       {/* Welcome + Summer Banner */}
       <WelcomeBanner user={user} />
 
+      {/* Delivery / Pickup toggle */}
+      <View style={styles.orderTypeRowInline}>
+        <TouchableOpacity
+          style={[styles.orderTypeBtn, orderType === 'delivery' && styles.orderTypeBtnActive, !deliveryAvailable && styles.orderTypeBtnDisabled]}
+          onPress={() => deliveryAvailable && setOrderType('delivery')}
+          activeOpacity={deliveryAvailable ? 0.8 : 1}
+        >
+          <Ionicons name="bicycle-outline" size={rs(14)} color={orderType === 'delivery' ? '#fff' : colors.textSecondary} />
+          <Text style={[styles.orderTypeBtnTextInline, orderType === 'delivery' && styles.orderTypeBtnTextInlineActive]}>
+            {deliveryAvailable ? 'Delivery' : 'Unavailable'}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.orderTypeBtn, orderType === 'pickup' && styles.orderTypeBtnActive]}
+          onPress={() => setOrderType('pickup')}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="storefront-outline" size={rs(14)} color={orderType === 'pickup' ? '#fff' : colors.textSecondary} />
+          <Text style={[styles.orderTypeBtnTextInline, orderType === 'pickup' && styles.orderTypeBtnTextInlineActive]}>Pickup</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Restaurant closed banner */}
+      {!restaurantOpen && (
+        <View style={styles.closedBanner}>
+          <Ionicons name="time-outline" size={rs(16)} color="#fff" />
+          <Text style={styles.closedBannerText}>
+            We're currently closed{restaurantHours ? `. Hours: ${restaurantHours}` : ''}
+          </Text>
+        </View>
+      )}
+
       {/* Offer Banners */}
       <FlatList
         ref={bannerRef}
@@ -306,6 +389,11 @@ export default function HomeScreen({ navigation }) {
         decelerationRate="fast"
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.bannerListContent}
+        getItemLayout={(_, index) => ({
+          length: BANNER_W + rs(12),
+          offset: (BANNER_W + rs(12)) * index,
+          index,
+        })}
         onMomentumScrollEnd={e => {
           const idx = Math.round(e.nativeEvent.contentOffset.x / (BANNER_W + rs(12)));
           setBannerIndex(Math.min(idx, OFFERS.length - 1));
@@ -393,27 +481,6 @@ export default function HomeScreen({ navigation }) {
           </View>
         </View>
 
-        {/* Delivery / Pickup toggle */}
-        <View style={styles.orderTypeRow}>
-          {['delivery', 'pickup'].map(type => (
-            <TouchableOpacity
-              key={type}
-              style={[styles.orderTypeBtn, orderType === type && styles.orderTypeBtnActive]}
-              onPress={() => setOrderType(type)}
-              activeOpacity={0.8}
-            >
-              <Ionicons
-                name={type === 'delivery' ? 'bicycle-outline' : 'storefront-outline'}
-                size={rs(14)}
-                color={orderType === type ? colors.primary : 'rgba(255,255,255,0.7)'}
-              />
-              <Text style={[styles.orderTypeBtnText, orderType === type && styles.orderTypeBtnTextActive]}>
-                {type === 'delivery' ? 'Delivery' : 'Pickup'}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
         {/* Search bar */}
         <View style={styles.searchBar}>
           <Ionicons name="search-outline" size={rs(18)} color={colors.placeholder} />
@@ -442,7 +509,9 @@ export default function HomeScreen({ navigation }) {
             <FoodCard
               item={item}
               qty={qty}
-              onPress={() => navigation.navigate('MenuItemDetail', { item })}
+              isOpen={restaurantOpen}
+              nextAvailableLabel={nextOpenTime ? `Next available at: ${formatTime12(nextOpenTime)}` : 'Currently closed'}
+              onPress={() => { setSelectedItem(item); setItemQty(1); }}
               onAdd={(delta = 1) => {
                 if (delta > 0) addToCart(item);
                 else updateQuantity(item._id || item.id, qty - 1);
@@ -453,6 +522,8 @@ export default function HomeScreen({ navigation }) {
         keyExtractor={item => item._id}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
         ListHeaderComponent={ListHeader}
         ListEmptyComponent={
           !loading && (
@@ -485,6 +556,77 @@ export default function HomeScreen({ navigation }) {
           </View>
         </TouchableOpacity>
       )}
+
+      {/* Item Detail Modal */}
+      <Modal visible={!!selectedItem} animationType="slide" transparent onRequestClose={() => setSelectedItem(null)}>
+        <View style={styles.itemModalOverlay}>
+          <TouchableOpacity style={styles.itemModalDismiss} onPress={() => setSelectedItem(null)} />
+          <View style={styles.itemModalSheet}>
+            {selectedItem && (
+              <>
+                {/* Handle bar */}
+                <View style={styles.itemModalHandle} />
+
+                {/* Image */}
+                <View style={styles.itemModalImageWrap}>
+                  {selectedItem.image && selectedItem.image.startsWith('/uploads') ? (
+                    <Image
+                      source={{ uri: `${API_BASE_URL.replace('/api', '')}${selectedItem.image}` }}
+                      style={styles.itemModalImage}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <Text style={styles.itemModalEmoji}>{selectedItem.image || '🍕'}</Text>
+                  )}
+                </View>
+
+                {/* Info */}
+                <View style={styles.itemModalInfo}>
+                  <View style={styles.itemModalTitleRow}>
+                    <View style={[styles.vegBox, { borderColor: selectedItem.isVeg !== false ? colors.tagVeg : colors.tagNonVeg, marginBottom: 0, marginRight: rs(8) }]}>
+                      <View style={[styles.vegDot, { backgroundColor: selectedItem.isVeg !== false ? colors.tagVeg : colors.tagNonVeg }]} />
+                    </View>
+                    <Text style={styles.itemModalName}>{selectedItem.name}</Text>
+                  </View>
+                  <Text style={styles.itemModalDesc}>{selectedItem.description}</Text>
+                  <Text style={styles.itemModalPrice}>₹{selectedItem.price}</Text>
+                </View>
+
+                {/* Quantity + Add */}
+                <View style={styles.itemModalFooter}>
+                  <View style={styles.itemModalQtyRow}>
+                    <TouchableOpacity style={styles.itemModalQtyBtn} onPress={() => setItemQty(q => Math.max(1, q - 1))}>
+                      <Ionicons name="remove" size={rs(16)} color={colors.primary} />
+                    </TouchableOpacity>
+                    <Text style={styles.itemModalQtyText}>{itemQty}</Text>
+                    <TouchableOpacity style={[styles.itemModalQtyBtn, styles.itemModalQtyBtnFilled]} onPress={() => setItemQty(q => q + 1)}>
+                      <Ionicons name="add" size={rs(16)} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
+                  {restaurantOpen ? (
+                    <TouchableOpacity
+                      style={styles.itemModalAddBtn}
+                      activeOpacity={0.88}
+                      onPress={() => {
+                        for (let i = 0; i < itemQty; i++) addToCart(selectedItem);
+                        setSelectedItem(null);
+                      }}
+                    >
+                      <Text style={styles.itemModalAddBtnText}>Add to Cart  ₹{(selectedItem.price * itemQty).toFixed(0)}</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <View style={styles.itemModalClosedBtn}>
+                      <Text style={styles.itemModalClosedText}>
+                        {nextOpenTime ? `Next available at: ${formatTime12(nextOpenTime)}` : 'Currently closed'}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
 
       {/* Address Picker Modal */}
       <Modal visible={addrModalVisible} animationType="slide" transparent>
@@ -556,6 +698,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.navy,
     paddingHorizontal: rs(16),
     paddingBottom: vs(14),
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
   },
   headerTop: {
     flexDirection: 'row',
@@ -589,7 +733,7 @@ const styles = StyleSheet.create({
   },
   searchInput: { flex: 1, fontSize: ms(13), color: colors.text },
 
-  // Order type toggle
+  // Order type toggle (header — kept for style reuse)
   orderTypeRow: {
     flexDirection: 'row',
     backgroundColor: 'rgba(255,255,255,0.12)',
@@ -598,39 +742,53 @@ const styles = StyleSheet.create({
     marginBottom: vs(10),
     alignSelf: 'flex-start',
   },
+  // Order type toggle (inline below welcome)
+  orderTypeRowInline: {
+    flexDirection: 'row',
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.full,
+    padding: rs(3),
+    marginHorizontal: rs(16),
+    marginTop: vs(12),
+    marginBottom: vs(4),
+    alignSelf: 'flex-start',
+    ...shadows.small,
+  },
+  orderTypeBtnTextInline: { fontSize: ms(13), fontWeight: '700', color: colors.textSecondary },
+  orderTypeBtnTextInlineActive: { color: '#fff' },
+  orderTypeBtnActive: { backgroundColor: colors.primary },
+  orderTypeBtnDisabled: { opacity: 0.45 },
   orderTypeBtn: {
     flexDirection: 'row', alignItems: 'center', gap: rs(5),
     paddingHorizontal: rs(14), paddingVertical: vs(6),
     borderRadius: borderRadius.full,
   },
-  orderTypeBtnActive: { backgroundColor: '#fff' },
   orderTypeBtnText: { fontSize: ms(13), fontWeight: '700', color: 'rgba(255,255,255,0.7)' },
   orderTypeBtnTextActive: { color: colors.primary },
 
   // Welcome Banner
   welcomeCard: {
-    marginHorizontal: rs(16),
-    marginTop: vs(16),
-    marginBottom: vs(4),
     backgroundColor: colors.navy,
-    borderRadius: borderRadius.lg,
-    padding: rs(18),
-    ...shadows.medium,
+    paddingHorizontal: rs(16),
+    paddingTop: vs(14),
+    paddingBottom: vs(18),
+    borderBottomLeftRadius: borderRadius.lg,
+    borderBottomRightRadius: borderRadius.lg,
+    marginBottom: vs(4),
   },
   welcomeTop: {
     marginBottom: vs(10),
   },
   welcomeGreeting: {
-    fontSize: ms(13),
+    fontSize: ms(17),
     color: 'rgba(255,255,255,0.6)',
     fontWeight: '600',
     letterSpacing: 0.5,
   },
   welcomeName: {
-    fontSize: ms(20),
+    fontSize: ms(17),
     fontWeight: '800',
     color: '#fff',
-    marginTop: vs(2),
   },
   welcomeBottom: {
     flexDirection: 'row',
@@ -649,7 +807,12 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   juiceGlass: {
-    fontSize: ms(64),
+    fontSize: ms(52),
+  },
+  glassRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: rs(6),
   },
 
   // Banners
@@ -700,13 +863,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: colors.surface,
     marginHorizontal: rs(16),
-    marginBottom: vs(1),
-    borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
+    marginBottom: vs(14),
+    borderRadius: borderRadius.md,
     paddingVertical: vs(16),
+    paddingHorizontal: rs(12),
     gap: rs(12),
+    ...shadows.small,
   },
-  foodImageWrap: { position: 'relative' },
+  foodImageWrap: { position: 'relative', alignSelf: 'flex-start' },
   foodImageBg: {
     width: rs(110), height: rs(110),
     borderRadius: borderRadius.md,
@@ -714,6 +878,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
     overflow: 'hidden',
   },
+  foodImage: { width: rs(110), height: rs(110) },
   foodEmoji: { fontSize: ms(52) },
   bestsellerBadge: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
@@ -725,14 +890,27 @@ const styles = StyleSheet.create({
   },
   bestsellerText: { fontSize: ms(8), fontWeight: '800', color: '#FFD700', letterSpacing: 0.3 },
   vegBox: {
-    position: 'absolute', top: rs(6), left: rs(6),
+    marginBottom: vs(2),
     width: rs(14), height: rs(14), borderRadius: rs(2),
     borderWidth: 1.5, backgroundColor: '#fff',
     justifyContent: 'center', alignItems: 'center',
   },
+  bestsellerTag: {
+    backgroundColor: '#FFF3CD',
+    borderRadius: rs(4),
+    paddingHorizontal: rs(6),
+    paddingVertical: vs(2),
+    marginBottom: vs(4),
+    alignSelf: 'flex-start',
+  },
+  bestsellerTagText: {
+    fontSize: ms(10),
+    fontWeight: '700',
+    color: '#B8860B',
+  },
   vegDot: { width: rs(6), height: rs(6), borderRadius: rs(3) },
 
-  foodInfo: { flex: 1, justifyContent: 'space-between' },
+  foodInfo: { flex: 1, justifyContent: 'flex-start', paddingTop: 0 },
   foodName: { fontSize: ms(14), fontWeight: '700', color: colors.text, marginBottom: vs(4) },
   foodDesc: { fontSize: ms(12), color: colors.placeholder, lineHeight: ms(18), marginBottom: vs(6) },
 
@@ -746,8 +924,8 @@ const styles = StyleSheet.create({
   ratingText: { fontSize: ms(11), fontWeight: '700', color: '#fff' },
   ratingCount: { fontSize: ms(11), color: colors.placeholder },
 
-  foodFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  foodPrice: { fontSize: ms(15), fontWeight: '800', color: colors.text },
+  foodPrice: { fontSize: ms(15), fontWeight: '800', color: colors.text, marginTop: vs(6) },
+  addBtnWrap: { alignItems: 'center', marginTop: vs(8) },
 
   addBtn: {
     flexDirection: 'row', alignItems: 'center', gap: rs(2),
@@ -772,6 +950,58 @@ const styles = StyleSheet.create({
     fontSize: ms(13), fontWeight: '800', color: colors.primary,
     paddingHorizontal: rs(10),
   },
+
+  // Item detail modal
+  itemModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  itemModalDismiss: { flex: 1 },
+  itemModalSheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: rs(24), borderTopRightRadius: rs(24),
+    paddingBottom: vs(32),
+    overflow: 'hidden',
+  },
+  itemModalHandle: {
+    width: rs(40), height: vs(4), borderRadius: rs(2),
+    backgroundColor: colors.border,
+    alignSelf: 'center', marginTop: vs(10), marginBottom: vs(12),
+  },
+  itemModalImageWrap: {
+    height: vs(180),
+    backgroundColor: colors.background,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  itemModalImage: { width: '100%', height: vs(180) },
+  itemModalEmoji: { fontSize: ms(90) },
+  itemModalInfo: { paddingHorizontal: rs(20), paddingTop: vs(16) },
+  itemModalTitleRow: { flexDirection: 'row', alignItems: 'center', marginBottom: vs(6) },
+  itemModalName: { fontSize: ms(20), fontWeight: '800', color: colors.text, flex: 1 },
+  itemModalDesc: { fontSize: ms(13), color: colors.placeholder, lineHeight: ms(20), marginBottom: vs(10) },
+  itemModalPrice: { fontSize: ms(22), fontWeight: '800', color: colors.primary },
+  itemModalFooter: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: rs(20), paddingTop: vs(20), gap: rs(12),
+  },
+  itemModalQtyRow: {
+    flexDirection: 'row', alignItems: 'center',
+    borderWidth: 1.5, borderColor: colors.primary,
+    borderRadius: borderRadius.xs, overflow: 'hidden',
+  },
+  itemModalQtyBtn: {
+    width: rs(36), height: rs(36),
+    justifyContent: 'center', alignItems: 'center',
+  },
+  itemModalQtyBtnFilled: { backgroundColor: colors.primary },
+  itemModalQtyText: {
+    fontSize: ms(15), fontWeight: '800', color: colors.primary,
+    paddingHorizontal: rs(14),
+  },
+  itemModalAddBtn: {
+    flex: 1, backgroundColor: colors.primary,
+    borderRadius: borderRadius.sm,
+    paddingVertical: vs(12),
+    alignItems: 'center',
+  },
+  itemModalAddBtnText: { color: '#fff', fontSize: ms(15), fontWeight: '800' },
 
   // Address modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
@@ -815,6 +1045,28 @@ const styles = StyleSheet.create({
   manageBtnText: { fontSize: ms(14), color: colors.primary, fontWeight: '700' },
 
   loader: { marginVertical: vs(30) },
+  closedBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: rs(8),
+    backgroundColor: '#c0392b',
+    paddingHorizontal: rs(16), paddingVertical: vs(10),
+    marginHorizontal: rs(16), marginTop: vs(8),
+    borderRadius: borderRadius.sm,
+  },
+  closedBannerText: { color: '#fff', fontSize: ms(13), fontWeight: '600', flex: 1 },
+  closedTag: {
+    borderWidth: 1.5, borderColor: colors.placeholder,
+    borderRadius: borderRadius.xs,
+    paddingHorizontal: rs(8), paddingVertical: vs(5),
+    backgroundColor: colors.background,
+  },
+  closedTagText: { fontSize: ms(10), fontWeight: '700', color: colors.placeholder, textAlign: 'center' },
+  itemModalClosedBtn: {
+    flex: 1, backgroundColor: colors.border,
+    borderRadius: borderRadius.sm,
+    paddingVertical: vs(12),
+    alignItems: 'center',
+  },
+  itemModalClosedText: { color: colors.textSecondary, fontSize: ms(13), fontWeight: '700' },
   emptyContainer: { alignItems: 'center', paddingVertical: vs(60), paddingHorizontal: rs(32) },
   emptyEmoji: { fontSize: ms(56), marginBottom: vs(12) },
   emptyTitle: { fontSize: ms(18), fontWeight: '800', color: colors.text, marginBottom: vs(6) },

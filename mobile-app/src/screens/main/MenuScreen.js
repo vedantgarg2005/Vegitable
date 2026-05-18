@@ -1,11 +1,20 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, FlatList, ScrollView, StyleSheet, TouchableOpacity, StatusBar, Modal, Pressable, Image } from 'react-native';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { View, FlatList, ScrollView, StyleSheet, TouchableOpacity, StatusBar, Modal, Pressable, Image, Animated } from 'react-native';
 import { Text, Searchbar } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, borderRadius, ms, rs, vs, shadows } from '../../utils/theme';
 import { menuAPI, API_BASE_URL } from '../../services/api';
+import { API_BASE_URL as BASE_URL } from '../../utils/constants';
 import { useCart } from '../../context/CartContext';
+
+function formatTime12(time24) {
+  if (!time24) return '';
+  const [h, m] = time24.split(':').map(Number);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 || 12;
+  return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
+}
 
 const CATEGORIES = ['All', 'Pizza', 'Burgers', 'Pasta', 'Sides', 'Beverages', 'Desserts'];
 
@@ -24,14 +33,35 @@ export default function MenuScreen({ navigation }) {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [menuItems, setMenuItems] = useState([]);
   const [menuPopupVisible, setMenuPopupVisible] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [restaurantOpen, setRestaurantOpen] = useState(true);
+  const [nextOpenTime, setNextOpenTime] = useState(null);
   const { addToCart, items: cartItems, updateQuantity, total, itemCount } = useCart();
   const insets = useSafeAreaInsets();
 
-  useEffect(() => {
-    menuAPI.getItems()
+  const fetchMenu = useCallback(() => {
+    return menuAPI.getItems()
       .then(res => setMenuItems(res.data))
       .catch(() => {});
   }, []);
+
+  useEffect(() => { fetchMenu(); }, [fetchMenu]);
+
+  useEffect(() => {
+    fetch(`${BASE_URL}/admin/restaurant-status`)
+      .then(r => r.json())
+      .then(d => {
+        setRestaurantOpen(d.isOpen ?? true);
+        if (d.nextOpenTime) setNextOpenTime(d.nextOpenTime);
+      })
+      .catch(() => {});
+  }, []);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchMenu();
+    setRefreshing(false);
+  }, [fetchMenu]);
 
   const filteredItems = menuItems.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -44,58 +74,68 @@ export default function MenuScreen({ navigation }) {
     setMenuPopupVisible(false);
   };
 
-  const renderItem = useCallback(({ item }) => (
-    <TouchableOpacity
-      style={[styles.card, shadows.small]}
-      onPress={() => navigation.navigate('MenuItemDetail', { item })}
-      activeOpacity={0.9}
-    >
-      <View style={styles.vegIndicatorTop}>
-        <View style={[styles.vegBox, { borderColor: item.isVeg !== false ? colors.tagVeg : colors.tagNonVeg }]}>
-          <View style={[styles.vegDot, { backgroundColor: item.isVeg !== false ? colors.tagVeg : colors.tagNonVeg }]} />
-        </View>
-      </View>
-      <View style={styles.emojiBox}>
-        {item.image && item.image.startsWith('/uploads') ? (
-          <Image source={{ uri: `${API_BASE_URL.replace('/api', '')}${item.image}` }} style={styles.itemImage} resizeMode="cover" />
-        ) : (
-          <Text style={styles.emoji}>{item.image || '🍕'}</Text>
-        )}
-      </View>
-      <View style={styles.cardBody}>
-        <Text style={styles.cardName} numberOfLines={1}>{item.name}</Text>
-        <Text style={styles.cardDesc} numberOfLines={2}>{item.description}</Text>
-        {item.ratings?.average != null && (
-          <View style={styles.ratingRow}>
-            <Ionicons name="star" size={rs(11)} color={colors.warning} />
-            <Text style={styles.ratingText}>{item.ratings.average.toFixed(1)}</Text>
+  const renderItem = useCallback(({ item }) => {
+    const cartItem = cartItems.find(c => c.id === (item._id || item.id));
+    const qty = cartItem?.quantity || 0;
+    const scaleAnim = new Animated.Value(1);
+
+    const handleAdd = () => {
+      Animated.sequence([
+        Animated.timing(scaleAnim, { toValue: 0.92, duration: 80, useNativeDriver: true }),
+        Animated.timing(scaleAnim, { toValue: 1, duration: 80, useNativeDriver: true }),
+      ]).start();
+      addToCart(item);
+    };
+
+    return (
+      <TouchableOpacity style={[styles.foodCard, shadows.small]} onPress={() => navigation.navigate('MenuItemDetail', { item })} activeOpacity={0.92}>
+        <View style={styles.foodInfo}>
+          <View style={[styles.vegBox, { borderColor: item.isVeg !== false ? colors.tagVeg : colors.tagNonVeg }]}>
+            <View style={[styles.vegDot, { backgroundColor: item.isVeg !== false ? colors.tagVeg : colors.tagNonVeg }]} />
           </View>
-        )}
-        <View style={styles.cardFooter}>
-          <Text style={styles.cardPrice}>₹{item.price}</Text>
-          {(() => {
-            const cartItem = cartItems.find(c => c.id === (item._id || item.id));
-            return cartItem ? (
+          {item.isBestseller && (
+            <View style={styles.bestsellerTag}>
+              <Text style={styles.bestsellerTagText}>⭐ Bestseller</Text>
+            </View>
+          )}
+          <Text style={styles.foodName} numberOfLines={1}>{item.name}</Text>
+          <Text style={styles.foodDesc} numberOfLines={2}>{item.description}</Text>
+          <Text style={styles.foodPrice}>₹{item.price}</Text>
+        </View>
+        <View style={styles.foodImageWrap}>
+          <View style={styles.foodImageBg}>
+            {item.image && item.image.startsWith('/uploads') ? (
+              <Image source={{ uri: `${API_BASE_URL.replace('/api', '')}${item.image}` }} style={styles.foodImage} resizeMode="cover" />
+            ) : (
+              <Text style={styles.foodEmoji}>{item.image || '🍕'}</Text>
+            )}
+          </View>
+          <Animated.View style={[styles.addBtnWrap, { transform: [{ scale: scaleAnim }] }]}>
+            {qty > 0 ? (
               <View style={styles.stepper}>
-                <TouchableOpacity onPress={() => updateQuantity(cartItem.id, cartItem.quantity - 1)} activeOpacity={0.8}>
-                  <Ionicons name="remove" size={rs(16)} color={colors.primary} />
+                <TouchableOpacity style={styles.stepperBtn} onPress={() => updateQuantity(cartItem.id, qty - 1)}>
+                  <Ionicons name="remove" size={rs(14)} color={colors.primary} />
                 </TouchableOpacity>
-                <Text style={styles.stepperCount}>{cartItem.quantity}</Text>
-                <TouchableOpacity onPress={() => addToCart(item)} activeOpacity={0.8}>
-                  <Ionicons name="add" size={rs(16)} color={colors.primary} />
+                <Text style={styles.stepperCount}>{qty}</Text>
+                <TouchableOpacity style={[styles.stepperBtn, styles.stepperBtnFilled]} onPress={handleAdd}>
+                  <Ionicons name="add" size={rs(14)} color="#fff" />
                 </TouchableOpacity>
               </View>
-            ) : (
-              <TouchableOpacity style={styles.addBtn} onPress={() => addToCart(item)} activeOpacity={0.8}>
+            ) : restaurantOpen ? (
+              <TouchableOpacity style={styles.addBtn} onPress={handleAdd} activeOpacity={0.8}>
                 <Text style={styles.addBtnText}>ADD</Text>
-                <Ionicons name="add" size={rs(14)} color={colors.primary} />
+                <Ionicons name="add" size={rs(13)} color={colors.primary} />
               </TouchableOpacity>
-            );
-          })()}
+            ) : (
+              <View style={styles.closedTag}>
+                <Text style={styles.closedTagText}>{nextOpenTime ? `Next at: ${formatTime12(nextOpenTime)}` : 'Closed'}</Text>
+              </View>
+            )}
+          </Animated.View>
         </View>
-      </View>
-    </TouchableOpacity>
-  ), [navigation, addToCart, cartItems, updateQuantity]);
+      </TouchableOpacity>
+    );
+  }, [navigation, addToCart, cartItems, updateQuantity, restaurantOpen, nextOpenTime]);
 
   return (
     <View style={styles.container}>
@@ -148,9 +188,10 @@ export default function MenuScreen({ navigation }) {
         data={filteredItems}
         renderItem={renderItem}
         keyExtractor={item => item._id}
-        numColumns={2}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
         ListHeaderComponent={
           <Text style={styles.resultCount}>
             {filteredItems.length} {selectedCategory === 'All' ? 'items' : selectedCategory + ' items'}
@@ -275,54 +316,73 @@ const styles = StyleSheet.create({
     marginBottom: vs(10),
     fontFamily: 'Poppins_700Bold',
   },
-  list: { padding: spacing.sm, paddingBottom: vs(20) },
+  list: { paddingVertical: vs(10), paddingBottom: vs(20) },
 
-  card: {
-    flex: 1,
+  foodCard: {
+    flexDirection: 'row',
     backgroundColor: colors.surface,
+    marginHorizontal: rs(16),
+    marginBottom: vs(14),
     borderRadius: borderRadius.md,
-    margin: rs(6),
-    overflow: 'hidden',
-    paddingBottom: rs(12),
+    paddingVertical: vs(16),
+    paddingHorizontal: rs(12),
+    gap: rs(12),
+    ...shadows.small,
   },
-  vegIndicatorTop: { padding: rs(8), alignItems: 'flex-start' },
+  foodInfo: { flex: 1, justifyContent: 'flex-start' },
+  foodName: { fontSize: ms(14), fontWeight: '700', color: colors.text, marginBottom: vs(4) },
+  foodDesc: { fontSize: ms(12), color: colors.placeholder, lineHeight: ms(18), marginBottom: vs(6) },
+  foodPrice: { fontSize: ms(15), fontWeight: '800', color: colors.text, marginTop: vs(6) },
   vegBox: {
+    marginBottom: vs(2),
     width: rs(14), height: rs(14), borderRadius: rs(2),
-    borderWidth: 1.5, justifyContent: 'center', alignItems: 'center',
+    borderWidth: 1.5, backgroundColor: '#fff',
+    justifyContent: 'center', alignItems: 'center',
   },
   vegDot: { width: rs(6), height: rs(6), borderRadius: rs(3) },
-  emojiBox: {
+  bestsellerTag: {
+    backgroundColor: '#FFF3CD', borderRadius: rs(4),
+    paddingHorizontal: rs(6), paddingVertical: vs(2),
+    marginBottom: vs(4), alignSelf: 'flex-start',
+  },
+  bestsellerTagText: { fontSize: ms(10), fontWeight: '700', color: '#B8860B' },
+  foodImageWrap: { position: 'relative', alignSelf: 'flex-start' },
+  foodImageBg: {
+    width: rs(110), height: rs(110),
+    borderRadius: borderRadius.md,
     backgroundColor: colors.background,
-    height: vs(100),
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'center', alignItems: 'center',
     overflow: 'hidden',
   },
-  emoji: { fontSize: ms(46) },
-  itemImage: { width: '100%', height: vs(100) },
-  cardBody: { paddingHorizontal: rs(10), paddingTop: vs(8) },
-  cardName: { fontSize: ms(13), fontWeight: '800', color: colors.text, marginBottom: vs(3), fontFamily: 'Poppins_800ExtraBold' },
-  cardDesc: { fontSize: ms(11), color: colors.placeholder, lineHeight: ms(17), marginBottom: vs(6), fontFamily: 'Poppins_400Regular' },
-  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: rs(3), marginBottom: vs(6) },
-  ratingText: { fontSize: ms(11), fontWeight: '700', color: colors.text, fontFamily: 'Poppins_700Bold' },
-  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  cardPrice: { fontSize: ms(15), fontWeight: '900', color: colors.text, fontFamily: 'Poppins_900Black' },
+  foodImage: { width: rs(110), height: rs(110) },
+  foodEmoji: { fontSize: ms(52) },
+  addBtnWrap: { alignItems: 'center', marginTop: vs(8) },
   addBtn: {
-    flexDirection: 'row', alignItems: 'center',
+    flexDirection: 'row', alignItems: 'center', gap: rs(2),
     borderWidth: 1.5, borderColor: colors.primary,
     borderRadius: borderRadius.xs,
-    paddingHorizontal: rs(8), paddingVertical: vs(5),
-    gap: rs(2), minHeight: vs(30),
+    paddingHorizontal: rs(14), paddingVertical: vs(6),
+    backgroundColor: colors.primarySurface,
   },
-  addBtnText: { fontSize: ms(12), fontWeight: '800', color: colors.primary, fontFamily: 'Poppins_800ExtraBold' },
+  addBtnText: { fontSize: ms(13), fontWeight: '800', color: colors.primary },
+  closedTag: {
+    borderWidth: 1.5, borderColor: colors.placeholder,
+    borderRadius: borderRadius.xs,
+    paddingHorizontal: rs(8), paddingVertical: vs(5),
+    backgroundColor: colors.background,
+  },
+  closedTagText: { fontSize: ms(10), fontWeight: '700', color: colors.placeholder, textAlign: 'center' },
   stepper: {
     flexDirection: 'row', alignItems: 'center',
     borderWidth: 1.5, borderColor: colors.primary,
-    borderRadius: borderRadius.xs,
-    paddingHorizontal: rs(6), paddingVertical: vs(5),
-    gap: rs(6), minHeight: vs(30),
+    borderRadius: borderRadius.xs, overflow: 'hidden',
   },
-  stepperCount: { fontSize: ms(13), fontWeight: '800', color: colors.primary, fontFamily: 'Poppins_800ExtraBold', minWidth: rs(14), textAlign: 'center' },
+  stepperBtn: {
+    width: rs(30), height: rs(30),
+    justifyContent: 'center', alignItems: 'center',
+  },
+  stepperBtnFilled: { backgroundColor: colors.primary },
+  stepperCount: { fontSize: ms(13), fontWeight: '800', color: colors.primary, paddingHorizontal: rs(10) },
 
   empty: { alignItems: 'center', paddingVertical: vs(60) },
   emptyEmoji: { fontSize: ms(52), marginBottom: vs(10) },

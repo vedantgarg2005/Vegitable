@@ -7,7 +7,7 @@ const Products = () => {
   const [filters, setFilters] = useState({ page: 1, limit: 10, category: '', search: '' });
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
-  const [formData, setFormData] = useState({ name: '', description: '', price: '', category: '', preparationTime: 30, isActive: true });
+  const [formData, setFormData] = useState({ name: '', description: '', price: '', category: '', preparationTime: 30, isActive: true, isBestseller: false });
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState('');
   const queryClient = useQueryClient();
@@ -82,7 +82,8 @@ const Products = () => {
       price: item.price,
       category: item.category,
       preparationTime: item.preparationTime,
-      isActive: item.isActive
+      isActive: item.isActive,
+      isBestseller: item.isBestseller || false,
     });
     setImageFile(null);
     setImagePreview(item.image || '');
@@ -130,7 +131,7 @@ const Products = () => {
             <button
               onClick={() => {
                 setEditingItem(null);
-                setFormData({ name: '', description: '', price: '', category: '', preparationTime: 30, isActive: true });
+                setFormData({ name: '', description: '', price: '', category: '', preparationTime: 30, isActive: true, isBestseller: false });
                 setImageFile(null);
                 setImagePreview('');
                 setShowModal(true);
@@ -151,6 +152,7 @@ const Products = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bestseller</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
               </tr>
             </thead>
@@ -183,6 +185,11 @@ const Products = () => {
                       }`}>
                         {item.isActive ? 'Active' : 'Inactive'}
                       </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      {item.isBestseller && (
+                        <span className="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800 font-semibold">⭐ Bestseller</span>
+                      )}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex gap-2">
@@ -268,6 +275,15 @@ const Products = () => {
                   className="mr-2"
                 />
                 Active
+              </label>
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={formData.isBestseller}
+                  onChange={(e) => setFormData({ ...formData, isBestseller: e.target.checked })}
+                  className="mr-2"
+                />
+                ⭐ Mark as Bestseller
               </label>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Product Image</label>

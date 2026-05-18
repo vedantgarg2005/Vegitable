@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, ScrollView, StyleSheet, TouchableOpacity, StatusBar, Image } from 'react-native';
 import { Text } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -7,12 +7,33 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCart } from '../../context/CartContext';
 import { colors, spacing, shadows, borderRadius, ms, rs, vs } from '../../utils/theme';
 import { API_BASE_URL } from '../../services/api';
+import { API_BASE_URL as BASE_URL } from '../../utils/constants';
+
+function formatTime12(time24) {
+  if (!time24) return '';
+  const [h, m] = time24.split(':').map(Number);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 || 12;
+  return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
+}
 
 export default function MenuItemDetailScreen({ route, navigation }) {
   const { item } = route.params;
   const [quantity, setQuantity] = useState(1);
   const { addToCart } = useCart();
   const insets = useSafeAreaInsets();
+  const [restaurantOpen, setRestaurantOpen] = useState(true);
+  const [nextOpenTime, setNextOpenTime] = useState(null);
+
+  useEffect(() => {
+    fetch(`${BASE_URL}/admin/restaurant-status`)
+      .then(r => r.json())
+      .then(d => {
+        setRestaurantOpen(d.isOpen ?? true);
+        if (d.nextOpenTime) setNextOpenTime(d.nextOpenTime);
+      })
+      .catch(() => {});
+  }, []);
 
   const increment = useCallback(() => setQuantity(q => q + 1), []);
   const decrement = useCallback(() => setQuantity(q => Math.max(1, q - 1)), []);
@@ -95,18 +116,26 @@ export default function MenuItemDetailScreen({ route, navigation }) {
 
       {/* Add to cart footer */}
       <View style={[styles.footer, { paddingBottom: insets.bottom + vs(12) }]}>
-        <TouchableOpacity style={styles.addBtn} onPress={handleAddToCart} activeOpacity={0.88}>
-          <LinearGradient
-            colors={[colors.gradientStart, colors.gradientEnd]}
-            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-            style={styles.addBtnGradient}
-          >
-            <Text style={styles.addBtnText}>Add to Cart</Text>
-            <View style={styles.addBtnBadge}>
-              <Text style={styles.addBtnBadgeText}>₹{(item.price * quantity).toFixed(2)}</Text>
-            </View>
-          </LinearGradient>
-        </TouchableOpacity>
+        {restaurantOpen ? (
+          <TouchableOpacity style={styles.addBtn} onPress={handleAddToCart} activeOpacity={0.88}>
+            <LinearGradient
+              colors={[colors.gradientStart, colors.gradientEnd]}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+              style={styles.addBtnGradient}
+            >
+              <Text style={styles.addBtnText}>Add to Cart</Text>
+              <View style={styles.addBtnBadge}>
+                <Text style={styles.addBtnBadgeText}>₹{(item.price * quantity).toFixed(2)}</Text>
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.closedBtn}>
+            <Text style={styles.closedBtnText}>
+              {nextOpenTime ? `Next available at: ${formatTime12(nextOpenTime)}` : 'Currently closed'}
+            </Text>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -202,4 +231,11 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.full,
   },
   addBtnBadgeText: { color: '#fff', fontWeight: '800', fontSize: ms(14) },
+  closedBtn: {
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.border,
+    paddingVertical: vs(15),
+    alignItems: 'center',
+  },
+  closedBtnText: { color: colors.textSecondary, fontSize: ms(15), fontWeight: '700' },
 });

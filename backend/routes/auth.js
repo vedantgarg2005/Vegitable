@@ -3,9 +3,10 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const User = require('../models/User');
 const { auth } = require('../middleware/auth');
+const messageCentral = require('../services/messageCentral');
 
 const router = express.Router();
-const otpStore = new Map();
+const otpStore = new Map(); // stores verificationId keyed by phone
 const REFERRAL_REWARD = 75;
 
 function generateReferralCode(name) {
@@ -62,15 +63,11 @@ router.post('/register', async (req, res) => {
 router.post('/send-otp', async (req, res) => {
   try {
     const { phone } = req.body;
-    
-    if (!phone) {
-      return res.status(400).json({ message: 'Phone number is required' });
-    }
+    if (!phone) return res.status(400).json({ message: 'Phone number is required' });
 
-    // For demo, using fixed OTP. In production, generate random OTP and send SMS
-    const otp = '123456';
-    otpStore.set(phone, { otp, timestamp: Date.now() });
-    
+    const result = await messageCentral.sendOTP(phone);
+    otpStore.set(phone, { verificationId: result.verificationId, timestamp: Date.now() });
+
     res.json({ message: 'OTP sent successfully' });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -83,17 +80,16 @@ router.post('/verify-otp', async (req, res) => {
     const { phone, otp, name, email, referralCode } = req.body;
     
     const storedOtpData = otpStore.get(phone);
-    if (!storedOtpData || storedOtpData.otp !== otp) {
-      return res.status(400).json({ message: 'Invalid OTP' });
-    }
+    if (!storedOtpData) return res.status(400).json({ message: 'OTP not sent or expired' });
 
-    // Check if OTP is expired (5 minutes)
     if (Date.now() - storedOtpData.timestamp > 5 * 60 * 1000) {
       otpStore.delete(phone);
       return res.status(400).json({ message: 'OTP expired' });
     }
 
-    // Remove OTP after verification
+    const validation = await messageCentral.validateOTP(storedOtpData.verificationId, otp);
+    if (!validation.success) return res.status(400).json({ message: 'Invalid OTP' });
+
     otpStore.delete(phone);
 
     // Check if user exists

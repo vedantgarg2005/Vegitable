@@ -13,6 +13,7 @@ const Fleet = require('../models/Fleet');
 const Campaign = require('../models/Campaign');
 const Notification = require('../models/Notification');
 const { auth } = require('../middleware/auth');
+const RestaurantSettings = require('../models/RestaurantSettings');
 
 const upload = multer({
   storage: multer.diskStorage({
@@ -949,6 +950,79 @@ router.post('/users/:id/wallet/debit', adminAuth, async (req, res) => {
     res.json({ balance: user.wallet.balance, transactions: user.wallet.transactions });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+});
+
+// ─── Restaurant Timing ──────────────────────────────────────────────────────
+
+// Public — used by mobile app
+router.get('/restaurant-status', async (req, res) => {
+  try {
+    const settings = await RestaurantSettings.findById('main');
+    if (!settings) return res.json({ isOpen: true });
+
+    const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const now = new Date();
+    const nowMins = now.getHours() * 60 + now.getMinutes();
+    const todayName = DAY_NAMES[now.getDay()];
+    const today = settings.schedule[todayName];
+
+    // Helper: find next open time within 7 days
+    const getNextOpenTime = () => {
+      for (let offset = 0; offset <= 7; offset++) {
+        const d = new Date(now);
+        d.setDate(d.getDate() + offset);
+        const name = DAY_NAMES[d.getDay()];
+        const slot = settings.schedule[name];
+        if (!slot || !slot.isOpen) continue;
+        const [h, m] = slot.openTime.split(':').map(Number);
+        if (offset === 0 && nowMins >= h * 60 + m) continue; // already past today's open
+        return slot.openTime;
+      }
+      return null;
+    };
+
+    if (!today || !today.isOpen) {
+      return res.json({ isOpen: false, nextOpenTime: getNextOpenTime(), schedule: settings.schedule });
+    }
+
+    const [openH, openM] = today.openTime.split(':').map(Number);
+    const [closeH, closeM] = today.closeTime.split(':').map(Number);
+    const isOpen = nowMins >= openH * 60 + openM && nowMins < closeH * 60 + closeM;
+
+    res.json({
+      isOpen,
+      openTime: today.openTime,
+      closeTime: today.closeTime,
+      nextOpenTime: isOpen ? null : getNextOpenTime(),
+      schedule: settings.schedule,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Admin — get full schedule
+router.get('/restaurant-settings', adminAuth, async (req, res) => {
+  try {
+    const settings = await RestaurantSettings.findById('main') || new RestaurantSettings();
+    res.json(settings);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Admin — update schedule
+router.put('/restaurant-settings', adminAuth, async (req, res) => {
+  try {
+    const settings = await RestaurantSettings.findByIdAndUpdate(
+      'main',
+      { schedule: req.body.schedule },
+      { new: true, upsert: true, runValidators: true }
+    );
+    res.json(settings);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
   }
 });
 

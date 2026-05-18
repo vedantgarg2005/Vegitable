@@ -11,22 +11,26 @@ export function WalletProvider({ children }) {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  const fetchWallet = useCallback(async () => {
+  const fetchWallet = useCallback(async (signal) => {
     if (!user) return;
     setLoading(true);
     try {
-      const { data } = await walletAPI.getWallet();
+      const { data } = await walletAPI.getWallet({ signal });
       setBalance(data.balance ?? 0);
       setTransactions(data.transactions ?? []);
     } catch (error) {
-      console.error('Wallet fetch error:', error);
+      if (error.name !== 'CanceledError' && error.code !== 'ERR_CANCELED') {
+        console.error('Wallet fetch error:', error);
+      }
     } finally {
       setLoading(false);
     }
   }, [user]);
 
   useEffect(() => {
-    fetchWallet();
+    const controller = new AbortController();
+    fetchWallet(controller.signal);
+    return () => controller.abort();
   }, [fetchWallet]);
 
   return (

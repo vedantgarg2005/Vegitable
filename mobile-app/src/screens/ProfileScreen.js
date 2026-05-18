@@ -75,7 +75,7 @@ const ProfileScreen = ({ navigation }) => {
         <StatusBar barStyle="light-content" />
         {headerContent}
         <View style={styles.content}>
-          <TouchableOpacity style={styles.signInBtn} onPress={() => navigation.navigate('Auth')} activeOpacity={0.88}>
+          <TouchableOpacity style={styles.signInBtn} onPress={() => navigation.navigate('Login')} activeOpacity={0.88}>
             <LinearGradient
               colors={[colors.gradientStart, colors.gradientEnd]}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}

@@ -3,7 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import { Badge } from 'react-native-paper';
-import { View, Platform } from 'react-native';
+import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import HomeScreen from '../screens/main/HomeScreen';
@@ -23,6 +23,8 @@ import ShippingPolicyScreen from '../screens/ShippingPolicyScreen';
 import MyProfileScreen from '../screens/MyProfileScreen';
 import OrderTrackingScreen from '../screens/OrderTrackingScreen';
 import WalletScreen from '../screens/WalletScreen';
+import ReviewScreen from '../screens/ReviewScreen';
+import LoginScreen from '../screens/LoginScreen';
 
 import { useCart } from '../context/CartContext';
 import { colors } from '../utils/theme';
@@ -70,19 +72,19 @@ function MainTabs() {
 
           if (route.name === 'Explore') {
             iconName = focused ? 'compass' : 'compass-outline';
-          } else if (route.name === 'Menu') {
+          } else if (route.name === 'MenuTab') {
             iconName = focused ? 'restaurant' : 'restaurant-outline';
-          } else if (route.name === 'Cart') {
+          } else if (route.name === 'CartTab') {
             iconName = focused ? 'bag' : 'bag-outline';
             badgeCount = itemCount;
-          } else if (route.name === 'Profile') {
+          } else if (route.name === 'ProfileTab') {
             iconName = focused ? 'person' : 'person-outline';
           }
 
           return <TabIcon name={iconName} color={color} size={size} badgeCount={badgeCount} focused={focused} />;
         },
         tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: '#999999',
+        tabBarInactiveTintColor: '#AAAAAA',
         tabBarStyle: {
           backgroundColor: '#fff',
           borderTopWidth: 1,
@@ -103,24 +105,56 @@ function MainTabs() {
           marginTop: -2,
           fontFamily: 'Poppins_700Bold',
         },
-        tabBarInactiveTintColor: '#AAAAAA',
         tabBarActiveBackgroundColor: 'transparent',
         tabBarInactiveBackgroundColor: 'transparent',
         headerShown: false,
       })}
     >
       <Tab.Screen name="Explore" component={HomeScreen} />
-      <Tab.Screen name="Menu" component={MenuScreen} options={{ tabBarStyle: { display: 'none' } }} />
-      <Tab.Screen name="Cart" component={CartScreen} options={{ tabBarStyle: { display: 'none' } }} />
-      <Tab.Screen name="Profile" component={ProfileScreen} options={{ tabBarStyle: { display: 'none' } }} />
+      <Tab.Screen
+        name="MenuTab"
+        component={HomeScreen}
+        options={{ title: 'Menu' }}
+        listeners={({ navigation }) => ({
+          tabPress: e => {
+            e.preventDefault();
+            navigation.navigate('Menu');
+          },
+        })}
+      />
+      <Tab.Screen
+        name="CartTab"
+        component={HomeScreen}
+        options={{ title: 'Cart' }}
+        listeners={({ navigation }) => ({
+          tabPress: e => {
+            e.preventDefault();
+            navigation.navigate('Cart');
+          },
+        })}
+      />
+      <Tab.Screen
+        name="ProfileTab"
+        component={HomeScreen}
+        options={{ title: 'Profile' }}
+        listeners={({ navigation }) => ({
+          tabPress: e => {
+            e.preventDefault();
+            navigation.navigate('Profile');
+          },
+        })}
+      />
     </Tab.Navigator>
   );
 }
 
 export default function MainNavigator() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false, gestureEnabled: true }}>
+    <Stack.Navigator screenOptions={{ headerShown: false, gestureEnabled: true, gestureResponseDistance: 50 }}>
       <Stack.Screen name="MainTabs" component={MainTabs} />
+      <Stack.Screen name="Menu" component={MenuScreen} />
+      <Stack.Screen name="Cart" component={CartScreen} />
+      <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="MenuItemDetail" component={MenuItemDetailScreen} />
       <Stack.Screen name="Checkout" component={CheckoutScreen} />
       <Stack.Screen name="Referral" component={ReferralScreen} />
@@ -133,6 +167,9 @@ export default function MainNavigator() {
       <Stack.Screen name="MyProfile" component={MyProfileScreen} />
       <Stack.Screen name="OrderTracking" component={OrderTrackingScreen} />
       <Stack.Screen name="Wallet" component={WalletScreen} />
+      <Stack.Screen name="Review" component={ReviewScreen} />
+      <Stack.Screen name="Orders" component={OrdersScreen} />
+      <Stack.Screen name="Login" component={LoginScreen} />
     </Stack.Navigator>
   );
 }

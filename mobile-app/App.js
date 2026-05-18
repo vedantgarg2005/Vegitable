@@ -1,7 +1,6 @@
 import 'react-native-gesture-handler';
 import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
-import { createStackNavigator } from '@react-navigation/stack';
 import { Provider as PaperProvider } from 'react-native-paper';
 import FlashMessage from 'react-native-flash-message';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -30,7 +29,6 @@ TextInput.defaultProps.style = [{ fontFamily: 'Poppins_400Regular' }];
 
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import AuthNavigator from './src/navigation/AuthNavigator';
 import MainNavigator from './src/navigation/MainNavigator';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { CartProvider } from './src/context/CartContext';
@@ -61,8 +59,6 @@ export async function registerPushToken() {
   await api.post('/auth/device-token', { token });
 }
 
-const Stack = createStackNavigator();
-
 function AppContent() {
   const { user, loading } = useAuth();
   const [isReady, setIsReady] = useState(false);
@@ -91,10 +87,7 @@ function AppContent() {
 
   return (
     <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false, gestureEnabled: true }}>
-        <Stack.Screen name="Main" component={MainNavigator} />
-        <Stack.Screen name="Auth" component={AuthNavigator} />
-      </Stack.Navigator>
+      <MainNavigator />
     </NavigationContainer>
   );
 }

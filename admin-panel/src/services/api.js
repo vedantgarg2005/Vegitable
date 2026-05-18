@@ -42,8 +42,8 @@ export const ordersAPI = {
   getOrders: (params) => api.get('/admin/orders', { params }),
   getOrder: (id) => api.get(`/orders/${id}`).then(res => res.data),
   updateOrderStatus: (id, data) => api.patch(`/admin/orders/${id}/status`, data),
-  addItemToOrder: (id, data) => api.post(`/orders/${id}/items`, data),
-  addChargeToOrder: (id, data) => api.post(`/orders/${id}/charges`, data),
+  addItemToOrder: (id, data) => api.post(`/orders/${id}/items`, data).then(res => res.data),
+  addChargeToOrder: (id, data) => api.post(`/orders/${id}/charges`, data).then(res => res.data),
   refundOrder: (id, data) => api.post(`/admin/orders/${id}/refund`, data),
 };
 
@@ -60,7 +60,7 @@ const toFormData = (data) => {
 
 export const menuAPI = {
   getMenuItems: (params) => api.get('/admin/menu', { params }),
-  getItems: () => api.get('/menu'),
+  getItems: () => api.get('/menu').then(res => res.data),
   createMenuItem: (data) => api.post('/admin/menu', toFormData(data), { headers: { 'Content-Type': 'multipart/form-data' } }),
   updateMenuItem: (id, data) => api.patch(`/admin/menu/${id}`, toFormData(data), { headers: { 'Content-Type': 'multipart/form-data' } }),
   deleteMenuItem: (id) => api.delete(`/admin/menu/${id}`),
@@ -121,6 +121,11 @@ export const restaurantAPI = {
   createRestaurant: (data) => api.post('/admin/restaurants', data),
   updateRestaurant: (id, data) => api.patch(`/admin/restaurants/${id}`, data),
   updateRestaurantStatus: (id, data) => api.patch(`/admin/restaurants/${id}/status`, data),
+};
+
+export const restaurantSettingsAPI = {
+  getSettings: () => api.get('/admin/restaurant-settings'),
+  updateSettings: (schedule) => api.put('/admin/restaurant-settings', { schedule }),
 };
 
 export default api;

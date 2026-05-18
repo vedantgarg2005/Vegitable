@@ -3,6 +3,7 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   Alert, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, Modal,
 } from 'react-native';
+import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,9 +13,13 @@ import { colors, shadows, borderRadius, ms, rs, vs } from '../utils/theme';
 import { API_BASE_URL } from '../utils/constants';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import { useWallet } from '../context/WalletContext';
+import { paymentAPI } from '../services/api';
 
 const PAYMENT_OPTIONS = [
   { id: 'cash', label: 'Cash on Delivery', icon: 'cash-outline', desc: 'Pay when your order arrives' },
+  { id: 'wallet', label: 'Pay via Wallet', icon: 'wallet-outline', desc: 'Instant payment from wallet balance' },
+  { id: 'cashfree', label: 'Pay Online', icon: 'card-outline', desc: 'UPI, Cards, Net Banking via Cashfree' },
 ];
 
 const ADDRESS_TYPES = ['home', 'work', 'other'];
@@ -24,11 +29,13 @@ const EMPTY_FORM = { type: 'home', address: '', landmark: '', city: '', pincode:
 const CheckoutScreen = ({ navigation, route }) => {
   const { user } = useAuth();
   const { items: cartItems, clearCart } = useCart();
+  const { balance, fetchWallet } = useWallet();
   const { grandTotal = 0, deliveryFee = 0, discount = 0, couponCode = '', instructions = '', orderType = 'delivery' } = route?.params || {};
 
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [loading, setLoading] = useState(false);
   const [deliveryAvailable, setDeliveryAvailable] = useState(true);
+  const [cfSession, setCfSession] = useState(null); // { paymentSessionId, orderId }
 
   useEffect(() => {
     if (orderType === 'delivery') {
@@ -152,13 +159,29 @@ const CheckoutScreen = ({ navigation, route }) => {
         headers: { Authorization: `Bearer ${userToken}` },
       });
 
+      if (paymentMethod === 'wallet') {
+        await axios.post(`${API_BASE_URL}/wallet/deduct`,
+          { amount: grandTotal, description: `Order #${res.data._id?.slice(-6)?.toUpperCase()}` },
+          { headers: { Authorization: `Bearer ${userToken}` } }
+        );
+        fetchWallet();
+        clearCart();
+        navigation.reset({ index: 1, routes: [{ name: 'MainTabs' }, { name: 'OrderTracking', params: { orderId: res.data._id } }] });
+        return;
+      }
+
+      if (paymentMethod === 'cashfree') {
+        const cfRes = await paymentAPI.createOrder(res.data._id);
+        console.log('[CF Session]', JSON.stringify(cfRes.data));
+        const { paymentSessionId, cfOrderId } = cfRes.data;
+        setCfSession({ paymentSessionId, orderId: res.data._id, cfOrderId });
+        return;
+      }
+
       clearCart();
       navigation.reset({
         index: 1,
-        routes: [
-          { name: 'MainTabs' },
-          { name: 'OrderTracking', params: { orderId: res.data._id } },
-        ],
+        routes: [{ name: 'MainTabs' }, { name: 'OrderTracking', params: { orderId: res.data._id } }],
       });
     } catch (err) {
       const msg = err.response?.data?.message || 'Failed to place order. Please try again.';
@@ -168,13 +191,62 @@ const CheckoutScreen = ({ navigation, route }) => {
     }
   };
 
+  const cfPollRef = React.useRef(null);
+
+  useEffect(() => {
+    if (!cfSession) {
+      clearInterval(cfPollRef.current);
+      return;
+    }
+    const { orderId, cfOrderId } = cfSession;
+    cfPollRef.current = setInterval(async () => {
+      try {
+        const res = await paymentAPI.verify(orderId, cfOrderId);
+        if (res.data.status === 'PAID') {
+          clearInterval(cfPollRef.current);
+          clearCart();
+          navigation.reset({ index: 1, routes: [{ name: 'MainTabs' }, { name: 'OrderTracking', params: { orderId } }] });
+        }
+      } catch {}
+    }, 3000);
+    return () => clearInterval(cfPollRef.current);
+  }, [cfSession]);
+
+  if (cfSession) {
+    const html = `
+      <!DOCTYPE html><html><head>
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
+      </head><body>
+      <script>
+        const cashfree = Cashfree({ mode: 'sandbox' });
+        cashfree.checkout({ paymentSessionId: '${cfSession.paymentSessionId}', redirectTarget: '_self' });
+      </script></body></html>
+    `;
+    return (
+      <View style={{ flex: 1 }}>
+        <TouchableOpacity
+          onPress={() => setCfSession(null)}
+          style={{ padding: rs(16), paddingTop: insets.top + rs(8), backgroundColor: colors.surface }}
+        >
+          <Ionicons name="arrow-back" size={rs(22)} color={colors.text} />
+        </TouchableOpacity>
+        <WebView
+          source={{ html }}
+          javaScriptEnabled
+          style={{ flex: 1 }}
+        />
+      </View>
+    );
+  }
+
   if (!user) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background, padding: rs(24) }}>
         <Ionicons name="lock-closed-outline" size={rs(56)} color={colors.primary} />
         <Text style={{ fontSize: ms(18), fontWeight: '700', color: colors.text, marginTop: vs(16), marginBottom: vs(8) }}>Sign in to Checkout</Text>
         <Text style={{ fontSize: ms(14), color: colors.placeholder, textAlign: 'center', marginBottom: vs(24) }}>Please sign in to place your order</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('Auth')} style={{ borderRadius: borderRadius.md, overflow: 'hidden', width: '100%' }}>
+        <TouchableOpacity onPress={() => navigation.navigate('Login')} style={{ borderRadius: borderRadius.md, overflow: 'hidden', width: '100%' }}>
           <LinearGradient colors={[colors.gradientStart, colors.gradientEnd]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ paddingVertical: vs(14), alignItems: 'center' }}>
             <Text style={{ color: '#fff', fontSize: ms(16), fontWeight: '700' }}>Sign In</Text>
           </LinearGradient>
@@ -337,25 +409,31 @@ const CheckoutScreen = ({ navigation, route }) => {
             </View>
             <Text style={styles.sectionTitle}>Payment Method</Text>
           </View>
-          {PAYMENT_OPTIONS.map(opt => (
-            <TouchableOpacity
-              key={opt.id}
-              style={[styles.paymentOption, paymentMethod === opt.id && styles.paymentOptionActive]}
-              onPress={() => setPaymentMethod(opt.id)}
-              activeOpacity={0.8}
-            >
-              <View style={[styles.paymentIconWrap, paymentMethod === opt.id && styles.paymentIconWrapActive]}>
-                <Ionicons name={opt.icon} size={rs(20)} color={paymentMethod === opt.id ? '#fff' : colors.textSecondary} />
-              </View>
-              <View style={styles.paymentInfo}>
-                <Text style={[styles.paymentLabel, paymentMethod === opt.id && styles.paymentLabelActive]}>{opt.label}</Text>
-                <Text style={styles.paymentDesc}>{opt.desc}</Text>
-              </View>
-              <View style={[styles.radioOuter, paymentMethod === opt.id && styles.radioOuterActive]}>
-                {paymentMethod === opt.id && <View style={styles.radioInner} />}
-              </View>
-            </TouchableOpacity>
-          ))}
+          {PAYMENT_OPTIONS.map(opt => {
+            const isWallet = opt.id === 'wallet';
+            const insufficient = isWallet && balance < grandTotal;
+            return (
+              <TouchableOpacity
+                key={opt.id}
+                style={[styles.paymentOption, paymentMethod === opt.id && styles.paymentOptionActive, insufficient && styles.paymentOptionDisabled]}
+                onPress={() => !insufficient && setPaymentMethod(opt.id)}
+                activeOpacity={insufficient ? 1 : 0.8}
+              >
+                <View style={[styles.paymentIconWrap, paymentMethod === opt.id && styles.paymentIconWrapActive]}>
+                  <Ionicons name={opt.icon} size={rs(20)} color={paymentMethod === opt.id ? '#fff' : colors.textSecondary} />
+                </View>
+                <View style={styles.paymentInfo}>
+                  <Text style={[styles.paymentLabel, paymentMethod === opt.id && styles.paymentLabelActive]}>{opt.label}</Text>
+                  <Text style={styles.paymentDesc}>
+                    {isWallet ? `Balance: ₹${balance.toFixed(2)}${insufficient ? ' (Insufficient)' : ''}` : opt.desc}
+                  </Text>
+                </View>
+                <View style={[styles.radioOuter, paymentMethod === opt.id && styles.radioOuterActive]}>
+                  {paymentMethod === opt.id && <View style={styles.radioInner} />}
+                </View>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         {/* Order Summary */}
@@ -590,6 +668,7 @@ const styles = StyleSheet.create({
     marginBottom: vs(10), gap: rs(12), backgroundColor: colors.background,
   },
   paymentOptionActive: { borderColor: colors.primary, backgroundColor: colors.primarySurface },
+  paymentOptionDisabled: { opacity: 0.5 },
   paymentIconWrap: {
     width: rs(40), height: rs(40), borderRadius: rs(10),
     backgroundColor: colors.surfaceAlt, justifyContent: 'center', alignItems: 'center',

@@ -12,9 +12,6 @@ import { colors, shadows, borderRadius, ms, rs, vs } from '../utils/theme';
 import { API_BASE_URL } from '../utils/constants';
 
 const LoginScreen = ({ navigation }) => {
-  const continueAsGuest = () => navigation.replace('Main');
-
-  // After successful login, go back to where user came from
   const handleLoginSuccess = (userData, token) => {
     setToken(token);
     setUser(userData);
@@ -42,15 +39,14 @@ const LoginScreen = ({ navigation }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone }),
       });
-      if (response.ok) { setStep('otp'); showSnack('OTP sent! Use 123456'); }
+      if (response.ok) { setStep('otp'); showSnack('OTP sent successfully!'); }
       else { const data = await response.json(); showSnack(data.message || 'Failed to send OTP'); }
     } catch { showSnack('Network error'); }
     setLoading(false);
   };
 
   const verifyOtp = async () => {
-    if (!otp) { showSnack('Please enter OTP'); return; }
-    if (otp !== '123456') { showSnack('Invalid OTP. Use 123456'); return; }
+    if (!otp || otp.length < 4) { showSnack('Please enter the 4-digit OTP'); return; }
     setLoading(true);
     try {
       const response = await fetch(`${API_BASE_URL}/auth/verify-otp`, {
@@ -152,9 +148,11 @@ const LoginScreen = ({ navigation }) => {
                 <TextInput
                   mode="outlined"
                   value={otp}
-                  onChangeText={setOtp}
-                  keyboardType="numeric"
-                  maxLength={6}
+                  onChangeText={(text) => setOtp(text.replace(/[^0-9]/g, '').slice(0, 4))}
+                  keyboardType="number-pad"
+                  maxLength={4}
+                  autoComplete="one-time-code"
+                  textContentType="oneTimeCode"
                   style={styles.input}
                   outlineStyle={styles.inputOutline}
                   placeholder="• • • •"
@@ -225,13 +223,6 @@ const LoginScreen = ({ navigation }) => {
               </>
             )}
           </View>
-
-          {/* Guest access */}
-          {step === 'phone' && (
-            <TouchableOpacity style={styles.guestBtn} onPress={continueAsGuest}>
-              <Text style={styles.guestBtnText}>Continue as Guest</Text>
-            </TouchableOpacity>
-          )}
 
           {/* Step indicator */}
           <View style={styles.stepIndicator}>
@@ -323,8 +314,7 @@ const styles = StyleSheet.create({
 
   snackbar: { backgroundColor: colors.text },
 
-  guestBtn: { alignItems: 'center', paddingVertical: vs(12) },
-  guestBtnText: { color: 'rgba(255,255,255,0.8)', fontSize: ms(14), fontWeight: '500', textDecorationLine: 'underline' },
+
 });
 
 export default LoginScreen;

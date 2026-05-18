@@ -6,9 +6,9 @@ const getApiBaseUrl = () => {
     // Use LAN IP for both Android and physical iOS devices
     // iOS Simulator can use localhost, but physical devices need the LAN IP
     if (Platform.OS === 'android') {
-      return 'http://192.168.1.8:5000/api';
+      return 'http://172.20.10.2:5000/api';
     }
-    return 'http://192.168.1.8:5000/api'; // Use LAN IP for physical iOS device too
+    return 'http://172.20.10.2:5000/api'; // Use LAN IP for physical iOS device too
   }
   return 'https://your-production-api.com/api';
 };

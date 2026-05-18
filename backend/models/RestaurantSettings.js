@@ -1,0 +1,22 @@
+const mongoose = require('mongoose');
+
+const daySchema = {
+  isOpen: { type: Boolean, default: true },
+  openTime: { type: String, default: '09:00' },
+  closeTime: { type: String, default: '22:00' },
+};
+
+const restaurantSettingsSchema = new mongoose.Schema({
+  _id: { type: String, default: 'main' },
+  schedule: {
+    monday:    daySchema,
+    tuesday:   daySchema,
+    wednesday: daySchema,
+    thursday:  daySchema,
+    friday:    daySchema,
+    saturday:  daySchema,
+    sunday:    { ...daySchema, isOpen: { type: Boolean, default: false } },
+  },
+}, { timestamps: true });
+
+module.exports = mongoose.model('RestaurantSettings', restaurantSettingsSchema);

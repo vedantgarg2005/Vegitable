@@ -52,14 +52,20 @@ export const orderAPI = {
 };
 
 export const walletAPI = {
-  getWallet: () => api.get('/wallet'),
+  getWallet: (config) => api.get('/wallet', config),
   addMoney: (data) => api.post('/wallet/add', data),
   deduct: (data) => api.post('/wallet/deduct', data),
 };
 
 export const reviewAPI = {
   addReview: (data) => api.post('/reviews', data),
-  getReviews: (menuItemId) => api.get(`/reviews/${menuItemId}`),
+  getItemReviews: (menuItemId) => api.get(`/reviews/item/${menuItemId}`),
+  getMyReviews: () => api.get('/reviews/my-reviews'),
+};
+
+export const paymentAPI = {
+  createOrder: (orderId) => api.post('/payment/create-order', { orderId }),
+  verify: (orderId, cfOrderId) => api.post('/payment/verify', { orderId, cfOrderId }),
 };
 
 export default api;
