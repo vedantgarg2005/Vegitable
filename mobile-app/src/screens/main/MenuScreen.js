@@ -90,14 +90,16 @@ export default function MenuScreen({ navigation }) {
     return (
       <TouchableOpacity style={[styles.foodCard, shadows.small]} onPress={() => navigation.navigate('MenuItemDetail', { item })} activeOpacity={0.92}>
         <View style={styles.foodInfo}>
-          <View style={[styles.vegBox, { borderColor: item.isVeg !== false ? colors.tagVeg : colors.tagNonVeg }]}>
-            <View style={[styles.vegDot, { backgroundColor: item.isVeg !== false ? colors.tagVeg : colors.tagNonVeg }]} />
-          </View>
-          {item.isBestseller && (
-            <View style={styles.bestsellerTag}>
-              <Text style={styles.bestsellerTagText}>⭐ Bestseller</Text>
+          <View style={styles.vegBestsellerRow}>
+            <View style={[styles.vegBox, { borderColor: item.isVeg !== false ? colors.tagVeg : colors.tagNonVeg }]}>
+              <View style={[styles.vegDot, { backgroundColor: item.isVeg !== false ? colors.tagVeg : colors.tagNonVeg }]} />
             </View>
-          )}
+            {item.isBestseller && (
+              <View style={styles.bestsellerTag}>
+                <Text style={styles.bestsellerTagText}>Bestseller</Text>
+              </View>
+            )}
+          </View>
           <Text style={styles.foodName} numberOfLines={1}>{item.name}</Text>
           <Text style={styles.foodDesc} numberOfLines={2}>{item.description}</Text>
           <Text style={styles.foodPrice}>₹{item.price}</Text>
@@ -320,21 +322,29 @@ const styles = StyleSheet.create({
 
   foodCard: {
     flexDirection: 'row',
+    alignItems: 'flex-start',
     backgroundColor: colors.surface,
     marginHorizontal: rs(16),
-    marginBottom: vs(14),
+    marginBottom: vs(36),
     borderRadius: borderRadius.md,
-    paddingVertical: vs(16),
-    paddingHorizontal: rs(12),
+    paddingTop: vs(14),
+    paddingHorizontal: rs(20),
+    paddingBottom: vs(26),
     gap: rs(12),
+    overflow: 'visible',
     ...shadows.small,
   },
-  foodInfo: { flex: 1, justifyContent: 'flex-start' },
+  foodInfo: { flex: 1, justifyContent: 'flex-start', alignSelf: 'flex-start' },
   foodName: { fontSize: ms(14), fontWeight: '700', color: colors.text, marginBottom: vs(4) },
   foodDesc: { fontSize: ms(12), color: colors.placeholder, lineHeight: ms(18), marginBottom: vs(6) },
   foodPrice: { fontSize: ms(15), fontWeight: '800', color: colors.text, marginTop: vs(6) },
+  vegBestsellerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: rs(8),
+    marginBottom: vs(4),
+  },
   vegBox: {
-    marginBottom: vs(2),
     width: rs(14), height: rs(14), borderRadius: rs(2),
     borderWidth: 1.5, backgroundColor: '#fff',
     justifyContent: 'center', alignItems: 'center',
@@ -343,20 +353,25 @@ const styles = StyleSheet.create({
   bestsellerTag: {
     backgroundColor: '#FFF3CD', borderRadius: rs(4),
     paddingHorizontal: rs(6), paddingVertical: vs(2),
-    marginBottom: vs(4), alignSelf: 'flex-start',
   },
   bestsellerTagText: { fontSize: ms(10), fontWeight: '700', color: '#B8860B' },
-  foodImageWrap: { position: 'relative', alignSelf: 'flex-start' },
+  foodImageWrap: { position: 'relative', alignSelf: 'center', marginTop: -vs(10) },
   foodImageBg: {
-    width: rs(110), height: rs(110),
+    width: rs(130), height: rs(130),
     borderRadius: borderRadius.md,
     backgroundColor: colors.background,
     justifyContent: 'center', alignItems: 'center',
     overflow: 'hidden',
   },
-  foodImage: { width: rs(110), height: rs(110) },
-  foodEmoji: { fontSize: ms(52) },
-  addBtnWrap: { alignItems: 'center', marginTop: vs(8) },
+  foodImage: { width: rs(130), height: rs(130) },
+  foodEmoji: { fontSize: ms(58) },
+  addBtnWrap: {
+    position: 'absolute',
+    bottom: -vs(16),
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
   addBtn: {
     flexDirection: 'row', alignItems: 'center', gap: rs(2),
     borderWidth: 1.5, borderColor: colors.primary,

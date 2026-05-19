@@ -28,7 +28,11 @@
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
         "CAMERA",
-        "WRITE_EXTERNAL_STORAGE"
+        "WRITE_EXTERNAL_STORAGE",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
@@ -39,6 +43,11 @@
       "expo-notifications",
       "expo-camera",
       "expo-font"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "33a1ff86-b70a-4730-adac-deb1808e282c"
+      }
+    }
   }
 }

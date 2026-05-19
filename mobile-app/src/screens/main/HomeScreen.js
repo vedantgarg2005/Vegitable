@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, FlatList, ScrollView, StyleSheet, TouchableOpacity,
   StatusBar, ActivityIndicator, Dimensions, Animated, TextInput,
-  Modal, Alert, Image,
+  Modal, Alert, Image, RefreshControl,
 } from 'react-native';
 import Reanimated, {
   useSharedValue, useAnimatedStyle, withRepeat, withSequence,
@@ -122,14 +122,16 @@ function FoodCard({ item, onPress, onAdd, qty, isOpen, nextAvailableLabel }) {
     <TouchableOpacity style={[styles.foodCard, shadows.small]} onPress={onPress} activeOpacity={0.92}>
       {/* Info on left */}
       <View style={styles.foodInfo}>
-        <View style={[styles.vegBox, { borderColor: item.isVeg !== false ? colors.tagVeg : colors.tagNonVeg }]}>
-          <View style={[styles.vegDot, { backgroundColor: item.isVeg !== false ? colors.tagVeg : colors.tagNonVeg }]} />
-        </View>
-        {item.isBestseller && (
-          <View style={styles.bestsellerTag}>
-            <Text style={styles.bestsellerTagText}>⭐ Bestseller</Text>
+        <View style={styles.vegBestsellerRow}>
+          <View style={[styles.vegBox, { borderColor: item.isVeg !== false ? colors.tagVeg : colors.tagNonVeg }]}>
+            <View style={[styles.vegDot, { backgroundColor: item.isVeg !== false ? colors.tagVeg : colors.tagNonVeg }]} />
           </View>
-        )}
+          {item.isBestseller && (
+            <View style={styles.bestsellerTag}>
+              <Text style={styles.bestsellerTagText}>Bestseller</Text>
+            </View>
+          )}
+        </View>
         <Text style={styles.foodName} numberOfLines={1}>{item.name}</Text>
         <Text style={styles.foodDesc} numberOfLines={2}>{item.description}</Text>
         <Text style={styles.foodPrice}>₹{item.price}</Text>
@@ -501,41 +503,48 @@ export default function HomeScreen({ navigation }) {
         </View>
       </View>
 
-      <FlatList
-        data={foodItems}
-        renderItem={({ item }) => {
-          const qty = getQty(item._id);
-          return (
-            <FoodCard
-              item={item}
-              qty={qty}
-              isOpen={restaurantOpen}
-              nextAvailableLabel={nextOpenTime ? `Next available at: ${formatTime12(nextOpenTime)}` : 'Currently closed'}
-              onPress={() => { setSelectedItem(item); setItemQty(1); }}
-              onAdd={(delta = 1) => {
-                if (delta > 0) addToCart(item);
-                else updateQuantity(item._id || item.id, qty - 1);
-              }}
-            />
-          );
-        }}
-        keyExtractor={item => item._id}
-        contentContainerStyle={styles.list}
+      <ScrollView
+        style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
-        refreshing={refreshing}
-        onRefresh={onRefresh}
-        ListHeaderComponent={ListHeader}
-        ListEmptyComponent={
-          !loading && (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyEmoji}>🍕</Text>
-              <Text style={styles.emptyTitle}>Nothing found</Text>
-              <Text style={styles.emptySubtitle}>Try a different search or category</Text>
-            </View>
-          )
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} tintColor={colors.primary} />
         }
-        ListFooterComponent={loading ? <ActivityIndicator size="large" color={colors.primary} style={styles.loader} /> : null}
-      />
+      >
+        <FlatList
+          data={foodItems}
+          renderItem={({ item }) => {
+            const qty = getQty(item._id);
+            return (
+              <FoodCard
+                item={item}
+                qty={qty}
+                isOpen={restaurantOpen}
+                nextAvailableLabel={nextOpenTime ? `Next available at: ${formatTime12(nextOpenTime)}` : 'Currently closed'}
+                onPress={() => { setSelectedItem(item); setItemQty(1); }}
+                onAdd={(delta = 1) => {
+                  if (delta > 0) addToCart(item);
+                  else updateQuantity(item._id || item.id, qty - 1);
+                }}
+              />
+            );
+          }}
+          keyExtractor={item => item._id}
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+          scrollEnabled={false}
+          ListHeaderComponent={ListHeader}
+          ListEmptyComponent={
+            !loading && (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyEmoji}>🍕</Text>
+                <Text style={styles.emptyTitle}>Nothing found</Text>
+                <Text style={styles.emptySubtitle}>Try a different search or category</Text>
+              </View>
+            )
+          }
+          ListFooterComponent={loading ? <ActivityIndicator size="large" color={colors.primary} style={styles.loader} /> : null}
+        />
+      </ScrollView>
 
       {/* Floating cart bar — like Swiggy */}
       {itemCount > 0 && (
@@ -861,25 +870,28 @@ const styles = StyleSheet.create({
   // Swiggy-style horizontal food card
   foodCard: {
     flexDirection: 'row',
+    alignItems: 'flex-start',
     backgroundColor: colors.surface,
     marginHorizontal: rs(16),
-    marginBottom: vs(14),
+    marginBottom: vs(36),
     borderRadius: borderRadius.md,
-    paddingVertical: vs(16),
-    paddingHorizontal: rs(12),
+    paddingTop: vs(14),
+    paddingHorizontal: rs(20),
+    paddingBottom: vs(26),
     gap: rs(12),
+    overflow: 'visible',
     ...shadows.small,
   },
-  foodImageWrap: { position: 'relative', alignSelf: 'flex-start' },
+  foodImageWrap: { position: 'relative', alignSelf: 'center', marginTop: -vs(10) },
   foodImageBg: {
-    width: rs(110), height: rs(110),
+    width: rs(130), height: rs(130),
     borderRadius: borderRadius.md,
     backgroundColor: colors.background,
     justifyContent: 'center', alignItems: 'center',
     overflow: 'hidden',
   },
-  foodImage: { width: rs(110), height: rs(110) },
-  foodEmoji: { fontSize: ms(52) },
+  foodImage: { width: rs(130), height: rs(130) },
+  foodEmoji: { fontSize: ms(58) },
   bestsellerBadge: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
     backgroundColor: 'rgba(0,0,0,0.55)',
@@ -889,8 +901,13 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: borderRadius.md,
   },
   bestsellerText: { fontSize: ms(8), fontWeight: '800', color: '#FFD700', letterSpacing: 0.3 },
+  vegBestsellerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: rs(8),
+    marginBottom: vs(4),
+  },
   vegBox: {
-    marginBottom: vs(2),
     width: rs(14), height: rs(14), borderRadius: rs(2),
     borderWidth: 1.5, backgroundColor: '#fff',
     justifyContent: 'center', alignItems: 'center',
@@ -900,8 +917,6 @@ const styles = StyleSheet.create({
     borderRadius: rs(4),
     paddingHorizontal: rs(6),
     paddingVertical: vs(2),
-    marginBottom: vs(4),
-    alignSelf: 'flex-start',
   },
   bestsellerTagText: {
     fontSize: ms(10),
@@ -910,7 +925,7 @@ const styles = StyleSheet.create({
   },
   vegDot: { width: rs(6), height: rs(6), borderRadius: rs(3) },
 
-  foodInfo: { flex: 1, justifyContent: 'flex-start', paddingTop: 0 },
+  foodInfo: { flex: 1, justifyContent: 'flex-start', paddingTop: 0, alignSelf: 'flex-start' },
   foodName: { fontSize: ms(14), fontWeight: '700', color: colors.text, marginBottom: vs(4) },
   foodDesc: { fontSize: ms(12), color: colors.placeholder, lineHeight: ms(18), marginBottom: vs(6) },
 
@@ -925,7 +940,13 @@ const styles = StyleSheet.create({
   ratingCount: { fontSize: ms(11), color: colors.placeholder },
 
   foodPrice: { fontSize: ms(15), fontWeight: '800', color: colors.text, marginTop: vs(6) },
-  addBtnWrap: { alignItems: 'center', marginTop: vs(8) },
+  addBtnWrap: {
+    position: 'absolute',
+    bottom: -vs(16),
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
 
   addBtn: {
     flexDirection: 'row', alignItems: 'center', gap: rs(2),
