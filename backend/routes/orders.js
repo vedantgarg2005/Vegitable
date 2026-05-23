@@ -42,7 +42,6 @@ router.post('/', auth, async (req, res) => {
     if (!items || items.length === 0) {
       return res.status(400).json({ message: 'Order must have at least one item' });
     }
-
     const deliveryFee = orderType === 'delivery' ? calculateDeliveryFee(subtotal) : 0;
     const discount = pricing?.discount || 0;
     const total = subtotal + deliveryFee - discount;
@@ -63,7 +62,7 @@ router.post('/', auth, async (req, res) => {
     await order.save();
     await order.populate('items.menuItem customer');
 
-    // Auto-assign nearest available delivery agent
+    // Auto-assign nearest available delivery agent from the SAME outlet
     if (order.orderType === 'delivery') {
       const agent = await Fleet.findOne({ status: 'available', isActive: true }).populate('driver');
       if (agent) {

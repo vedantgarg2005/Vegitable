@@ -18,28 +18,30 @@ import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
 import { colors, shadows, borderRadius, ms, rs, vs } from '../../utils/theme';
 import { API_BASE_URL } from '../../utils/constants';
+import FoodCard, { isOutOfStock } from '../../components/FoodCard';
 
 const TYPE_ICONS = { home: 'home-outline', work: 'briefcase-outline', other: 'location-outline' };
 
 const { width: W } = Dimensions.get('window');
 
+
 const CATEGORIES = [
   { name: 'All',       emoji: '🍽️' },
-  { name: 'Pizza',     emoji: '🍕' },
-  { name: 'Burgers',   emoji: '🍔' },
-  { name: 'Pasta',     emoji: '🍝' },
-  { name: 'Sides',     emoji: '🍟' },
+  { name: 'Chaap',     emoji: '🌿' },
+  { name: 'Tikka',     emoji: '🔥' },
+  { name: 'Rolls',     emoji: '🌯' },
+  { name: 'Thali',     emoji: '🍱' },
   { name: 'Beverages', emoji: '🥤' },
-  { name: 'Desserts',  emoji: '🍰' },
+  { name: 'Desserts',  emoji: '🍮' },
 ];
 
 const OFFERS = [
-  { id: '1', title: '50% OFF up to ₹100', subtitle: 'Use code FIRST50 • First order only', bg: ['#E31837', '#A50E26'], emoji: '🎉' },
-  { id: '2', title: 'Buy 1 Get 1 FREE', subtitle: 'On all large pizzas today', bg: ['#0F3460', '#1A1A2E'], emoji: '🍕' },
+  { id: '1', title: '50% OFF up to ₹100', subtitle: 'Use code FIRST50 • First order only', bg: ['#E8650A', '#B84D00'], emoji: '🎉' },
+  { id: '2', title: 'Buy 1 Get 1 FREE', subtitle: 'On all Chaap combos today', bg: ['#1B3A2D', '#254D3C'], emoji: '🌿' },
   { id: '3', title: 'Free Delivery', subtitle: 'On orders above ₹299', bg: ['#2E7D32', '#1B5E20'], emoji: '🛵' },
 ];
 
-function WelcomeBanner({ user }) {
+function WelcomeBanner({ user, orderTypeToggle }) {
   const translateY = useSharedValue(0);
   const rotate = useSharedValue(0);
 
@@ -73,24 +75,28 @@ function WelcomeBanner({ user }) {
   const firstName = user?.name?.split(' ')[0] || 'Guest';
 
   return (
-    <View style={styles.welcomeCard} >
+    <View style={styles.welcomeCard}>
       <View style={styles.welcomeTop}>
         <Text style={styles.welcomeGreeting}>Welcome, <Text style={styles.welcomeName}>{firstName} 👋</Text></Text>
       </View>
+      {orderTypeToggle}
       <View style={styles.welcomeBottom}>
-        <View>
-          <Text style={styles.helloText}>Hello</Text>
-          <Text style={styles.summerText}>Summer</Text>
+        <View style={styles.welcomeTextBlock}>
+          <Text style={styles.helloText}>Pure Veg</Text>
+          <Text style={styles.summerText}>Chaap 🌿</Text>
+          <View style={styles.vegBadge}>
+            <Text style={styles.vegBadgeText}>🟢 100% Vegetarian</Text>
+          </View>
         </View>
         <View style={styles.glassRow}>
-          <Reanimated.View style={[glassStyle, { marginTop: vs(10) }]}>
-            <Text style={styles.juiceGlass}>🥤</Text>
+          <Reanimated.View style={[glassStyle, { marginTop: vs(14) }]}>
+            <Text style={styles.juiceGlass}>🌿</Text>
           </Reanimated.View>
           <Reanimated.View style={glassStyle}>
-            <Text style={styles.juiceGlass}>🥤</Text>
+            <Text style={styles.juiceGlass}>🔥</Text>
           </Reanimated.View>
-          <Reanimated.View style={[glassStyle, { marginTop: vs(6) }]}>
-            <Text style={styles.juiceGlass}>🥤</Text>
+          <Reanimated.View style={[glassStyle, { marginTop: vs(8) }]}>
+            <Text style={styles.juiceGlass}>🌯</Text>
           </Reanimated.View>
         </View>
       </View>
@@ -98,7 +104,6 @@ function WelcomeBanner({ user }) {
   );
 }
 
-// Swiggy-style horizontal food card
 function formatTime12(time24) {
   if (!time24) return '';
   const [h, m] = time24.split(':').map(Number);
@@ -107,80 +112,6 @@ function formatTime12(time24) {
   return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
 }
 
-function FoodCard({ item, onPress, onAdd, qty, isOpen, nextAvailableLabel }) {
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-
-  const handleAdd = () => {
-    Animated.sequence([
-      Animated.timing(scaleAnim, { toValue: 0.92, duration: 80, useNativeDriver: true }),
-      Animated.timing(scaleAnim, { toValue: 1, duration: 80, useNativeDriver: true }),
-    ]).start();
-    onAdd();
-  };
-
-  return (
-    <TouchableOpacity style={[styles.foodCard, shadows.small]} onPress={onPress} activeOpacity={0.92}>
-      {/* Info on left */}
-      <View style={styles.foodInfo}>
-        <View style={styles.vegBestsellerRow}>
-          <View style={[styles.vegBox, { borderColor: item.isVeg !== false ? colors.tagVeg : colors.tagNonVeg }]}>
-            <View style={[styles.vegDot, { backgroundColor: item.isVeg !== false ? colors.tagVeg : colors.tagNonVeg }]} />
-          </View>
-          {item.isBestseller && (
-            <View style={styles.bestsellerTag}>
-              <Text style={styles.bestsellerTagText}>Bestseller</Text>
-            </View>
-          )}
-        </View>
-        <Text style={styles.foodName} numberOfLines={1}>{item.name}</Text>
-        <Text style={styles.foodDesc} numberOfLines={2}>{item.description}</Text>
-        <Text style={styles.foodPrice}>₹{item.price}</Text>
-      </View>
-
-      {/* Image + Add button on right */}
-      <View style={styles.foodImageWrap}>
-        <View style={styles.foodImageBg}>
-          {item.image && item.image.startsWith('/uploads') ? (
-            <Image
-              source={{ uri: `${API_BASE_URL.replace('/api', '')}${item.image}` }}
-              style={styles.foodImage}
-              resizeMode="cover"
-            />
-          ) : (
-            <Text style={styles.foodEmoji}>{item.image || '🍕'}</Text>
-          )}
-        </View>
-        {item.ratings?.average >= 4.2 && (
-          <View style={styles.bestsellerBadge}>
-            <Text style={styles.bestsellerText}>⭐ BESTSELLER</Text>
-          </View>
-        )}
-        <Animated.View style={[styles.addBtnWrap, { transform: [{ scale: scaleAnim }] }]}>
-          {qty > 0 ? (
-            <View style={styles.qtyControl}>
-              <TouchableOpacity style={styles.qtyBtn} onPress={() => onAdd(-1)}>
-                <Ionicons name="remove" size={rs(14)} color={colors.primary} />
-              </TouchableOpacity>
-              <Text style={styles.qtyText}>{qty}</Text>
-              <TouchableOpacity style={[styles.qtyBtn, styles.qtyBtnFilled]} onPress={handleAdd}>
-                <Ionicons name="add" size={rs(14)} color="#fff" />
-              </TouchableOpacity>
-            </View>
-          ) : isOpen ? (
-            <TouchableOpacity style={styles.addBtn} onPress={handleAdd} activeOpacity={0.8}>
-              <Text style={styles.addBtnText}>ADD</Text>
-              <Ionicons name="add" size={rs(13)} color={colors.primary} />
-            </TouchableOpacity>
-          ) : (
-            <View style={styles.closedTag}>
-              <Text style={styles.closedTagText}>{nextAvailableLabel}</Text>
-            </View>
-          )}
-        </Animated.View>
-      </View>
-    </TouchableOpacity>
-  );
-}
 
 export default function HomeScreen({ navigation }) {
   const { user } = useAuth();
@@ -231,24 +162,21 @@ export default function HomeScreen({ navigation }) {
   const [nextOpenTime, setNextOpenTime] = useState(null);
 
   useEffect(() => {
-    fetch(`${API_BASE_URL}/admin/delivery-status`)
-      .then(r => r.json())
-      .then(d => {
-        const enabled = d.deliveryEnabled ?? true;
-        setDeliveryAvailable(enabled);
-        if (!enabled) setOrderType('pickup');
-      })
-      .catch(() => {});
+    if (!deliveryAvailable && orderType === 'delivery') setOrderType('pickup');
+  }, [deliveryAvailable]);
 
-    fetch(`${API_BASE_URL}/admin/restaurant-status`)
-      .then(r => r.json())
-      .then(d => {
-        setRestaurantOpen(d.isOpen ?? true);
-        if (d.openTime && d.closeTime) setRestaurantHours(`${d.openTime} – ${d.closeTime}`);
-        if (d.nextOpenTime) setNextOpenTime(d.nextOpenTime);
-      })
-      .catch(() => {});
-  }, []);
+  // Re-fetch delivery status on focus
+  useEffect(() => {
+    const fetchStatus = () => {
+      fetch(`${API_BASE_URL}/admin/delivery-status`)
+        .then(r => r.json())
+        .then(d => setDeliveryAvailable(d.deliveryEnabled ?? true))
+        .catch(() => {});
+    };
+    fetchStatus();
+    const unsubscribe = navigation.addListener('focus', fetchStatus);
+    return unsubscribe;
+  }, [navigation]);
 
   useEffect(() => { loadAddresses(); }, [loadAddresses]);
   useEffect(() => {
@@ -343,30 +271,30 @@ export default function HomeScreen({ navigation }) {
 
   const ListHeader = () => (
     <>
-      {/* Welcome + Summer Banner */}
-      <WelcomeBanner user={user} />
-
-      {/* Delivery / Pickup toggle */}
-      <View style={styles.orderTypeRowInline}>
-        <TouchableOpacity
-          style={[styles.orderTypeBtn, orderType === 'delivery' && styles.orderTypeBtnActive, !deliveryAvailable && styles.orderTypeBtnDisabled]}
-          onPress={() => deliveryAvailable && setOrderType('delivery')}
-          activeOpacity={deliveryAvailable ? 0.8 : 1}
-        >
-          <Ionicons name="bicycle-outline" size={rs(14)} color={orderType === 'delivery' ? '#fff' : colors.textSecondary} />
-          <Text style={[styles.orderTypeBtnTextInline, orderType === 'delivery' && styles.orderTypeBtnTextInlineActive]}>
-            {deliveryAvailable ? 'Delivery' : 'Unavailable'}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.orderTypeBtn, orderType === 'pickup' && styles.orderTypeBtnActive]}
-          onPress={() => setOrderType('pickup')}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="storefront-outline" size={rs(14)} color={orderType === 'pickup' ? '#fff' : colors.textSecondary} />
-          <Text style={[styles.orderTypeBtnTextInline, orderType === 'pickup' && styles.orderTypeBtnTextInlineActive]}>Pickup</Text>
-        </TouchableOpacity>
-      </View>
+      {/* Welcome + Summer Banner with toggle inside */}
+      <WelcomeBanner user={user} orderTypeToggle={
+        <View style={styles.orderTypeRowInline}>
+          <TouchableOpacity
+            style={[styles.orderTypeBtn, orderType === 'delivery' && styles.orderTypeBtnActive, !deliveryAvailable && styles.orderTypeBtnDisabled]}
+            onPress={() => deliveryAvailable && setOrderType('delivery')}
+            activeOpacity={deliveryAvailable ? 0.8 : 1}
+          >
+            <Ionicons name="bicycle-outline" size={rs(18)} color={orderType === 'delivery' ? '#fff' : colors.textSecondary} />
+            <View style={{ alignItems: 'center' }}>
+              <Text style={[styles.orderTypeBtnTextInline, orderType === 'delivery' && styles.orderTypeBtnTextInlineActive]}>Delivery</Text>
+              {!deliveryAvailable && <Text style={styles.orderTypeBtnUnavailable}>Unavailable</Text>}
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.orderTypeBtn, orderType === 'pickup' && styles.orderTypeBtnActive]}
+            onPress={() => setOrderType('pickup')}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="storefront-outline" size={rs(18)} color={orderType === 'pickup' ? '#fff' : colors.textSecondary} />
+            <Text style={[styles.orderTypeBtnTextInline, orderType === 'pickup' && styles.orderTypeBtnTextInlineActive]}>Pickup</Text>
+          </TouchableOpacity>
+        </View>
+      } />
 
       {/* Restaurant closed banner */}
       {!restaurantOpen && (
@@ -410,7 +338,7 @@ export default function HomeScreen({ navigation }) {
 
       {/* "What's on your mind?" — category scroll */}
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>What's on your mind?</Text>
+        <Text style={styles.sectionTitle}>What are you craving?</Text>
       </View>
       <ScrollView
         horizontal
@@ -489,7 +417,7 @@ export default function HomeScreen({ navigation }) {
           <TextInput
             ref={searchRef}
             style={styles.searchInput}
-            placeholder="Search for pizzas, burgers..."
+            placeholder="Search for chaap, tikka, rolls..."
             placeholderTextColor={colors.placeholder}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -503,48 +431,40 @@ export default function HomeScreen({ navigation }) {
         </View>
       </View>
 
-      <ScrollView
-        style={{ flex: 1 }}
+      <FlatList
+        data={foodItems}
+        renderItem={({ item }) => {
+          const qty = getQty(item._id);
+          return (
+            <FoodCard
+              item={item}
+              qty={qty}
+              isOpen={restaurantOpen}
+              nextAvailableLabel={nextOpenTime ? `Next available at: ${formatTime12(nextOpenTime)}` : 'Currently closed'}
+              onPress={() => { setSelectedItem(item); setItemQty(1); }}
+              onAdd={() => addToCart(item)}
+              onRemove={() => updateQuantity(item._id || item.id, qty - 1)}
+            />
+          );
+        }}
+        keyExtractor={item => item._id}
+        contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
+        ListHeaderComponent={ListHeader}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} tintColor={colors.primary} />
         }
-      >
-        <FlatList
-          data={foodItems}
-          renderItem={({ item }) => {
-            const qty = getQty(item._id);
-            return (
-              <FoodCard
-                item={item}
-                qty={qty}
-                isOpen={restaurantOpen}
-                nextAvailableLabel={nextOpenTime ? `Next available at: ${formatTime12(nextOpenTime)}` : 'Currently closed'}
-                onPress={() => { setSelectedItem(item); setItemQty(1); }}
-                onAdd={(delta = 1) => {
-                  if (delta > 0) addToCart(item);
-                  else updateQuantity(item._id || item.id, qty - 1);
-                }}
-              />
-            );
-          }}
-          keyExtractor={item => item._id}
-          contentContainerStyle={styles.list}
-          showsVerticalScrollIndicator={false}
-          scrollEnabled={false}
-          ListHeaderComponent={ListHeader}
-          ListEmptyComponent={
-            !loading && (
-              <View style={styles.emptyContainer}>
-                <Text style={styles.emptyEmoji}>🍕</Text>
-                <Text style={styles.emptyTitle}>Nothing found</Text>
-                <Text style={styles.emptySubtitle}>Try a different search or category</Text>
-              </View>
-            )
-          }
-          ListFooterComponent={loading ? <ActivityIndicator size="large" color={colors.primary} style={styles.loader} /> : null}
-        />
-      </ScrollView>
+        ListEmptyComponent={
+          !loading && (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyEmoji}>🌿</Text>
+              <Text style={styles.emptyTitle}>Nothing found</Text>
+              <Text style={styles.emptySubtitle}>Try a different search or category</Text>
+            </View>
+          )
+        }
+        ListFooterComponent={loading ? <ActivityIndicator size="large" color={colors.primary} style={styles.loader} /> : null}
+      />
 
       {/* Floating cart bar — like Swiggy */}
       {itemCount > 0 && (
@@ -603,32 +523,41 @@ export default function HomeScreen({ navigation }) {
 
                 {/* Quantity + Add */}
                 <View style={styles.itemModalFooter}>
-                  <View style={styles.itemModalQtyRow}>
-                    <TouchableOpacity style={styles.itemModalQtyBtn} onPress={() => setItemQty(q => Math.max(1, q - 1))}>
-                      <Ionicons name="remove" size={rs(16)} color={colors.primary} />
-                    </TouchableOpacity>
-                    <Text style={styles.itemModalQtyText}>{itemQty}</Text>
-                    <TouchableOpacity style={[styles.itemModalQtyBtn, styles.itemModalQtyBtnFilled]} onPress={() => setItemQty(q => q + 1)}>
-                      <Ionicons name="add" size={rs(16)} color="#fff" />
-                    </TouchableOpacity>
-                  </View>
-                  {restaurantOpen ? (
-                    <TouchableOpacity
-                      style={styles.itemModalAddBtn}
-                      activeOpacity={0.88}
-                      onPress={() => {
-                        for (let i = 0; i < itemQty; i++) addToCart(selectedItem);
-                        setSelectedItem(null);
-                      }}
-                    >
-                      <Text style={styles.itemModalAddBtnText}>Add to Cart  ₹{(selectedItem.price * itemQty).toFixed(0)}</Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <View style={styles.itemModalClosedBtn}>
-                      <Text style={styles.itemModalClosedText}>
-                        {nextOpenTime ? `Next available at: ${formatTime12(nextOpenTime)}` : 'Currently closed'}
-                      </Text>
+                  {isOutOfStock(selectedItem) ? (
+                    <View style={styles.itemModalOutOfStockBtn}>
+                      <Ionicons name="close-circle-outline" size={rs(18)} color="#EF4444" />
+                      <Text style={styles.itemModalOutOfStockText}>Currently Out of Stock</Text>
                     </View>
+                  ) : (
+                    <>
+                      <View style={styles.itemModalQtyRow}>
+                        <TouchableOpacity style={styles.itemModalQtyBtn} onPress={() => setItemQty(q => Math.max(1, q - 1))}>
+                          <Ionicons name="remove" size={rs(16)} color={colors.primary} />
+                        </TouchableOpacity>
+                        <Text style={styles.itemModalQtyText}>{itemQty}</Text>
+                        <TouchableOpacity style={[styles.itemModalQtyBtn, styles.itemModalQtyBtnFilled]} onPress={() => setItemQty(q => q + 1)}>
+                          <Ionicons name="add" size={rs(16)} color="#fff" />
+                        </TouchableOpacity>
+                      </View>
+                      {restaurantOpen ? (
+                        <TouchableOpacity
+                          style={styles.itemModalAddBtn}
+                          activeOpacity={0.88}
+                          onPress={() => {
+                            for (let i = 0; i < itemQty; i++) addToCart(selectedItem);
+                            setSelectedItem(null);
+                          }}
+                        >
+                          <Text style={styles.itemModalAddBtnText}>Add to Cart  ₹{(selectedItem.price * itemQty).toFixed(0)}</Text>
+                        </TouchableOpacity>
+                      ) : (
+                        <View style={styles.itemModalClosedBtn}>
+                          <Text style={styles.itemModalClosedText}>
+                            {nextOpenTime ? `Next available at: ${formatTime12(nextOpenTime)}` : 'Currently closed'}
+                          </Text>
+                        </View>
+                      )}
+                    </>
                   )}
                 </View>
               </>
@@ -720,7 +649,14 @@ const styles = StyleSheet.create({
   deliverTo: { fontSize: ms(10), color: 'rgba(255,255,255,0.55)', fontWeight: '700', letterSpacing: 1 },
   locationValueRow: { flexDirection: 'row', alignItems: 'center', gap: rs(4) },
   locationText: { fontSize: ms(15), color: '#fff', fontWeight: '700' },
-  headerActions: { flexDirection: 'row', gap: rs(4) },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: rs(4) },
+  outletChip: {
+    flexDirection: 'row', alignItems: 'center', gap: rs(4),
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderRadius: borderRadius.full,
+    paddingHorizontal: rs(10), paddingVertical: vs(5),
+  },
+  outletChipText: { fontSize: ms(11), fontWeight: '700', color: '#fff', maxWidth: rs(70) },
   headerIconBtn: { padding: rs(8), position: 'relative' },
   cartBadge: {
     position: 'absolute', top: rs(4), right: rs(4),
@@ -754,22 +690,21 @@ const styles = StyleSheet.create({
   // Order type toggle (inline below welcome)
   orderTypeRowInline: {
     flexDirection: 'row',
-    backgroundColor: colors.surface,
+    backgroundColor: 'rgba(255,255,255,0.15)',
     borderRadius: borderRadius.full,
-    padding: rs(3),
-    marginHorizontal: rs(16),
+    padding: rs(4),
     marginTop: vs(12),
-    marginBottom: vs(4),
-    alignSelf: 'flex-start',
-    ...shadows.small,
+    marginBottom: vs(12),
+    alignSelf: 'stretch',
   },
-  orderTypeBtnTextInline: { fontSize: ms(13), fontWeight: '700', color: colors.textSecondary },
+  orderTypeBtnTextInline: { fontSize: ms(15), fontWeight: '700', color: 'rgba(255,255,255,0.6)' },
   orderTypeBtnTextInlineActive: { color: '#fff' },
+  orderTypeBtnUnavailable: { fontSize: ms(10), fontWeight: '600', color: 'rgba(255,255,255,0.5)', marginTop: vs(1) },
   orderTypeBtnActive: { backgroundColor: colors.primary },
   orderTypeBtnDisabled: { opacity: 0.45 },
   orderTypeBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: rs(5),
-    paddingHorizontal: rs(14), paddingVertical: vs(6),
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: rs(7),
+    paddingHorizontal: rs(16), paddingVertical: vs(10),
     borderRadius: borderRadius.full,
   },
   orderTypeBtnText: { fontSize: ms(13), fontWeight: '700', color: 'rgba(255,255,255,0.7)' },
@@ -803,25 +738,50 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginTop: vs(4),
+  },
+  welcomeTextBlock: {
+    flex: 1,
+    justifyContent: 'center',
   },
   helloText: {
-    fontSize: ms(14),
-    color: 'rgba(255,255,255,0.55)',
+    fontSize: ms(13),
+    color: 'rgba(255,255,255,0.5)',
     fontWeight: '600',
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+    marginBottom: vs(2),
   },
   summerText: {
-    fontSize: ms(28),
+    fontSize: ms(34),
     fontWeight: '900',
     color: colors.primary,
-    letterSpacing: -0.5,
+    letterSpacing: -1,
+    lineHeight: ms(38),
+  },
+  vegBadge: {
+    marginTop: vs(8),
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: borderRadius.full,
+    paddingHorizontal: rs(10),
+    paddingVertical: vs(4),
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+  },
+  vegBadgeText: {
+    fontSize: ms(11),
+    color: 'rgba(255,255,255,0.8)',
+    fontWeight: '600',
   },
   juiceGlass: {
-    fontSize: ms(52),
+    fontSize: ms(48),
   },
   glassRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    gap: rs(6),
+    gap: rs(4),
+    paddingBottom: vs(4),
   },
 
   // Banners
@@ -867,68 +827,6 @@ const styles = StyleSheet.create({
   // Food list
   list: { paddingBottom: vs(100) },
 
-  // Swiggy-style horizontal food card
-  foodCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: colors.surface,
-    marginHorizontal: rs(16),
-    marginBottom: vs(36),
-    borderRadius: borderRadius.md,
-    paddingTop: vs(14),
-    paddingHorizontal: rs(20),
-    paddingBottom: vs(26),
-    gap: rs(12),
-    overflow: 'visible',
-    ...shadows.small,
-  },
-  foodImageWrap: { position: 'relative', alignSelf: 'center', marginTop: -vs(10) },
-  foodImageBg: {
-    width: rs(130), height: rs(130),
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.background,
-    justifyContent: 'center', alignItems: 'center',
-    overflow: 'hidden',
-  },
-  foodImage: { width: rs(130), height: rs(130) },
-  foodEmoji: { fontSize: ms(58) },
-  bestsellerBadge: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    paddingVertical: vs(3),
-    alignItems: 'center',
-    borderBottomLeftRadius: borderRadius.md,
-    borderBottomRightRadius: borderRadius.md,
-  },
-  bestsellerText: { fontSize: ms(8), fontWeight: '800', color: '#FFD700', letterSpacing: 0.3 },
-  vegBestsellerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: rs(8),
-    marginBottom: vs(4),
-  },
-  vegBox: {
-    width: rs(14), height: rs(14), borderRadius: rs(2),
-    borderWidth: 1.5, backgroundColor: '#fff',
-    justifyContent: 'center', alignItems: 'center',
-  },
-  bestsellerTag: {
-    backgroundColor: '#FFF3CD',
-    borderRadius: rs(4),
-    paddingHorizontal: rs(6),
-    paddingVertical: vs(2),
-  },
-  bestsellerTagText: {
-    fontSize: ms(10),
-    fontWeight: '700',
-    color: '#B8860B',
-  },
-  vegDot: { width: rs(6), height: rs(6), borderRadius: rs(3) },
-
-  foodInfo: { flex: 1, justifyContent: 'flex-start', paddingTop: 0, alignSelf: 'flex-start' },
-  foodName: { fontSize: ms(14), fontWeight: '700', color: colors.text, marginBottom: vs(4) },
-  foodDesc: { fontSize: ms(12), color: colors.placeholder, lineHeight: ms(18), marginBottom: vs(6) },
-
   ratingRow: { flexDirection: 'row', alignItems: 'center', gap: rs(6), marginBottom: vs(8) },
   ratingBadge: {
     flexDirection: 'row', alignItems: 'center', gap: rs(3),
@@ -938,39 +836,6 @@ const styles = StyleSheet.create({
   },
   ratingText: { fontSize: ms(11), fontWeight: '700', color: '#fff' },
   ratingCount: { fontSize: ms(11), color: colors.placeholder },
-
-  foodPrice: { fontSize: ms(15), fontWeight: '800', color: colors.text, marginTop: vs(6) },
-  addBtnWrap: {
-    position: 'absolute',
-    bottom: -vs(16),
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-  },
-
-  addBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: rs(2),
-    borderWidth: 1.5, borderColor: colors.primary,
-    borderRadius: borderRadius.xs,
-    paddingHorizontal: rs(14), paddingVertical: vs(6),
-    backgroundColor: colors.primarySurface,
-  },
-  addBtnText: { fontSize: ms(13), fontWeight: '800', color: colors.primary },
-
-  qtyControl: {
-    flexDirection: 'row', alignItems: 'center',
-    borderWidth: 1.5, borderColor: colors.primary,
-    borderRadius: borderRadius.xs, overflow: 'hidden',
-  },
-  qtyBtn: {
-    width: rs(30), height: rs(30),
-    justifyContent: 'center', alignItems: 'center',
-  },
-  qtyBtnFilled: { backgroundColor: colors.primary },
-  qtyText: {
-    fontSize: ms(13), fontWeight: '800', color: colors.primary,
-    paddingHorizontal: rs(10),
-  },
 
   // Item detail modal
   itemModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
@@ -1088,6 +953,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   itemModalClosedText: { color: colors.textSecondary, fontSize: ms(13), fontWeight: '700' },
+  itemModalOutOfStockBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: rs(8),
+    borderRadius: borderRadius.sm,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1.5, borderColor: '#EF4444',
+    paddingVertical: vs(12),
+  },
+  itemModalOutOfStockText: { color: '#EF4444', fontSize: ms(14), fontWeight: '700' },
   emptyContainer: { alignItems: 'center', paddingVertical: vs(60), paddingHorizontal: rs(32) },
   emptyEmoji: { fontSize: ms(56), marginBottom: vs(12) },
   emptyTitle: { fontSize: ms(18), fontWeight: '800', color: colors.text, marginBottom: vs(6) },

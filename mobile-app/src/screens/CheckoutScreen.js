@@ -126,6 +126,7 @@ const CheckoutScreen = ({ navigation, route }) => {
       const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
       const payload = {
+        outletId: undefined,
         orderType,
         items: cartItems.map(item => ({
           menuItem: item._id || item.id,

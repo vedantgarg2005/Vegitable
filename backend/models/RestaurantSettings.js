@@ -8,6 +8,7 @@ const daySchema = {
 
 const restaurantSettingsSchema = new mongoose.Schema({
   _id: { type: String, default: 'main' },
+  deliveryEnabled: { type: Boolean, default: true },
   schedule: {
     monday:    daySchema,
     tuesday:   daySchema,

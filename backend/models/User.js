@@ -13,7 +13,7 @@ const userSchema = new mongoose.Schema({
   referralCount: { type: Number, default: 0 },
   role: { 
     type: String, 
-    enum: ['customer', 'admin', 'delivery_partner', 'restaurant_staff'], 
+    enum: ['customer', 'admin', 'delivery_partner', 'store_staff'], 
     default: 'customer' 
   },
   avatar: { type: String },
@@ -30,8 +30,13 @@ const userSchema = new mongoose.Schema({
     isDefault: { type: Boolean, default: false }
   }],
   preferences: {
-    dietary: [{ type: String, enum: ['vegetarian', 'vegan', 'jain', 'gluten_free'] }],
-    spiceLevel: { type: String, enum: ['mild', 'medium', 'spicy'], default: 'medium' }
+    sports: [{ type: String }],
+    brands: [{ type: String }],
+    sizes: {
+      top: String,
+      bottom: String,
+      shoes: String,
+    }
   },
   wallet: {
     balance: { type: Number, default: 0 },

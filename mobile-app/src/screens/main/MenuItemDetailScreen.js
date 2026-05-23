@@ -24,6 +24,7 @@ export default function MenuItemDetailScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
   const [restaurantOpen, setRestaurantOpen] = useState(true);
   const [nextOpenTime, setNextOpenTime] = useState(null);
+  const isOutOfStock = item.availability?.isAvailable === false;
 
   useEffect(() => {
     fetch(`${BASE_URL}/admin/restaurant-status`)
@@ -56,13 +57,19 @@ export default function MenuItemDetailScreen({ route, navigation }) {
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={rs(22)} color="#fff" />
         </TouchableOpacity>
-        <View style={styles.heroEmojiWrap}>
+        <View style={[styles.heroEmojiWrap, isOutOfStock && { opacity: 0.45 }]}>
           {item.image && item.image.startsWith('/uploads') ? (
             <Image source={{ uri: `${API_BASE_URL.replace('/api', '')}${item.image}` }} style={styles.heroImage} resizeMode="cover" />
           ) : (
             <Text style={styles.heroEmoji}>{item.image || '🍽️'}</Text>
           )}
         </View>
+        {isOutOfStock && (
+          <View style={styles.outOfStockHeroBadge}>
+            <Ionicons name="close-circle" size={rs(14)} color="#fff" />
+            <Text style={styles.outOfStockHeroText}>Out of Stock</Text>
+          </View>
+        )}
       </LinearGradient>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -116,7 +123,12 @@ export default function MenuItemDetailScreen({ route, navigation }) {
 
       {/* Add to cart footer */}
       <View style={[styles.footer, { paddingBottom: insets.bottom + vs(12) }]}>
-        {restaurantOpen ? (
+        {isOutOfStock ? (
+          <View style={styles.outOfStockBtn}>
+            <Ionicons name="close-circle-outline" size={rs(18)} color="#EF4444" />
+            <Text style={styles.outOfStockBtnText}>Currently Out of Stock</Text>
+          </View>
+        ) : restaurantOpen ? (
           <TouchableOpacity style={styles.addBtn} onPress={handleAddToCart} activeOpacity={0.88}>
             <LinearGradient
               colors={[colors.gradientStart, colors.gradientEnd]}
@@ -238,4 +250,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   closedBtnText: { color: colors.textSecondary, fontSize: ms(15), fontWeight: '700' },
+  outOfStockHeroBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: rs(5),
+    backgroundColor: '#EF4444',
+    borderRadius: borderRadius.full,
+    paddingHorizontal: rs(12), paddingVertical: vs(5),
+    marginTop: vs(10),
+  },
+  outOfStockHeroText: { color: '#fff', fontSize: ms(12), fontWeight: '700' },
+  outOfStockBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: rs(8),
+    borderRadius: borderRadius.md,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1.5, borderColor: '#EF4444',
+    paddingVertical: vs(15),
+  },
+  outOfStockBtnText: { color: '#EF4444', fontSize: ms(15), fontWeight: '700' },
 });

@@ -9,10 +9,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCart } from '../context/CartContext';
 import { colors, shadows, borderRadius, ms, rs, vs } from '../utils/theme';
 import api, { menuAPI } from '../services/api';
+import { useOutlet } from '../context/OutletContext';
 import { FREE_DELIVERY_THRESHOLD, STANDARD_DELIVERY_FEE, getDeliveryFee, API_BASE_URL, PICKUP_ADDRESS } from '../utils/constants';
 
 const CartScreen = ({ navigation, route }) => {
   const { items: cartItems, total, updateQuantity, removeFromCart, addToCart } = useCart();
+  const { selectedOutlet } = useOutlet();
   const [orderType, setOrderType] = useState(route?.params?.orderType || 'delivery');
   const [suggestedItems, setSuggestedItems] = useState([]);
   const [instructions, setInstructions] = useState('');
@@ -34,11 +36,15 @@ const CartScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
-    fetch(`${API_BASE_URL}/admin/delivery-status`)
-      .then(r => r.json())
-      .then(d => setDeliveryAvailable(d.deliveryEnabled ?? true))
-      .catch(() => {});
-  }, []);
+    if (selectedOutlet) {
+      setDeliveryAvailable(selectedOutlet.deliveryEnabled ?? true);
+    } else {
+      fetch(`${API_BASE_URL}/admin/delivery-status`)
+        .then(r => r.json())
+        .then(d => setDeliveryAvailable(d.deliveryEnabled ?? true))
+        .catch(() => {});
+    }
+  }, [selectedOutlet]);
 
   useEffect(() => {
     menuAPI.getItems()
@@ -94,9 +100,11 @@ const CartScreen = ({ navigation, route }) => {
 
   const deliveryFee = orderType === 'pickup' ? 0 : getDeliveryFee(total);
   const grandTotal = Math.max(0, total + deliveryFee - discount);
+  const hasOutOfStockItems = cartItems.some(i => i.availability?.isAvailable === false);
 
   const proceedToCheckout = () => {
     if (cartItems.length === 0) { Alert.alert('Empty Cart', 'Please add items first'); return; }
+    if (hasOutOfStockItems) { Alert.alert('Items Unavailable', 'Please remove out-of-stock items before placing your order.'); return; }
     navigation.navigate('Checkout', { instructions, discount, couponCode, grandTotal, deliveryFee, orderType });
   };
 
@@ -120,9 +128,10 @@ const CartScreen = ({ navigation, route }) => {
             activeOpacity={deliveryAvailable ? 0.8 : 1}
           >
             <Ionicons name="bicycle-outline" size={rs(14)} color={orderType === 'delivery' ? '#fff' : 'rgba(255,255,255,0.6)'} />
-            <Text style={[styles.toggleBtnText, orderType === 'delivery' && styles.toggleBtnTextActive]}>
-              {deliveryAvailable ? 'Delivery' : 'Unavailable'}
-            </Text>
+            <View style={{ alignItems: 'center' }}>
+              <Text style={[styles.toggleBtnText, orderType === 'delivery' && styles.toggleBtnTextActive]}>Delivery</Text>
+              {!deliveryAvailable && <Text style={styles.toggleBtnUnavailable}>Unavailable</Text>}
+            </View>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.toggleBtn, orderType === 'pickup' && styles.toggleBtnActive]}
@@ -136,7 +145,7 @@ const CartScreen = ({ navigation, route }) => {
 
       {cartItems.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyEmoji}>🍕</Text>
+          <Text style={styles.emptyEmoji}>🌿</Text>
           <Text style={styles.emptyTitle}>Your cart is empty</Text>
           <Text style={styles.emptySubtitle}>Add some delicious items!</Text>
           <TouchableOpacity style={styles.browseBtn} onPress={() => navigation.goBack()}>
@@ -186,7 +195,7 @@ const CartScreen = ({ navigation, route }) => {
               {cartItems.map((item, idx) => (
                 <View key={item.id || item._id}>
                   {idx > 0 && <View style={styles.itemDivider} />}
-                  <View style={styles.cartItem}>
+                  <View style={[styles.cartItem, item.availability?.isAvailable === false && { opacity: 0.5 }]}>
                     <View style={styles.itemLeft}>
                       <View style={[styles.vegBox, { borderColor: colors.tagVeg }]}>
                         <View style={[styles.vegDot, { backgroundColor: colors.tagVeg }]} />
@@ -204,6 +213,15 @@ const CartScreen = ({ navigation, route }) => {
                       <Text style={styles.itemPrice}>₹{(item.price * item.quantity).toFixed(2)}</Text>
                     </View>
                   </View>
+                  {item.availability?.isAvailable === false && (
+                    <View style={styles.unavailableBanner}>
+                      <Ionicons name="alert-circle" size={rs(13)} color="#EF4444" />
+                      <Text style={styles.unavailableBannerText}>This item is not available right now</Text>
+                      <TouchableOpacity onPress={() => removeFromCart(item.id)}>
+                        <Text style={styles.unavailableRemoveText}>Remove</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
                 </View>
               ))}
 
@@ -234,12 +252,12 @@ const CartScreen = ({ navigation, route }) => {
             </View>
 
             {/* Craving More */}
-            {suggestedItems.filter(i => !cartItems.find(c => c.id === (i._id || i.id))).length > 0 && (
+            {suggestedItems.filter(i => !cartItems.find(c => c.id === (i._id || i.id)) && i.availability?.isAvailable !== false).length > 0 && (
               <View style={[styles.sectionCard, shadows.small]}>
                 <Text style={styles.sectionTitle}>CRAVING MORE? 🤤</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.suggestList}>
                   {suggestedItems
-                    .filter(i => !cartItems.find(c => c.id === (i._id || i.id)))
+                    .filter(i => !cartItems.find(c => c.id === (i._id || i.id)) && i.availability?.isAvailable !== false)
                     .slice(0, 10)
                     .map(item => {
                       const cartItem = cartItems.find(c => c.id === (item._id || item.id));
@@ -362,8 +380,14 @@ const CartScreen = ({ navigation, route }) => {
 
           {/* Checkout Footer */}
           <View style={[styles.footer, { paddingBottom: insets.bottom + vs(8) }]}>
+            {hasOutOfStockItems && (
+              <View style={styles.outOfStockFooterBanner}>
+                <Ionicons name="alert-circle" size={rs(14)} color="#EF4444" />
+                <Text style={styles.outOfStockFooterText}>Remove unavailable items to place order</Text>
+              </View>
+            )}
             <TouchableOpacity
-              style={[styles.checkoutBtn, orderType === 'delivery' && !deliveryAvailable && styles.checkoutBtnDisabled]}
+              style={[styles.checkoutBtn, (orderType === 'delivery' && !deliveryAvailable || hasOutOfStockItems) && styles.checkoutBtnDisabled]}
               onPress={proceedToCheckout}
               activeOpacity={0.88}
               disabled={orderType === 'delivery' && !deliveryAvailable}
@@ -468,6 +492,7 @@ const styles = StyleSheet.create({
   toggleBtnDisabled: { opacity: 0.45 },
   toggleBtnText: { fontSize: ms(13), fontWeight: '700', color: 'rgba(255,255,255,0.6)', fontFamily: 'Poppins_700Bold' },
   toggleBtnTextActive: { color: '#fff' },
+  toggleBtnUnavailable: { fontSize: ms(10), fontWeight: '600', color: 'rgba(255,255,255,0.5)', marginTop: vs(1) },
 
   emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: rs(32) },
   emptyEmoji: { fontSize: ms(64), marginBottom: vs(16) },
@@ -710,6 +735,24 @@ const styles = StyleSheet.create({
   pickupPhoneRow: { flexDirection: 'row', alignItems: 'center', gap: rs(6), marginTop: vs(8) },
   pickupPhone: { fontSize: ms(13), color: colors.textSecondary, fontWeight: '600' },
 
+  unavailableBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: rs(6),
+    backgroundColor: '#FEF2F2',
+    borderRadius: borderRadius.xs,
+    paddingHorizontal: rs(10), paddingVertical: vs(6),
+    marginBottom: vs(6),
+  },
+  unavailableBannerText: { flex: 1, fontSize: ms(11), color: '#EF4444', fontWeight: '600' },
+  unavailableRemoveText: { fontSize: ms(11), fontWeight: '800', color: '#EF4444', textDecorationLine: 'underline' },
+  outOfStockFooterBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: rs(6),
+    backgroundColor: '#FEF2F2',
+    borderRadius: borderRadius.xs,
+    paddingHorizontal: rs(10), paddingVertical: vs(7),
+    marginBottom: vs(8),
+    borderWidth: 1, borderColor: '#FECACA',
+  },
+  outOfStockFooterText: { flex: 1, fontSize: ms(12), color: '#EF4444', fontWeight: '600' },
   grandTotalLabel: { fontSize: ms(15), fontWeight: '800', color: colors.text, letterSpacing: 0.5, fontFamily: 'Poppins_800ExtraBold' },
   grandTotalValue: { fontSize: ms(17), fontWeight: '900', color: colors.primary, fontFamily: 'Poppins_900Black' },
 
@@ -724,7 +767,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.xs,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: vs(14),
+    paddingVertical: vs(6),
     paddingHorizontal: rs(16),
   },
   checkoutBtnDisabled: { backgroundColor: colors.placeholder },
@@ -739,9 +782,9 @@ const styles = StyleSheet.create({
   deliveryBannerText: { flex: 1, fontSize: ms(13), color: '#fff', fontWeight: '600' },
 
   checkoutLeft: { flex: 1 },
-  checkoutItemCount: { fontSize: ms(11), color: 'rgba(255,255,255,0.8)', fontWeight: '700', letterSpacing: 0.5, fontFamily: 'Poppins_700Bold' },
-  checkoutTotal: { fontSize: ms(16), fontWeight: '900', color: '#fff', fontFamily: 'Poppins_900Black' },
-  checkoutBtnText: { fontSize: ms(15), fontWeight: '900', color: '#fff', letterSpacing: 1, marginRight: rs(8), fontFamily: 'Poppins_900Black' },
+  checkoutItemCount: { fontSize: ms(10), color: 'rgba(255,255,255,0.8)', fontWeight: '700', letterSpacing: 0.5, fontFamily: 'Poppins_700Bold' },
+  checkoutTotal: { fontSize: ms(14), fontWeight: '900', color: '#fff', fontFamily: 'Poppins_900Black' },
+  checkoutBtnText: { fontSize: ms(13), fontWeight: '900', color: '#fff', letterSpacing: 1, marginRight: rs(8), fontFamily: 'Poppins_900Black' },
 });
 
 export default CartScreen;

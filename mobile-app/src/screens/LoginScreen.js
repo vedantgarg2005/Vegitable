@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, KeyboardAvoidingView,
-  Platform, ScrollView, TouchableOpacity,
+  View, Text, StyleSheet, KeyboardAvoidingView, Platform,
+  TouchableOpacity, TextInput, ActivityIndicator, Animated,
 } from 'react-native';
-import { TextInput, Snackbar } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,310 +10,482 @@ import { useAuth } from '../context/AuthContext';
 import { colors, shadows, borderRadius, ms, rs, vs } from '../utils/theme';
 import { API_BASE_URL } from '../utils/constants';
 
-const LoginScreen = ({ navigation }) => {
+const STEPS = ['phone', 'otp', 'register'];
+
+const STEP_META = {
+  phone:    { label: 'Phone',    icon: 'call-outline' },
+  otp:      { label: 'Verify',   icon: 'shield-checkmark-outline' },
+  register: { label: 'Profile',  icon: 'person-outline' },
+};
+
+/* ── OTP Box Row ─────────────────────────────────────────────────── */
+function OtpInput({ value, onChange }) {
+  const refs = [useRef(), useRef(), useRef(), useRef()];
+  const digits = value.split('');
+
+  const handleKey = (index, text) => {
+    const cleaned = text.replace(/[^0-9]/g, '');
+    if (!cleaned) {
+      const next = [...digits];
+      next[index] = '';
+      onChange(next.join(''));
+      if (index > 0) refs[index - 1].current?.focus();
+      return;
+    }
+    const next = [...digits];
+    next[index] = cleaned[cleaned.length - 1];
+    onChange(next.join(''));
+    if (index < 3) refs[index + 1].current?.focus();
+  };
+
+  return (
+    <View style={otp.row}>
+      {[0, 1, 2, 3].map(i => (
+        <TextInput
+          key={i}
+          ref={refs[i]}
+          style={[otp.box, digits[i] ? otp.boxFilled : null]}
+          value={digits[i] || ''}
+          onChangeText={t => handleKey(i, t)}
+          keyboardType="number-pad"
+          maxLength={1}
+          textAlign="center"
+          autoComplete="one-time-code"
+          textContentType="oneTimeCode"
+          selectTextOnFocus
+        />
+      ))}
+    </View>
+  );
+}
+
+const otp = StyleSheet.create({
+  row: { flexDirection: 'row', justifyContent: 'center', gap: rs(14), marginBottom: vs(24) },
+  box: {
+    width: rs(60), height: rs(64),
+    borderRadius: borderRadius.md,
+    borderWidth: 2, borderColor: colors.border,
+    fontSize: ms(26), fontWeight: '800', color: colors.text,
+    backgroundColor: colors.background,
+  },
+  boxFilled: { borderColor: colors.primary, backgroundColor: colors.primarySurface },
+});
+
+/* ── Step Progress Bar ───────────────────────────────────────────── */
+function StepBar({ step }) {
+  const current = STEPS.indexOf(step);
+  return (
+    <View style={bar.row}>
+      {STEPS.map((s, i) => {
+        const done    = i < current;
+        const active  = i === current;
+        return (
+          <React.Fragment key={s}>
+            <View style={bar.item}>
+              <View style={[bar.circle, done && bar.circleDone, active && bar.circleActive]}>
+                {done
+                  ? <Ionicons name="checkmark" size={rs(13)} color="#fff" />
+                  : <Text style={[bar.num, active && bar.numActive]}>{i + 1}</Text>}
+              </View>
+              <Text style={[bar.label, active && bar.labelActive]}>{STEP_META[s].label}</Text>
+            </View>
+            {i < STEPS.length - 1 && (
+              <View style={[bar.line, done && bar.lineDone]} />
+            )}
+          </React.Fragment>
+        );
+      })}
+    </View>
+  );
+}
+
+const bar = StyleSheet.create({
+  row: {
+    flexDirection: 'row', alignItems: 'flex-start',
+    justifyContent: 'center', marginBottom: vs(28),
+    paddingHorizontal: rs(8),
+  },
+  item: { alignItems: 'center', gap: vs(4) },
+  circle: {
+    width: rs(32), height: rs(32), borderRadius: rs(16),
+    borderWidth: 2, borderColor: 'rgba(255,255,255,0.35)',
+    justifyContent: 'center', alignItems: 'center',
+    backgroundColor: 'transparent',
+  },
+  circleActive: { borderColor: '#fff', backgroundColor: colors.primary },
+  circleDone:   { borderColor: colors.primary, backgroundColor: colors.primary },
+  num:          { fontSize: ms(13), fontWeight: '700', color: 'rgba(255,255,255,0.5)' },
+  numActive:    { color: '#fff' },
+  label:        { fontSize: ms(10), fontWeight: '600', color: 'rgba(255,255,255,0.45)' },
+  labelActive:  { color: '#fff' },
+  line: {
+    flex: 1, height: 2, marginTop: rs(15), marginHorizontal: rs(4),
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  lineDone: { backgroundColor: colors.primary },
+});
+
+/* ── Main Screen ─────────────────────────────────────────────────── */
+export default function LoginScreen({ navigation }) {
+  const { setUser, setToken } = useAuth();
+  const insets = useSafeAreaInsets();
+
+  const [phone, setPhone]           = useState('');
+  const [otp, setOtp]               = useState('');
+  const [name, setName]             = useState('');
+  const [referralCode, setReferral] = useState('');
+  const [step, setStep]             = useState('phone');
+  const [loading, setLoading]       = useState(false);
+  const [error, setError]           = useState('');
+  const [resendTimer, setResendTimer] = useState(0);
+
+  const cardAnim = useRef(new Animated.Value(0)).current;
+  const shakeAnim = useRef(new Animated.Value(0)).current;
+  const timerRef = useRef(null);
+
+  // Slide-in card when step changes
+  useEffect(() => {
+    cardAnim.setValue(40);
+    Animated.spring(cardAnim, { toValue: 0, useNativeDriver: true, tension: 80, friction: 10 }).start();
+  }, [step]);
+
+  // Resend countdown
+  const startTimer = useCallback(() => {
+    setResendTimer(30);
+    timerRef.current = setInterval(() => {
+      setResendTimer(t => {
+        if (t <= 1) { clearInterval(timerRef.current); return 0; }
+        return t - 1;
+      });
+    }, 1000);
+  }, []);
+
+  useEffect(() => () => clearInterval(timerRef.current), []);
+
+  const shake = () => {
+    Animated.sequence([
+      Animated.timing(shakeAnim, { toValue: 8,  duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -8, duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 6,  duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 0,  duration: 60, useNativeDriver: true }),
+    ]).start();
+  };
+
+  const showError = (msg) => { setError(msg); shake(); };
+
   const handleLoginSuccess = (userData, token) => {
     setToken(token);
     setUser(userData);
     navigation.goBack();
   };
-  const [phone, setPhone] = useState('');
-  const [otp, setOtp] = useState('');
-  const [name, setName] = useState('');
-  const [referralCode, setReferralCode] = useState('');
-  const [step, setStep] = useState('phone');
-  const [snackbarVisible, setSnackbarVisible] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
-  const [loading, setLoading] = useState(false);
-  const { setUser, setToken } = useAuth();
-  const insets = useSafeAreaInsets();
-
-  const showSnack = (msg) => { setSnackbarMessage(msg); setSnackbarVisible(true); };
 
   const sendOtp = async () => {
-    if (!phone || phone.length < 10) { showSnack('Please enter a valid phone number'); return; }
-    setLoading(true);
+    if (phone.length < 10) { showError('Enter a valid 10-digit number'); return; }
+    setLoading(true); setError('');
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/send-otp`, {
+      const res = await fetch(`${API_BASE_URL}/auth/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone }),
       });
-      if (response.ok) { setStep('otp'); showSnack('OTP sent successfully!'); }
-      else { const data = await response.json(); showSnack(data.message || 'Failed to send OTP'); }
-    } catch { showSnack('Network error'); }
+      if (res.ok) { setStep('otp'); startTimer(); }
+      else { const d = await res.json(); showError(d.message || 'Failed to send OTP'); }
+    } catch { showError('Network error. Try again.'); }
     setLoading(false);
   };
 
   const verifyOtp = async () => {
-    if (!otp || otp.length < 4) { showSnack('Please enter the 4-digit OTP'); return; }
-    setLoading(true);
+    if (otp.length < 4) { showError('Enter the 4-digit OTP'); return; }
+    setLoading(true); setError('');
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/verify-otp`, {
+      const res = await fetch(`${API_BASE_URL}/auth/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone, otp }),
       });
-      const data = await response.json();
-      if (response.ok) {
-        if (data.isNewUser === false) { handleLoginSuccess(data.user, data.token); }
+      const data = await res.json();
+      if (res.ok) {
+        if (data.isNewUser === false) handleLoginSuccess(data.user, data.token);
         else setStep('register');
-      } else { showSnack(data.message); }
+      } else { showError(data.message || 'Invalid OTP'); }
     } catch { setStep('register'); }
     setLoading(false);
   };
 
   const completeRegistration = async () => {
-    if (!name.trim()) { showSnack('Please enter your name'); return; }
-    setLoading(true);
+    if (!name.trim()) { showError('Please enter your name'); return; }
+    setLoading(true); setError('');
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/complete-registration`, {
+      const res = await fetch(`${API_BASE_URL}/auth/complete-registration`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone, name, referralCode }),
       });
-      const data = await response.json();
-      if (response.ok) { handleLoginSuccess(data.user, data.token); }
-      else showSnack(data.message || 'Registration failed');
-    } catch { showSnack('Network error'); }
+      const data = await res.json();
+      if (res.ok) handleLoginSuccess(data.user, data.token);
+      else showError(data.message || 'Registration failed');
+    } catch { showError('Network error. Try again.'); }
     setLoading(false);
   };
 
-  const stepConfig = {
-    phone: { title: 'Welcome Back!', subtitle: 'Enter your phone number to continue', icon: 'restaurant' },
-    otp: { title: 'Verify OTP', subtitle: `Code sent to +91 ${phone}`, icon: 'shield-checkmark' },
-    register: { title: 'Almost There!', subtitle: 'Tell us a bit about yourself', icon: 'person-add' },
-  };
-
-  const { title, subtitle, icon } = stepConfig[step];
-
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <View style={[styles.gradient, { paddingTop: insets.top, backgroundColor: colors.navy }]}>
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+    <KeyboardAvoidingView style={s.root} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <LinearGradient colors={['#1B3A2D', '#254D3C', '#1B3A2D']} style={[s.bg, { paddingTop: insets.top }]}>
 
-          {/* Hero */}
-          <View style={styles.hero}>
-            <View style={styles.iconCircle}>
-              <Ionicons name={icon} size={rs(36)} color={colors.primary} />
+        {/* ── Top brand area ── */}
+        <View style={s.brand}>
+          <View style={s.logoWrap}>
+            <Text style={s.logoEmoji}>🌿</Text>
+          </View>
+          <Text style={s.brandName}>Khatri Veg Chaap</Text>
+          <Text style={s.brandTagline}>Pure veg, pure taste</Text>
+        </View>
+
+        {/* ── Step progress ── */}
+        <StepBar step={step} />
+
+        {/* ── Card ── */}
+        <Animated.View style={[s.card, shadows.large, { transform: [{ translateY: cardAnim }, { translateX: shakeAnim }] }]}>
+
+          {/* Card header */}
+          <View style={s.cardHeader}>
+            <View style={s.cardIconWrap}>
+              <Ionicons name={STEP_META[step].icon} size={rs(22)} color={colors.primary} />
             </View>
-            <Text style={styles.heroTitle}>{title}</Text>
-            <Text style={styles.heroSubtitle}>{subtitle}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={s.cardTitle}>
+                {step === 'phone' ? 'Sign In / Sign Up' : step === 'otp' ? 'Enter OTP' : 'Create Profile'}
+              </Text>
+              <Text style={s.cardSubtitle}>
+                {step === 'phone' ? 'Enter your mobile number to continue'
+                  : step === 'otp' ? `Code sent to +91 ${phone}`
+                  : 'Just a few details to get started'}
+              </Text>
+            </View>
           </View>
 
-          {/* Card */}
-          <View style={[styles.card, shadows.large]}>
+          <View style={s.divider} />
 
-            {step === 'phone' && (
-              <>
-                <Text style={styles.fieldLabel}>Phone Number</Text>
-                <View style={styles.phoneRow}>
-                  <View style={styles.countryCode}>
-                    <Text style={styles.countryCodeText}>🇮🇳 +91</Text>
-                  </View>
-                  <TextInput
-                    mode="outlined"
-                    value={phone}
-                    onChangeText={setPhone}
-                    keyboardType="phone-pad"
-                    maxLength={10}
-                    style={styles.phoneInput}
-                    outlineStyle={styles.inputOutline}
-                    placeholder="Enter 10-digit number"
-                    placeholderTextColor={colors.placeholder}
-                    theme={{ colors: { primary: colors.primary, background: colors.surface } }}
-                  />
+          {/* ── Phone step ── */}
+          {step === 'phone' && (
+            <>
+              <Text style={s.label}>Mobile Number</Text>
+              <View style={s.phoneRow}>
+                <View style={s.countryBadge}>
+                  <Text style={s.countryFlag}>🇮🇳</Text>
+                  <Text style={s.countryCode}>+91</Text>
                 </View>
-                <TouchableOpacity
-                  style={[styles.primaryBtn, loading && styles.btnDisabled]}
-                  onPress={sendOtp}
-                  disabled={loading || phone.length < 10}
-                  activeOpacity={0.85}
-                >
-                  <LinearGradient
-                    colors={[colors.gradientStart, colors.gradientEnd]}
-                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                    style={styles.btnGradient}
-                  >
-                    <Text style={styles.primaryBtnText}>Send OTP</Text>
-                    <Ionicons name="arrow-forward" size={rs(18)} color="#fff" />
-                  </LinearGradient>
-                </TouchableOpacity>
-              </>
-            )}
-
-            {step === 'otp' && (
-              <>
-                <Text style={styles.fieldLabel}>Enter 4-digit OTP</Text>
                 <TextInput
-                  mode="outlined"
-                  value={otp}
-                  onChangeText={(text) => setOtp(text.replace(/[^0-9]/g, '').slice(0, 4))}
-                  keyboardType="number-pad"
-                  maxLength={4}
-                  autoComplete="one-time-code"
-                  textContentType="oneTimeCode"
-                  style={styles.input}
-                  outlineStyle={styles.inputOutline}
-                  placeholder="• • • •"
+                  style={s.phoneInput}
+                  value={phone}
+                  onChangeText={t => { setPhone(t.replace(/[^0-9]/g, '').slice(0, 10)); setError(''); }}
+                  keyboardType="phone-pad"
+                  maxLength={10}
+                  placeholder="10-digit number"
                   placeholderTextColor={colors.placeholder}
-                  theme={{ colors: { primary: colors.primary, background: colors.surface } }}
+                  autoFocus
                 />
-                <TouchableOpacity
-                  style={[styles.primaryBtn, loading && styles.btnDisabled]}
-                  onPress={verifyOtp}
-                  disabled={loading}
-                  activeOpacity={0.85}
-                >
-                  <LinearGradient
-                    colors={[colors.gradientStart, colors.gradientEnd]}
-                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                    style={styles.btnGradient}
-                  >
-                    <Text style={styles.primaryBtnText}>{loading ? 'Verifying...' : 'Verify OTP'}</Text>
-                  </LinearGradient>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.linkBtn} onPress={() => setStep('phone')}>
-                  <Text style={styles.linkBtnText}>← Change Number</Text>
-                </TouchableOpacity>
-              </>
-            )}
+                {phone.length === 10 && (
+                  <Ionicons name="checkmark-circle" size={rs(20)} color={colors.success} />
+                )}
+              </View>
 
-            {step === 'register' && (
-              <>
-                <Text style={styles.fieldLabel}>Full Name *</Text>
+              {error ? <ErrorRow msg={error} /> : null}
+
+              <TouchableOpacity
+                style={[s.btn, (loading || phone.length < 10) && s.btnOff]}
+                onPress={sendOtp}
+                disabled={loading || phone.length < 10}
+                activeOpacity={0.85}
+              >
+                <LinearGradient colors={['#E8650A', '#B84D00']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.btnGrad}>
+                  {loading
+                    ? <ActivityIndicator color="#fff" size="small" />
+                    : <><Text style={s.btnText}>Send OTP</Text><Ionicons name="arrow-forward" size={rs(18)} color="#fff" /></>}
+                </LinearGradient>
+              </TouchableOpacity>
+            </>
+          )}
+
+          {/* ── OTP step ── */}
+          {step === 'otp' && (
+            <>
+              <Text style={s.label}>Verification Code</Text>
+              <OtpInput value={otp} onChange={v => { setOtp(v); setError(''); }} />
+
+              {error ? <ErrorRow msg={error} /> : null}
+
+              <TouchableOpacity
+                style={[s.btn, (loading || otp.length < 4) && s.btnOff]}
+                onPress={verifyOtp}
+                disabled={loading || otp.length < 4}
+                activeOpacity={0.85}
+              >
+                <LinearGradient colors={['#E8650A', '#B84D00']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.btnGrad}>
+                  {loading
+                    ? <ActivityIndicator color="#fff" size="small" />
+                    : <><Text style={s.btnText}>Verify OTP</Text><Ionicons name="shield-checkmark" size={rs(18)} color="#fff" /></>}
+                </LinearGradient>
+              </TouchableOpacity>
+
+              <View style={s.otpFooter}>
+                <TouchableOpacity onPress={() => { setStep('phone'); setOtp(''); setError(''); }}>
+                  <Text style={s.linkText}>← Change Number</Text>
+                </TouchableOpacity>
+                {resendTimer > 0
+                  ? <Text style={s.timerText}>Resend in {resendTimer}s</Text>
+                  : <TouchableOpacity onPress={sendOtp}><Text style={s.linkText}>Resend OTP</Text></TouchableOpacity>}
+              </View>
+            </>
+          )}
+
+          {/* ── Register step ── */}
+          {step === 'register' && (
+            <>
+              <Text style={s.label}>Full Name *</Text>
+              <View style={[s.inputWrap, name.trim() && s.inputWrapFilled]}>
+                <Ionicons name="person-outline" size={rs(18)} color={name.trim() ? colors.primary : colors.placeholder} />
                 <TextInput
-                  mode="outlined"
+                  style={s.textInput}
                   value={name}
-                  onChangeText={setName}
-                  style={styles.input}
-                  outlineStyle={styles.inputOutline}
+                  onChangeText={t => { setName(t); setError(''); }}
                   placeholder="Your full name"
                   placeholderTextColor={colors.placeholder}
-                  left={<TextInput.Icon icon="account" color={colors.primary} />}
-                  theme={{ colors: { primary: colors.primary, background: colors.surface } }}
+                  autoFocus
                 />
-                <Text style={styles.fieldLabel}>Referral Code (Optional)</Text>
+              </View>
+
+              <Text style={[s.label, { marginTop: vs(12) }]}>Referral Code <Text style={s.optional}>(optional)</Text></Text>
+              <View style={s.inputWrap}>
+                <Ionicons name="gift-outline" size={rs(18)} color={colors.placeholder} />
                 <TextInput
-                  mode="outlined"
+                  style={s.textInput}
                   value={referralCode}
-                  onChangeText={setReferralCode}
-                  autoCapitalize="characters"
-                  style={styles.input}
-                  outlineStyle={styles.inputOutline}
+                  onChangeText={setReferral}
                   placeholder="Enter referral code"
                   placeholderTextColor={colors.placeholder}
-                  left={<TextInput.Icon icon="gift" color={colors.accent} />}
-                  theme={{ colors: { primary: colors.primary, background: colors.surface } }}
+                  autoCapitalize="characters"
                 />
-                <TouchableOpacity
-                  style={[styles.primaryBtn, loading && styles.btnDisabled]}
-                  onPress={completeRegistration}
-                  disabled={loading}
-                  activeOpacity={0.85}
-                >
-                  <LinearGradient
-                    colors={[colors.gradientStart, colors.gradientEnd]}
-                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                    style={styles.btnGradient}
-                  >
-                    <Text style={styles.primaryBtnText}>{loading ? 'Creating Account...' : 'Get Started 🎉'}</Text>
-                  </LinearGradient>
-                </TouchableOpacity>
-              </>
-            )}
-          </View>
+              </View>
 
-          {/* Step indicator */}
-          <View style={styles.stepIndicator}>
-            {['phone', 'otp', 'register'].map((s, i) => (
-              <View
-                key={s}
-                style={[styles.stepDot, step === s && styles.stepDotActive,
-                  ['phone', 'otp', 'register'].indexOf(step) > i && styles.stepDotDone]}
-              />
-            ))}
-          </View>
+              {error ? <ErrorRow msg={error} /> : null}
 
-        </ScrollView>
-      </View>
+              <TouchableOpacity
+                style={[s.btn, (loading || !name.trim()) && s.btnOff]}
+                onPress={completeRegistration}
+                disabled={loading || !name.trim()}
+                activeOpacity={0.85}
+              >
+                <LinearGradient colors={['#E8650A', '#B84D00']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.btnGrad}>
+                  {loading
+                    ? <ActivityIndicator color="#fff" size="small" />
+                    : <Text style={s.btnText}>Get Started 🎉</Text>}
+                </LinearGradient>
+              </TouchableOpacity>
+            </>
+          )}
+        </Animated.View>
 
-      <Snackbar
-        visible={snackbarVisible}
-        onDismiss={() => setSnackbarVisible(false)}
-        duration={3000}
-        style={styles.snackbar}
-      >
-        {snackbarMessage}
-      </Snackbar>
+        <Text style={s.terms}>By continuing, you agree to our{' '}
+          <Text style={s.termsLink}>Terms of Service</Text> &{' '}
+          <Text style={s.termsLink}>Privacy Policy</Text>
+        </Text>
+
+      </LinearGradient>
     </KeyboardAvoidingView>
   );
-};
+}
 
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  gradient: { flex: 1 },
-  scrollContent: { flexGrow: 1, justifyContent: 'center', padding: rs(20), paddingBottom: vs(40) },
+function ErrorRow({ msg }) {
+  return (
+    <View style={err.row}>
+      <Ionicons name="alert-circle-outline" size={rs(15)} color={colors.error} />
+      <Text style={err.text}>{msg}</Text>
+    </View>
+  );
+}
 
-  hero: { alignItems: 'center', marginBottom: vs(28) },
-  iconCircle: {
-    width: rs(80),
-    height: rs(80),
-    borderRadius: rs(40),
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: vs(16),
-    ...shadows.medium,
-  },
-  heroTitle: { fontSize: ms(28), fontWeight: '800', color: '#FFFFFF', marginBottom: vs(6), textAlign: 'center' },
-  heroSubtitle: { fontSize: ms(15), color: 'rgba(255,255,255,0.88)', textAlign: 'center', lineHeight: ms(22) },
-
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.xl,
-    padding: rs(24),
-    marginBottom: vs(20),
-  },
-
-  fieldLabel: { fontSize: ms(13), fontWeight: '600', color: colors.textSecondary, marginBottom: vs(6), marginTop: vs(4) },
-
-  phoneRow: { flexDirection: 'row', alignItems: 'center', gap: rs(10), marginBottom: vs(16) },
-  countryCode: {
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: borderRadius.sm,
-    paddingHorizontal: rs(12),
-    paddingVertical: vs(14),
-  },
-  countryCodeText: { fontSize: ms(14), fontWeight: '600', color: colors.text },
-  phoneInput: { flex: 1, backgroundColor: colors.surface, fontSize: ms(15) },
-
-  input: { backgroundColor: colors.surface, marginBottom: vs(14), fontSize: ms(15) },
-  inputOutline: { borderRadius: borderRadius.sm, borderColor: colors.border },
-
-  primaryBtn: { borderRadius: borderRadius.md, overflow: 'hidden', marginTop: vs(4) },
-  btnDisabled: { opacity: 0.6 },
-  btnGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: vs(15),
-    gap: rs(8),
-  },
-  primaryBtnText: { color: '#FFFFFF', fontSize: ms(16), fontWeight: '700' },
-
-  linkBtn: { alignItems: 'center', paddingVertical: vs(12) },
-  linkBtnText: { color: colors.primary, fontSize: ms(14), fontWeight: '600' },
-
-  stepIndicator: { flexDirection: 'row', justifyContent: 'center', gap: rs(8) },
-  stepDot: { width: rs(8), height: rs(8), borderRadius: rs(4), backgroundColor: 'rgba(255,255,255,0.4)' },
-  stepDotActive: { backgroundColor: '#FFFFFF', width: rs(24) },
-  stepDotDone: { backgroundColor: 'rgba(255,255,255,0.7)' },
-
-  snackbar: { backgroundColor: colors.text },
-
-
+const err = StyleSheet.create({
+  row: { flexDirection: 'row', alignItems: 'center', gap: rs(6), marginBottom: vs(10) },
+  text: { fontSize: ms(12), color: colors.error, fontWeight: '600', flex: 1 },
 });
 
-export default LoginScreen;
+const s = StyleSheet.create({
+  root: { flex: 1 },
+  bg:   { flex: 1, paddingHorizontal: rs(20), justifyContent: 'center' },
+
+  // Brand
+  brand:       { alignItems: 'center', marginBottom: vs(32) },
+  logoWrap:    {
+    width: rs(72), height: rs(72), borderRadius: rs(20),
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    justifyContent: 'center', alignItems: 'center',
+    marginBottom: vs(10),
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)',
+  },
+  logoEmoji:   { fontSize: ms(38) },
+  brandName:   { fontSize: ms(26), fontWeight: '900', color: '#fff', letterSpacing: -0.5 },
+  brandTagline:{ fontSize: ms(13), color: 'rgba(255,255,255,0.5)', marginTop: vs(2) },
+
+  // Card
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: borderRadius.xl,
+    padding: rs(22),
+    marginBottom: vs(20),
+  },
+  cardHeader:  { flexDirection: 'row', alignItems: 'center', gap: rs(12), marginBottom: vs(14) },
+  cardIconWrap:{
+    width: rs(44), height: rs(44), borderRadius: rs(12),
+    backgroundColor: colors.primarySurface,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  cardTitle:   { fontSize: ms(17), fontWeight: '800', color: colors.text },
+  cardSubtitle:{ fontSize: ms(12), color: colors.placeholder, marginTop: vs(2) },
+  divider:     { height: 1, backgroundColor: colors.divider, marginBottom: vs(18) },
+
+  // Fields
+  label:       { fontSize: ms(12), fontWeight: '700', color: colors.textSecondary, marginBottom: vs(8), letterSpacing: 0.3 },
+  optional:    { fontWeight: '400', color: colors.placeholder },
+
+  phoneRow:    { flexDirection: 'row', alignItems: 'center', gap: rs(10), marginBottom: vs(16) },
+  countryBadge:{
+    flexDirection: 'row', alignItems: 'center', gap: rs(6),
+    backgroundColor: colors.background, borderRadius: borderRadius.sm,
+    borderWidth: 1.5, borderColor: colors.border,
+    paddingHorizontal: rs(12), paddingVertical: vs(13),
+  },
+  countryFlag: { fontSize: ms(16) },
+  countryCode: { fontSize: ms(14), fontWeight: '700', color: colors.text },
+  phoneInput:  {
+    flex: 1, fontSize: ms(16), fontWeight: '700', color: colors.text,
+    backgroundColor: colors.background, borderRadius: borderRadius.sm,
+    borderWidth: 1.5, borderColor: colors.border,
+    paddingHorizontal: rs(14), paddingVertical: vs(13),
+  },
+
+  inputWrap: {
+    flexDirection: 'row', alignItems: 'center', gap: rs(10),
+    backgroundColor: colors.background, borderRadius: borderRadius.sm,
+    borderWidth: 1.5, borderColor: colors.border,
+    paddingHorizontal: rs(14), paddingVertical: vs(4),
+    marginBottom: vs(4),
+  },
+  inputWrapFilled: { borderColor: colors.primary, backgroundColor: colors.primarySurface },
+  textInput: { flex: 1, fontSize: ms(15), fontWeight: '600', color: colors.text, paddingVertical: vs(10) },
+
+  // Button
+  btn:     { borderRadius: borderRadius.md, overflow: 'hidden', marginTop: vs(4) },
+  btnOff:  { opacity: 0.5 },
+  btnGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: vs(15), gap: rs(8) },
+  btnText: { color: '#fff', fontSize: ms(16), fontWeight: '800' },
+
+  // OTP footer
+  otpFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: vs(14) },
+  linkText:  { fontSize: ms(13), color: colors.primary, fontWeight: '700' },
+  timerText: { fontSize: ms(13), color: colors.placeholder, fontWeight: '600' },
+
+  // Terms
+  terms:     { textAlign: 'center', fontSize: ms(11), color: 'rgba(255,255,255,0.35)', lineHeight: ms(18) },
+  termsLink: { color: 'rgba(255,255,255,0.65)', fontWeight: '600' },
+});

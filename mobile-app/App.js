@@ -111,8 +111,8 @@ export default function App() {
           <AuthProvider>
             <CartProvider>
               <WalletProvider>
-                <AppContent />
-                <FlashMessage position="top" />
+                  <AppContent />
+                  <FlashMessage position="top" />
               </WalletProvider>
             </CartProvider>
           </AuthProvider>

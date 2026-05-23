@@ -23,8 +23,12 @@ const upload = multer({
   fileFilter: (req, file, cb) => cb(null, file.mimetype.startsWith('image/')),
 });
 
-// In-memory delivery control state (persists while server is running)
-let deliveryEnabled = true;
+// deliveryEnabled is now persisted in RestaurantSettings DB (field: deliveryEnabled)
+// Helper to get current value
+async function getDeliveryEnabled() {
+  const s = await RestaurantSettings.findById('main');
+  return s ? s.deliveryEnabled : true;
+}
 
 // Test Login (for development/testing)
 router.post('/test-login', async (req, res) => {
@@ -512,8 +516,10 @@ router.get('/referrals', adminAuth, async (req, res) => {
 });
 
 // Public delivery status — no auth, used by mobile app
-router.get('/delivery-status', (req, res) => {
-  res.json({ deliveryEnabled });
+router.get('/delivery-status', async (req, res) => {
+  try {
+    res.json({ deliveryEnabled: await getDeliveryEnabled() });
+  } catch { res.json({ deliveryEnabled: true }); }
 });
 
 // ─── Delivery Control ───────────────────────────────────────────────────────
@@ -521,6 +527,8 @@ router.get('/delivery-status', (req, res) => {
 // Get delivery control status + all agents + active deliveries
 router.get('/delivery-control', adminAuth, async (req, res) => {
   try {
+    const deliveryEnabled = await getDeliveryEnabled();
+
     const agents = await Fleet.find()
       .populate('driver', 'name phone email isActive')
       .populate('currentOrder')
@@ -542,19 +550,28 @@ router.get('/delivery-control', adminAuth, async (req, res) => {
 });
 
 // Toggle global delivery on/off
-router.post('/delivery-control/toggle', adminAuth, (req, res) => {
-  deliveryEnabled = !deliveryEnabled;
-  res.json({ deliveryEnabled });
+router.post('/delivery-control/toggle', adminAuth, async (req, res) => {
+  try {
+    const current = await getDeliveryEnabled();
+    const settings = await RestaurantSettings.findByIdAndUpdate(
+      'main', { deliveryEnabled: !current }, { new: true, upsert: true }
+    );
+    res.json({ deliveryEnabled: settings.deliveryEnabled });
+  } catch (error) { res.status(500).json({ message: error.message }); }
 });
 
 // Force-set delivery enabled state
-router.post('/delivery-control/set', adminAuth, (req, res) => {
+router.post('/delivery-control/set', adminAuth, async (req, res) => {
   const { enabled } = req.body;
   if (typeof enabled !== 'boolean') {
     return res.status(400).json({ message: 'enabled must be a boolean' });
   }
-  deliveryEnabled = enabled;
-  res.json({ deliveryEnabled });
+  try {
+    const settings = await RestaurantSettings.findByIdAndUpdate(
+      'main', { deliveryEnabled: enabled }, { new: true, upsert: true }
+    );
+    res.json({ deliveryEnabled: settings.deliveryEnabled });
+  } catch (error) { res.status(500).json({ message: error.message }); }
 });
 
 // Update a delivery agent's status (available / busy / offline)
@@ -1027,6 +1044,6 @@ router.put('/restaurant-settings', adminAuth, async (req, res) => {
 });
 
 // Export deliveryEnabled getter for use in orders route
-router.getDeliveryEnabled = () => deliveryEnabled;
+router.getDeliveryEnabled = getDeliveryEnabled;
 
 module.exports = router;

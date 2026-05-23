@@ -55,6 +55,12 @@ const Products = () => {
     onError: () => toast.error('Failed to delete product'),
   });
 
+  const stockMutation = useMutation({
+    mutationFn: menuAPI.toggleStock,
+    onSuccess: () => queryClient.invalidateQueries(['menu-items']),
+    onError: () => toast.error('Failed to update stock status'),
+  });
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (createMutation.isPending || updateMutation.isPending) return;
@@ -152,6 +158,7 @@ const Products = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Stock</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bestseller</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
               </tr>
@@ -185,6 +192,19 @@ const Products = () => {
                       }`}>
                         {item.isActive ? 'Active' : 'Inactive'}
                       </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <button
+                        onClick={() => stockMutation.mutate(item._id)}
+                        disabled={stockMutation.isPending}
+                        className={`px-2 py-1 text-xs rounded-full font-semibold ${
+                          item.availability?.isAvailable !== false
+                            ? 'bg-green-100 text-green-800 hover:bg-red-100 hover:text-red-800'
+                            : 'bg-red-100 text-red-800 hover:bg-green-100 hover:text-green-800'
+                        } transition-colors cursor-pointer disabled:opacity-50`}
+                      >
+                        {item.availability?.isAvailable !== false ? 'In Stock' : 'Out of Stock'}
+                      </button>
                     </td>
                     <td className="px-6 py-4">
                       {item.isBestseller && (

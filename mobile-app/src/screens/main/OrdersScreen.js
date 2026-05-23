@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, FlatList, StyleSheet, TouchableOpacity, StatusBar } from 'react-native';
+import { View, FlatList, StyleSheet, TouchableOpacity, StatusBar, Alert } from 'react-native';
 import { Text } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { orderAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useWallet } from '../../context/WalletContext';
+import { useCart } from '../../context/CartContext';
 import { colors, spacing, shadows, borderRadius, ms, rs, vs } from '../../utils/theme';
 
 const STATUS_CONFIG = {
@@ -20,6 +21,7 @@ const STATUS_CONFIG = {
 export default function OrdersScreen({ navigation }) {
   const { user } = useAuth();
   const { fetchWallet } = useWallet();
+  const { addToCart, clearCart } = useCart();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -53,9 +55,31 @@ export default function OrdersScreen({ navigation }) {
     navigation.navigate('Review', { orderId: order._id, items: order.items });
   }, [navigation]);
 
+  const handleReorder = useCallback((order) => {
+    Alert.alert(
+      'Reorder',
+      'This will clear your current cart and add these items. Continue?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Yes, Reorder',
+          onPress: () => {
+            clearCart();
+            order.items.forEach(i => {
+              const menuItem = i.menuItem && typeof i.menuItem === 'object' ? i.menuItem : { _id: i.menuItem, name: i.name, price: i.price };
+              for (let q = 0; q < (i.quantity || 1); q++) addToCart(menuItem);
+            });
+            navigation.navigate('Cart');
+          },
+        },
+      ]
+    );
+  }, [addToCart, clearCart, navigation]);
+
   const renderOrder = useCallback(({ item }) => {
     const status = item.status?.current ?? item.status;
     const cfg = STATUS_CONFIG[status] ?? { color: colors.placeholder, bg: colors.surfaceAlt, icon: 'ellipse-outline' };
+    const isDelivered = status === 'delivered';
     return (
       <View style={[styles.orderCard, shadows.medium]}>
         <View style={styles.orderHeader}>
@@ -71,19 +95,47 @@ export default function OrdersScreen({ navigation }) {
         <View style={styles.orderMeta}>
           <Ionicons name="calendar-outline" size={rs(13)} color={colors.placeholder} />
           <Text style={styles.orderDate}>{new Date(item.createdAt).toLocaleDateString('en-IN')}</Text>
+          <Text style={styles.orderMetaDot}>•</Text>
+          <Text style={styles.orderDate}>{item.items?.length || 0} item{item.items?.length !== 1 ? 's' : ''}</Text>
         </View>
+
+        {/* Item names preview */}
+        {item.items?.length > 0 && (
+          <Text style={styles.itemsPreview} numberOfLines={1}>
+            {item.items.map(i => i.name ?? i.menuItem?.name ?? 'Item').join(', ')}
+          </Text>
+        )}
 
         <View style={styles.orderTotalRow}>
           <Text style={styles.orderTotalLabel}>Order Total</Text>
           <Text style={styles.orderTotalValue}>₹{item.pricing?.total ?? item.totalAmount ?? 0}</Text>
         </View>
 
-        <View style={styles.orderActions}>
-          <TouchableOpacity
-            style={styles.trackBtn}
-            onPress={() => handleTrack(item._id)}
-            activeOpacity={0.85}
-          >
+        {/* Delivered: 3 action buttons */}
+        {isDelivered ? (
+          <View style={styles.deliveredActions}>
+            <TouchableOpacity style={styles.actionBtnOutline} onPress={() => handleTrack(item._id)} activeOpacity={0.8}>
+              <Ionicons name="receipt-outline" size={rs(15)} color={colors.accent} />
+              <Text style={[styles.actionBtnText, { color: colors.accent }]}>View</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.actionBtnOutline} onPress={() => handleRate(item)} activeOpacity={0.8}>
+              <Ionicons name="star-outline" size={rs(15)} color="#FFB800" />
+              <Text style={[styles.actionBtnText, { color: '#FFB800' }]}>Rate</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.actionBtnFilled} onPress={() => handleReorder(item)} activeOpacity={0.85}>
+              <LinearGradient
+                colors={[colors.gradientStart, colors.gradientEnd]}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                style={styles.actionBtnGrad}
+              >
+                <Ionicons name="refresh-outline" size={rs(15)} color="#fff" />
+                <Text style={styles.actionBtnFilledText}>Reorder</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          /* Active order: Track button */
+          <TouchableOpacity style={styles.trackBtn} onPress={() => handleTrack(item._id)} activeOpacity={0.85}>
             <LinearGradient
               colors={[colors.gradientStart, colors.gradientEnd]}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
@@ -93,20 +145,10 @@ export default function OrdersScreen({ navigation }) {
               <Text style={styles.trackBtnText}>Track Order</Text>
             </LinearGradient>
           </TouchableOpacity>
-          {status === 'delivered' && (
-            <TouchableOpacity
-              style={styles.rateBtn}
-              onPress={() => handleRate(item)}
-              activeOpacity={0.85}
-            >
-              <Ionicons name="star-outline" size={rs(16)} color={colors.primary} />
-              <Text style={styles.rateBtnText}>Rate</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+        )}
       </View>
     );
-  }, [handleTrack]);
+  }, [handleTrack, handleRate, handleReorder]);
 
   if (!user) {
     return (
@@ -209,26 +251,42 @@ const styles = StyleSheet.create({
   },
   statusText: { fontSize: ms(11), fontWeight: '700' },
 
-  orderMeta: { flexDirection: 'row', alignItems: 'center', gap: rs(5), marginBottom: vs(10) },
+  orderMeta: { flexDirection: 'row', alignItems: 'center', gap: rs(5), marginBottom: vs(6) },
   orderDate: { fontSize: ms(13), color: colors.placeholder },
+  orderMetaDot: { fontSize: ms(13), color: colors.border },
+
+  itemsPreview: {
+    fontSize: ms(12), color: colors.textSecondary,
+    marginBottom: vs(10), fontStyle: 'italic',
+  },
 
   orderTotalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: vs(14) },
   orderTotalLabel: { fontSize: ms(14), color: colors.textSecondary },
   orderTotalValue: { fontSize: ms(17), fontWeight: '800', color: colors.primary },
 
-  orderActions: { flexDirection: 'row', gap: rs(10) },
-  trackBtn: { flex: 1, borderRadius: borderRadius.sm, overflow: 'hidden', backgroundColor: colors.primary },
+  // Delivered: 3-button row
+  deliveredActions: { flexDirection: 'row', gap: rs(8) },
+  actionBtnOutline: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: rs(5),
+    borderWidth: 1.5, borderColor: colors.border,
+    borderRadius: borderRadius.sm, paddingVertical: vs(10),
+    backgroundColor: colors.background,
+  },
+  actionBtnText: { fontSize: ms(13), fontWeight: '700' },
+  actionBtnFilled: { flex: 1, borderRadius: borderRadius.sm, overflow: 'hidden' },
+  actionBtnGrad: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    paddingVertical: vs(10), gap: rs(5),
+  },
+  actionBtnFilledText: { color: '#fff', fontSize: ms(13), fontWeight: '700' },
+
+  // Active order: track button
+  trackBtn: { borderRadius: borderRadius.sm, overflow: 'hidden' },
   trackBtnGradient: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     paddingVertical: vs(11), gap: rs(6),
   },
   trackBtnText: { color: '#fff', fontSize: ms(14), fontWeight: '700' },
-  rateBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: rs(5),
-    borderWidth: 1.5, borderColor: colors.primary, borderRadius: borderRadius.sm,
-    paddingHorizontal: rs(16), paddingVertical: vs(11),
-  },
-  rateBtnText: { color: colors.primary, fontSize: ms(14), fontWeight: '700' },
 
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: rs(32), marginTop: vs(60) },
   emptyEmoji: { fontSize: ms(56), marginBottom: vs(12) },

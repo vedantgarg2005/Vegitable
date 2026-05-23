@@ -38,6 +38,16 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Get distinct categories
+router.get('/categories', async (req, res) => {
+  try {
+    const categories = await MenuItem.distinct('category', { isActive: true });
+    res.json(categories);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Get single menu item
 router.get('/:id', async (req, res) => {
   try {
@@ -86,6 +96,19 @@ router.put('/:id', adminAuth, upload.single('image'), async (req, res) => {
       return res.status(404).json({ message: 'Menu item not found' });
     }
     res.json(menuItem);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Toggle stock status (Admin only)
+router.patch('/:id/stock', adminAuth, async (req, res) => {
+  try {
+    const menuItem = await MenuItem.findById(req.params.id);
+    if (!menuItem) return res.status(404).json({ message: 'Menu item not found' });
+    menuItem.availability.isAvailable = !menuItem.availability.isAvailable;
+    await menuItem.save();
+    res.json({ isAvailable: menuItem.availability.isAvailable });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

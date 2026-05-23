@@ -16,24 +16,24 @@ export const W = getWindow().width;
 export const H = getWindow().height;
 
 export const colors = {
-  // Domino's Brand
-  primary: '#E31837',
-  primaryLight: '#FF4D6A',
-  primaryDark: '#B01229',
-  primarySurface: '#FFF0F2',
+  // SportZone Brand — Decathlon-style electric blue
+  primary: '#0082C8',
+  primaryLight: '#33A3E0',
+  primaryDark: '#005F99',
+  primarySurface: '#E8F4FC',
 
-  // Domino's Dark Navy
-  navy: '#1A1A2E',
-  navyLight: '#16213E',
+  // Dark navy header
+  navy: '#0A1628',
+  navyLight: '#132240',
 
-  // Accent — Domino's uses a dark blue accent
-  accent: '#0F3460',
-  accentLight: '#E8EEF7',
+  // Accent — energetic yellow (Puma/Nike style)
+  accent: '#FFD600',
+  accentLight: '#FFFDE7',
 
   // Neutrals
-  background: '#F5F5F5',
+  background: '#F6F4F0',
   surface: '#FFFFFF',
-  surfaceAlt: '#F9F9F9',
+  surfaceAlt: '#FAF8F5',
   card: '#FFFFFF',
 
   // Text
@@ -42,8 +42,8 @@ export const colors = {
   placeholder: '#999999',
 
   // Semantic
-  error: '#E31837',
-  errorLight: '#FFEAED',
+  error: '#D32F2F',
+  errorLight: '#FFEAEA',
   success: '#2E7D32',
   successLight: '#E8F5E9',
   warning: '#F57C00',
@@ -52,19 +52,19 @@ export const colors = {
   infoLight: '#E1F5FE',
 
   // UI
-  border: '#E0E0E0',
-  divider: '#EEEEEE',
+  border: '#E0DDD8',
+  divider: '#EEEBE5',
   shadow: '#000000',
   overlay: 'rgba(0,0,0,0.05)',
 
-  // Gradient — Domino's red
-  gradientStart: '#E31837',
-  gradientMid: '#C8102E',
-  gradientEnd: '#A50E26',
+  // Gradient — saffron
+  gradientStart: '#E8650A',
+  gradientMid: '#D45A00',
+  gradientEnd: '#B84D00',
 
-  // Food tags
-  tagVeg: '#2E7D32',
-  tagNonVeg: '#E31837',
+  // Product tags
+  tagNew: '#0082C8',
+  tagSale: '#E53935',
 };
 
 export const spacing = {

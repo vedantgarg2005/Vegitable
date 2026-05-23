@@ -64,6 +64,7 @@ export const menuAPI = {
   createMenuItem: (data) => api.post('/admin/menu', toFormData(data), { headers: { 'Content-Type': 'multipart/form-data' } }),
   updateMenuItem: (id, data) => api.patch(`/admin/menu/${id}`, toFormData(data), { headers: { 'Content-Type': 'multipart/form-data' } }),
   deleteMenuItem: (id) => api.delete(`/admin/menu/${id}`),
+  toggleStock: (id) => api.patch(`/menu/${id}/stock`),
 };
 
 export const promoAPI = {

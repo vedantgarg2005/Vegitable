@@ -110,7 +110,7 @@ function MainTabs() {
         headerShown: false,
       })}
     >
-      <Tab.Screen name="Explore" component={HomeScreen} />
+      <Tab.Screen name="Explore" component={HomeScreen} options={{ title: 'Home' }} />
       <Tab.Screen
         name="MenuTab"
         component={HomeScreen}

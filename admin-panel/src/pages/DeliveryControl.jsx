@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { deliveryControlAPI } from '../services/api';
+import api from '../services/api';
 import toast from 'react-hot-toast';
 import {
   Truck, Power, UserCheck, UserX, RefreshCw,
@@ -21,8 +22,8 @@ const ORDER_STATUS_STYLE = {
 
 export default function DeliveryControl() {
   const queryClient = useQueryClient();
-  const [reassignModal, setReassignModal] = useState(null); // { orderId, currentAgentName }
-  const [cancelModal, setCancelModal]     = useState(null); // { orderId, orderNumber }
+  const [reassignModal, setReassignModal] = useState(null);
+  const [cancelModal, setCancelModal]     = useState(null);
   const [cancelReason, setCancelReason]   = useState('');
   const [selectedAgent, setSelectedAgent] = useState('');
 
