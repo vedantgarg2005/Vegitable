@@ -26,19 +26,19 @@ const { width: W } = Dimensions.get('window');
 
 
 const CATEGORIES = [
-  { name: 'All',       emoji: '🍽️' },
-  { name: 'Chaap',     emoji: '🌿' },
-  { name: 'Tikka',     emoji: '🔥' },
-  { name: 'Rolls',     emoji: '🌯' },
-  { name: 'Thali',     emoji: '🍱' },
-  { name: 'Beverages', emoji: '🥤' },
-  { name: 'Desserts',  emoji: '🍮' },
+  { name: 'All',         emoji: '🏅' },
+  { name: 'Running',     emoji: '👟' },
+  { name: 'Football',    emoji: '⚽' },
+  { name: 'Cricket',     emoji: '🏏' },
+  { name: 'Basketball',  emoji: '🏀' },
+  { name: 'Fitness',     emoji: '💪' },
+  { name: 'Accessories', emoji: '🎽' },
 ];
 
 const OFFERS = [
-  { id: '1', title: '50% OFF up to ₹100', subtitle: 'Use code FIRST50 • First order only', bg: ['#E8650A', '#B84D00'], emoji: '🎉' },
-  { id: '2', title: 'Buy 1 Get 1 FREE', subtitle: 'On all Chaap combos today', bg: ['#1B3A2D', '#254D3C'], emoji: '🌿' },
-  { id: '3', title: 'Free Delivery', subtitle: 'On orders above ₹299', bg: ['#2E7D32', '#1B5E20'], emoji: '🛵' },
+  { id: '1', title: '20% OFF on Nike & Adidas', subtitle: 'Use code SPORT20 • Limited time', bg: ['#E8650A', '#B84D00'], emoji: '🏃' },
+  { id: '2', title: 'Buy 1 Get 1 FREE', subtitle: 'On all fitness accessories today', bg: ['#1B3A2D', '#254D3C'], emoji: '💪' },
+  { id: '3', title: 'Free Delivery', subtitle: 'On orders above ₹999', bg: ['#2E7D32', '#1B5E20'], emoji: '🚚' },
 ];
 
 function WelcomeBanner({ user, orderTypeToggle }) {
@@ -82,21 +82,21 @@ function WelcomeBanner({ user, orderTypeToggle }) {
       {orderTypeToggle}
       <View style={styles.welcomeBottom}>
         <View style={styles.welcomeTextBlock}>
-          <Text style={styles.helloText}>Pure Veg</Text>
-          <Text style={styles.summerText}>Chaap 🌿</Text>
+          <Text style={styles.helloText}>SportZone</Text>
+          <Text style={styles.summerText}>Sports 🏆</Text>
           <View style={styles.vegBadge}>
-            <Text style={styles.vegBadgeText}>🟢 100% Vegetarian</Text>
+            <Text style={styles.vegBadgeText}>🏅 Top Brands Available</Text>
           </View>
         </View>
         <View style={styles.glassRow}>
           <Reanimated.View style={[glassStyle, { marginTop: vs(14) }]}>
-            <Text style={styles.juiceGlass}>🌿</Text>
+            <Text style={styles.juiceGlass}>⚽</Text>
           </Reanimated.View>
           <Reanimated.View style={glassStyle}>
-            <Text style={styles.juiceGlass}>🔥</Text>
+            <Text style={styles.juiceGlass}>🏏</Text>
           </Reanimated.View>
           <Reanimated.View style={[glassStyle, { marginTop: vs(8) }]}>
-            <Text style={styles.juiceGlass}>🌯</Text>
+            <Text style={styles.juiceGlass}>👟</Text>
           </Reanimated.View>
         </View>
       </View>
@@ -336,9 +336,9 @@ export default function HomeScreen({ navigation }) {
         ))}
       </View>
 
-      {/* "What's on your mind?" — category scroll */}
+      {/* Shop by Sport — category scroll */}
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>What are you craving?</Text>
+        <Text style={styles.sectionTitle}>Shop by Sport</Text>
       </View>
       <ScrollView
         horizontal
@@ -417,7 +417,7 @@ export default function HomeScreen({ navigation }) {
           <TextInput
             ref={searchRef}
             style={styles.searchInput}
-            placeholder="Search for chaap, tikka, rolls..."
+            placeholder="Search for shoes, jerseys, equipment..."
             placeholderTextColor={colors.placeholder}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -457,7 +457,7 @@ export default function HomeScreen({ navigation }) {
         ListEmptyComponent={
           !loading && (
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyEmoji}>🌿</Text>
+              <Text style={styles.emptyEmoji}>🏅</Text>
               <Text style={styles.emptyTitle}>Nothing found</Text>
               <Text style={styles.emptySubtitle}>Try a different search or category</Text>
             </View>
@@ -505,7 +505,7 @@ export default function HomeScreen({ navigation }) {
                       resizeMode="cover"
                     />
                   ) : (
-                    <Text style={styles.itemModalEmoji}>{selectedItem.image || '🍕'}</Text>
+                    <Text style={styles.itemModalEmoji}>{selectedItem.image || '🏅'}</Text>
                   )}
                 </View>
 

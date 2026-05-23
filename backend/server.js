@@ -35,7 +35,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static('uploads'));
 
 // MongoDB connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/newdelhisweets', {
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/sportzone', {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })

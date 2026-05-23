@@ -17,16 +17,16 @@ function formatTime12(time24) {
   return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
 }
 
-const CATEGORIES = ['All', 'Chaap', 'Tikka', 'Rolls', 'Thali', 'Beverages', 'Desserts'];
+const CATEGORIES = ['All', 'Running', 'Football', 'Cricket', 'Basketball', 'Fitness', 'Accessories'];
 
 const CATEGORY_ICONS = {
-  All: '🍽️',
-  Chaap: '🌿',
-  Tikka: '🔥',
-  Rolls: '🌯',
-  Thali: '🍱',
-  Beverages: '🥤',
-  Desserts: '🍮',
+  All: '🏅',
+  Running: '👟',
+  Football: '⚽',
+  Cricket: '🏏',
+  Basketball: '🏀',
+  Fitness: '💪',
+  Accessories: '🎽',
 };
 
 export default function MenuScreen({ navigation }) {
@@ -103,7 +103,7 @@ export default function MenuScreen({ navigation }) {
             <Ionicons name="arrow-back" size={rs(22)} color="#fff" />
           </TouchableOpacity>
           <Searchbar
-            placeholder="Search chaap, tikka, rolls..."
+            placeholder="Search shoes, jerseys, equipment..."
             onChangeText={setSearchQuery}
             value={searchQuery}
             style={styles.searchBar}
@@ -154,7 +154,7 @@ export default function MenuScreen({ navigation }) {
         }
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={styles.emptyEmoji}>🌿</Text>
+            <Text style={styles.emptyEmoji}>🏅</Text>
             <Text style={styles.emptyTitle}>Nothing found</Text>
           </View>
         }
@@ -187,7 +187,7 @@ export default function MenuScreen({ navigation }) {
         <Pressable style={styles.overlay} onPress={() => setMenuPopupVisible(false)}>
           <Pressable style={styles.popup} onPress={() => {}}>
             <View style={styles.popupHeader}>
-              <Text style={styles.popupTitle}>Browse Menu</Text>
+              <Text style={styles.popupTitle}>Browse Products</Text>
               <TouchableOpacity onPress={() => setMenuPopupVisible(false)}>
                 <Ionicons name="close" size={rs(22)} color={colors.text} />
               </TouchableOpacity>

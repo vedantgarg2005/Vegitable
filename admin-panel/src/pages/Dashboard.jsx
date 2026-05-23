@@ -92,7 +92,7 @@ function Dashboard() {
     { title: "Today's Orders", value: stats.todayOrders, icon: Clock, gradient: 'from-amber-400 to-orange-500', trend: 'up', trendValue: '+5%' },
     { title: 'Monthly Revenue', value: `₹${stats.monthlyRevenue?.toLocaleString()}`, icon: DollarSign, gradient: 'from-emerald-500 to-teal-500', trend: 'up', trendValue: '+18%' },
     { title: 'Pending Orders', value: stats.pendingOrders, icon: TrendingUp, gradient: 'from-rose-500 to-pink-500', trend: 'down', trendValue: '-3%' },
-    { title: 'Active Items', value: stats.activeMenuItems, icon: Package, gradient: 'from-sky-500 to-blue-600', trend: 'up', trendValue: '+2%' },
+    { title: 'Active Products', value: stats.activeProducts, icon: Package, gradient: 'from-sky-500 to-blue-600', trend: 'up', trendValue: '+2%' },
   ] : [];
 
   const totalOrders = orderStatus.reduce((s, i) => s + i.value, 0);
@@ -102,7 +102,7 @@ function Dashboard() {
       {/* Header */}
       <div className="mb-7">
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-sm text-gray-500 mt-1">Welcome back! Here's your business overview.</p>
+        <p className="text-sm text-gray-500 mt-1">Welcome back! Here's your SportZone store overview.</p>
       </div>
 
       {/* Stats Cards */}
@@ -162,7 +162,7 @@ function Dashboard() {
 
       {/* Row 2: Popular Items + Hourly Orders */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <SectionCard title="Popular Items" subtitle="Top ordered items">
+        <SectionCard title="Top Products" subtitle="Most ordered products">
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={popularItems} layout="vertical" margin={{ top: 0, right: 20, left: 10, bottom: 0 }}>
               <defs>
@@ -175,8 +175,7 @@ function Dashboard() {
               <XAxis type="number" tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
               <YAxis type="category" dataKey="name" tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} width={90} />
               <Tooltip content={<CustomTooltip />} />
-              <Bar dataKey="orders" name="Orders" fill="url(#barGrad)" radius={[0, 6, 6, 0]} barSize={18} />
-            </BarChart>
+              <Bar dataKey="orders" name="Orders" fill="url(#barGrad)" radius={[0, 6, 6, 0]} barSize={18} />            </BarChart>
           </ResponsiveContainer>
         </SectionCard>
 

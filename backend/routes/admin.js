@@ -6,7 +6,7 @@ const fs = require('fs');
 const router = express.Router();
 const User = require('../models/User');
 const Order = require('../models/Order');
-const MenuItem = require('../models/MenuItem');
+const Product = require('../models/Product');
 const Review = require('../models/Review');
 const PromoCode = require('../models/PromoCode');
 const Fleet = require('../models/Fleet');
@@ -23,8 +23,7 @@ const upload = multer({
   fileFilter: (req, file, cb) => cb(null, file.mimetype.startsWith('image/')),
 });
 
-// deliveryEnabled is now persisted in RestaurantSettings DB (field: deliveryEnabled)
-// Helper to get current value
+// deliveryEnabled is persisted in RestaurantSettings (store settings)
 async function getDeliveryEnabled() {
   const s = await RestaurantSettings.findById('main');
   return s ? s.deliveryEnabled : true;
@@ -140,7 +139,7 @@ router.get('/dashboard/stats', adminAuth, async (req, res) => {
       todayOrders,
       monthlyRevenue,
       pendingOrders,
-      activeMenuItems
+      activeProducts
     ] = await Promise.all([
       User.countDocuments({ role: 'customer' }),
       Order.countDocuments(),
@@ -149,8 +148,8 @@ router.get('/dashboard/stats', adminAuth, async (req, res) => {
         { $match: { createdAt: { $gte: startOfMonth }, 'payment.status': 'completed' } },
         { $group: { _id: null, total: { $sum: '$pricing.total' } } }
       ]),
-      Order.countDocuments({ 'status.current': { $in: ['placed', 'confirmed', 'preparing'] } }),
-      MenuItem.countDocuments({ isActive: true })
+      Order.countDocuments({ 'status.current': { $in: ['placed', 'confirmed', 'processing'] } }),
+      Product.countDocuments({ isActive: true })
     ]);
 
     res.json({
@@ -159,7 +158,7 @@ router.get('/dashboard/stats', adminAuth, async (req, res) => {
       todayOrders,
       monthlyRevenue: monthlyRevenue[0]?.total || 0,
       pendingOrders,
-      activeMenuItems
+      activeProducts
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -225,7 +224,7 @@ router.get('/orders', adminAuth, async (req, res) => {
 
     const orders = await Order.find(query)
       .populate('customer', 'name email phone')
-      .populate('items.menuItem', 'name price')
+      .populate('items.product', 'name price')
       .populate('delivery.partner', 'name phone')
       .limit(limit * 1)
       .skip((page - 1) * limit)
@@ -275,32 +274,28 @@ router.patch('/orders/:id/status', adminAuth, async (req, res) => {
   }
 });
 
-// Menu Management
+// Product Management
 router.get('/menu', adminAuth, async (req, res) => {
   try {
-    const { page = 1, limit = 10, category, isActive, search } = req.query;
+    const { page = 1, limit = 10, category, brand, isActive, search } = req.query;
     const query = {};
-    
+
     if (category) query.category = category;
+    if (brand) query.brand = brand;
     if (isActive !== undefined) query.isActive = isActive === 'true';
     if (search) query.$or = [
       { name: { $regex: search, $options: 'i' } },
       { description: { $regex: search, $options: 'i' } }
     ];
 
-    const menuItems = await MenuItem.find(query)
+    const menuItems = await Product.find(query)
       .limit(limit * 1)
       .skip((page - 1) * limit)
       .sort({ sortOrder: 1, createdAt: -1 });
 
-    const total = await MenuItem.countDocuments(query);
+    const total = await Product.countDocuments(query);
 
-    res.json({
-      menuItems,
-      totalPages: Math.ceil(total / limit),
-      currentPage: page,
-      total
-    });
+    res.json({ menuItems, totalPages: Math.ceil(total / limit), currentPage: page, total });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -310,9 +305,9 @@ router.post('/menu', adminAuth, upload.single('image'), async (req, res) => {
   try {
     const data = { ...req.body };
     if (req.file) data.image = `/uploads/${req.file.filename}`;
-    const menuItem = new MenuItem(data);
-    await menuItem.save();
-    res.status(201).json(menuItem);
+    const product = new Product(data);
+    await product.save();
+    res.status(201).json(product);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -322,24 +317,13 @@ router.patch('/menu/:id', adminAuth, upload.single('image'), async (req, res) =>
   try {
     const updates = { ...req.body };
     if (req.file) {
-      const existing = await MenuItem.findById(req.params.id);
-      if (existing?.image) {
-        const oldPath = path.join(__dirname, '..', existing.image);
-        fs.unlink(oldPath, () => {});
-      }
+      const existing = await Product.findById(req.params.id);
+      if (existing?.image) fs.unlink(path.join(__dirname, '..', existing.image), () => {});
       updates.image = `/uploads/${req.file.filename}`;
     }
-    const menuItem = await MenuItem.findByIdAndUpdate(
-      req.params.id,
-      updates,
-      { new: true, runValidators: true }
-    );
-    
-    if (!menuItem) {
-      return res.status(404).json({ message: 'Menu item not found' });
-    }
-    
-    res.json(menuItem);
+    const product = await Product.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true });
+    if (!product) return res.status(404).json({ message: 'Product not found' });
+    res.json(product);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -347,13 +331,9 @@ router.patch('/menu/:id', adminAuth, upload.single('image'), async (req, res) =>
 
 router.delete('/menu/:id', adminAuth, async (req, res) => {
   try {
-    const menuItem = await MenuItem.findByIdAndDelete(req.params.id);
-    
-    if (!menuItem) {
-      return res.status(404).json({ message: 'Menu item not found' });
-    }
-    
-    res.json({ message: 'Menu item deleted successfully' });
+    const product = await Product.findByIdAndDelete(req.params.id);
+    if (!product) return res.status(404).json({ message: 'Product not found' });
+    res.json({ message: 'Product deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -454,24 +434,24 @@ router.get('/analytics/popular-items', adminAuth, async (req, res) => {
       { $unwind: '$items' },
       {
         $group: {
-          _id: '$items.menuItem',
+          _id: '$items.product',
           totalOrdered: { $sum: '$items.quantity' },
           revenue: { $sum: { $multiply: ['$items.quantity', '$items.price'] } }
         }
       },
       {
         $lookup: {
-          from: 'menuitems',
+          from: 'products',
           localField: '_id',
           foreignField: '_id',
-          as: 'menuItem'
+          as: 'product'
         }
       },
-      { $unwind: '$menuItem' },
+      { $unwind: '$product' },
       {
         $project: {
-          name: '$menuItem.name',
-          category: '$menuItem.category',
+          name: '$product.name',
+          category: '$product.category',
           totalOrdered: 1,
           revenue: 1
         }
@@ -540,7 +520,7 @@ router.get('/delivery-control', adminAuth, async (req, res) => {
     })
       .populate('customer', 'name phone')
       .populate('delivery.partner', 'name phone')
-      .populate('items.menuItem', 'name')
+      .populate('items.product', 'name')
       .sort({ createdAt: -1 });
 
     res.json({ deliveryEnabled, agents, activeDeliveries });
@@ -631,7 +611,7 @@ router.post('/delivery-control/reassign', adminAuth, async (req, res) => {
     newFleet.currentOrder = orderId;
 
     await Promise.all([order.save(), newFleet.save()]);
-    await order.populate('customer delivery.partner items.menuItem');
+    await order.populate('customer delivery.partner items.product');
 
     // Notify new agent via socket
     if (req.io) req.io.to(String(newAgentId)).emit('new-assignment', order);
@@ -681,7 +661,7 @@ router.get('/reviews', adminAuth, async (req, res) => {
 
     const reviews = await Review.find(query)
       .populate('customer', 'name email')
-      .populate('menuItem', 'name')
+      .populate('product', 'name')
       .populate('order', 'orderNumber')
       .limit(limit * 1)
       .skip((page - 1) * limit)
@@ -714,7 +694,7 @@ router.patch('/reviews/:id/respond', adminAuth, async (req, res) => {
       req.params.id,
       { adminResponse: { message: req.body.message, respondedAt: new Date(), respondedBy: req.user._id } },
       { new: true }
-    ).populate('customer', 'name').populate('menuItem', 'name');
+    ).populate('customer', 'name').populate('product', 'name');
     if (!review) return res.status(404).json({ message: 'Review not found' });
     res.json(review);
   } catch (error) {
@@ -970,7 +950,7 @@ router.post('/users/:id/wallet/debit', adminAuth, async (req, res) => {
   }
 });
 
-// ─── Restaurant Timing ──────────────────────────────────────────────────────
+// ─── Store Hours ─────────────────────────────────────────────────────────────
 
 // Public — used by mobile app
 router.get('/restaurant-status', async (req, res) => {
@@ -1020,6 +1000,14 @@ router.get('/restaurant-status', async (req, res) => {
 });
 
 // Admin — get full schedule
+router.get('/store-settings', adminAuth, async (req, res) => {
+  try {
+    const settings = await RestaurantSettings.findById('main') || new RestaurantSettings();
+    res.json(settings);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 router.get('/restaurant-settings', adminAuth, async (req, res) => {
   try {
     const settings = await RestaurantSettings.findById('main') || new RestaurantSettings();
@@ -1030,6 +1018,18 @@ router.get('/restaurant-settings', adminAuth, async (req, res) => {
 });
 
 // Admin — update schedule
+router.put('/store-settings', adminAuth, async (req, res) => {
+  try {
+    const settings = await RestaurantSettings.findByIdAndUpdate(
+      'main',
+      { schedule: req.body.schedule },
+      { new: true, upsert: true, runValidators: true }
+    );
+    res.json(settings);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
 router.put('/restaurant-settings', adminAuth, async (req, res) => {
   try {
     const settings = await RestaurantSettings.findByIdAndUpdate(

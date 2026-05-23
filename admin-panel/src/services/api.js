@@ -124,9 +124,14 @@ export const restaurantAPI = {
   updateRestaurantStatus: (id, data) => api.patch(`/admin/restaurants/${id}/status`, data),
 };
 
+export const storeSettingsAPI = {
+  getSettings: () => api.get('/admin/store-settings'),
+  updateSettings: (schedule) => api.put('/admin/store-settings', { schedule }),
+};
+
 export const restaurantSettingsAPI = {
-  getSettings: () => api.get('/admin/restaurant-settings'),
-  updateSettings: (schedule) => api.put('/admin/restaurant-settings', { schedule }),
+  getSettings: () => api.get('/admin/store-settings'),
+  updateSettings: (schedule) => api.put('/admin/store-settings', { schedule }),
 };
 
 export default api;

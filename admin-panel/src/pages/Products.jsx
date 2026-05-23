@@ -7,7 +7,7 @@ const Products = () => {
   const [filters, setFilters] = useState({ page: 1, limit: 10, category: '', search: '' });
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
-  const [formData, setFormData] = useState({ name: '', description: '', price: '', category: '', preparationTime: 30, isActive: true, isBestseller: false });
+  const [formData, setFormData] = useState({ name: '', description: '', price: '', category: '', brand: '', isActive: true, isBestseller: false });
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState('');
   const queryClient = useQueryClient();
@@ -87,7 +87,7 @@ const Products = () => {
       description: item.description,
       price: item.price,
       category: item.category,
-      preparationTime: item.preparationTime,
+      brand: item.brand || '',
       isActive: item.isActive,
       isBestseller: item.isBestseller || false,
     });
@@ -106,7 +106,7 @@ const Products = () => {
     <div className="p-6">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Products</h1>
-        <p className="text-gray-600">Manage restaurant products and menu items</p>
+        <p className="text-gray-600">Manage sports store products</p>
       </div>
 
       <div className="bg-white rounded-lg shadow">
@@ -126,18 +126,22 @@ const Products = () => {
                 className="border rounded-lg px-3 py-2"
               >
                 <option value="">All Categories</option>
-                <option value="sweets">Sweets</option>
-                <option value="snacks">Snacks</option>
-                <option value="main_course">Main Course</option>
-                <option value="desserts">Desserts</option>
-                <option value="beverages">Beverages</option>
-                <option value="combos">Combos</option>
+                <option value="running">Running</option>
+                <option value="football">Football</option>
+                <option value="cricket">Cricket</option>
+                <option value="basketball">Basketball</option>
+                <option value="fitness">Fitness</option>
+                <option value="swimming">Swimming</option>
+                <option value="cycling">Cycling</option>
+                <option value="hiking">Hiking</option>
+                <option value="yoga">Yoga</option>
+                <option value="accessories">Accessories</option>
               </select>
             </div>
             <button
               onClick={() => {
                 setEditingItem(null);
-                setFormData({ name: '', description: '', price: '', category: '', preparationTime: 30, isActive: true, isBestseller: false });
+                setFormData({ name: '', description: '', price: '', category: '', brand: '', isActive: true, isBestseller: false });
                 setImageFile(null);
                 setImagePreview('');
                 setShowModal(true);
@@ -272,21 +276,35 @@ const Products = () => {
                 required
               >
                 <option value="">Select Category</option>
-                <option value="sweets">Sweets</option>
-                <option value="snacks">Snacks</option>
-                <option value="main_course">Main Course</option>
-                <option value="desserts">Desserts</option>
-                <option value="beverages">Beverages</option>
-                <option value="combos">Combos</option>
+                <option value="running">Running</option>
+                <option value="football">Football</option>
+                <option value="cricket">Cricket</option>
+                <option value="basketball">Basketball</option>
+                <option value="fitness">Fitness</option>
+                <option value="swimming">Swimming</option>
+                <option value="cycling">Cycling</option>
+                <option value="hiking">Hiking</option>
+                <option value="yoga">Yoga</option>
+                <option value="accessories">Accessories</option>
               </select>
-              <input
-                type="number"
-                placeholder="Preparation Time (minutes)"
-                value={formData.preparationTime}
-                onChange={(e) => setFormData({ ...formData, preparationTime: e.target.value })}
+              <select
+                value={formData.brand}
+                onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
                 className="w-full border rounded-lg px-3 py-2"
                 required
-              />
+              >
+                <option value="">Select Brand</option>
+                <option value="decathlon">Decathlon</option>
+                <option value="puma">Puma</option>
+                <option value="nike">Nike</option>
+                <option value="adidas">Adidas</option>
+                <option value="reebok">Reebok</option>
+                <option value="under_armour">Under Armour</option>
+                <option value="asics">Asics</option>
+                <option value="new_balance">New Balance</option>
+                <option value="columbia">Columbia</option>
+                <option value="other">Other</option>
+              </select>
               <label className="flex items-center">
                 <input
                   type="checkbox"

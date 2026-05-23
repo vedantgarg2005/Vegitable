@@ -31,7 +31,7 @@ const Layout = () => {
   const navigation = [
     { name: 'Dashboard', href: '/', icon: LayoutDashboard },
     { name: 'Orders', href: '/orders', icon: ShoppingBag },
-    { name: 'Menu', href: '/menu', icon: Store },
+    { name: 'Products', href: '/menu', icon: Store },
     { name: 'Users', href: '/users', icon: Users },
     { name: 'Analytics', href: '/analytics', icon: BarChart3 },
     { name: 'Referrals', href: '/referrals', icon: Gift },
@@ -51,9 +51,9 @@ const Layout = () => {
       <div className={`flex items-center h-16 px-4 border-b border-white/10 ${collapsed ? 'justify-center' : 'justify-between'}`}>
         <div className="flex items-center space-x-2">
           <div className="w-8 h-8 bg-primary-500 rounded-lg flex items-center justify-center flex-shrink-0">
-            <span className="text-white font-bold text-sm">🍔</span>
+            <span className="text-white font-bold text-sm">🏆</span>
           </div>
-          {!collapsed && <h1 className="text-lg font-bold text-white">FoodAdmin</h1>}
+          {!collapsed && <h1 className="text-lg font-bold text-white">SportZone</h1>}
         </div>
         {/* Mobile close */}
         <button

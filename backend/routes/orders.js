@@ -62,7 +62,7 @@ router.post('/', auth, async (req, res) => {
     await order.save();
     await order.populate('items.menuItem customer');
 
-    // Auto-assign nearest available delivery agent from the SAME outlet
+    // Auto-assign available delivery agent
     if (order.orderType === 'delivery') {
       const agent = await Fleet.findOne({ status: 'available', isActive: true }).populate('driver');
       if (agent) {

@@ -61,7 +61,7 @@ export default function MenuItemDetailScreen({ route, navigation }) {
           {item.image && item.image.startsWith('/uploads') ? (
             <Image source={{ uri: `${API_BASE_URL.replace('/api', '')}${item.image}` }} style={styles.heroImage} resizeMode="cover" />
           ) : (
-            <Text style={styles.heroEmoji}>{item.image || '🍽️'}</Text>
+            <Text style={styles.heroEmoji}>{item.image || '🏅'}</Text>
           )}
         </View>
         {isOutOfStock && (
