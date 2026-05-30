@@ -80,7 +80,6 @@ app.use('/api/orders', (req, res, next) => {
 app.use('/api/reviews', require('./routes/reviews'));
 app.use('/api/fleet', require('./routes/fleet'));
 app.use('/api/promo', require('./routes/promo'));
-app.use('/api/reservations', require('./routes/reservations'));
 app.use('/api/admin', adminRouter);
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/addresses', require('./routes/addresses'));

@@ -9,7 +9,6 @@ import Orders from './pages/Orders';
 import OrderDetails from './pages/OrderDetails';
 import Users from './pages/Users';
 import Analytics from './pages/Analytics';
-import Referrals from './pages/Referrals';
 import Products from './pages/Products';
 import DeliveryControl from './pages/DeliveryControl';
 import DeliveryPartners from './pages/DeliveryPartners';
@@ -51,7 +50,6 @@ function AppContent() {
         <Route path="menu" element={<Products />} />
         <Route path="users" element={<Users />} />
         <Route path="analytics" element={<Analytics />} />
-        <Route path="referrals" element={<Referrals />} />
         <Route path="delivery-control" element={<DeliveryControl />} />
         <Route path="delivery-partners" element={<DeliveryPartners />} />
         <Route path="reviews" element={<Reviews />} />

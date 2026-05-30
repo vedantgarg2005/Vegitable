@@ -1,59 +1,43 @@
 const mongoose = require('mongoose');
 
-const menuItemSchema = new mongoose.Schema({
+// Legacy alias — new code should use Product model directly.
+// Kept for backward-compat with existing /menu routes.
+const productSchema = new mongoose.Schema({
   name: { type: String, required: true },
   description: { type: String, required: true },
-  category: { 
-    type: String, 
+  brand: { type: String, default: 'other' },
+  category: {
+    type: String,
     required: true,
-    enum: ['sweets', 'snacks', 'main_course', 'beverages', 'desserts', 'combos']
+    enum: ['running', 'football', 'cricket', 'basketball', 'fitness', 'swimming', 'cycling', 'hiking', 'yoga', 'accessories'],
   },
   subcategory: String,
   price: { type: Number, required: true },
-  originalPrice: Number, // For discounts
+  originalPrice: Number,
   images: [String],
   image: { type: String, default: '' },
-  ingredients: [String],
-  nutritionalInfo: {
-    calories: Number,
-    protein: Number,
-    carbs: Number,
-    fat: Number,
-    fiber: Number
+  sizes: [{ size: String, stock: { type: Number, default: 0 } }],
+  colors: [String],
+  specifications: {
+    weight: String,
+    material: String,
+    gender: { type: String, enum: ['men', 'women', 'unisex', 'kids'] },
   },
-  allergens: [String],
-  dietary: [{ type: String, enum: ['vegetarian', 'vegan', 'jain', 'gluten_free'] }],
-  spiceLevel: { type: String, enum: ['mild', 'medium', 'spicy'] },
-  preparationTime: { type: Number, required: true }, // in minutes
   availability: {
     isAvailable: { type: Boolean, default: true },
-    availableFrom: String, // time format "09:00"
-    availableTo: String,   // time format "22:00"
-    daysAvailable: [{ type: String, enum: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] }]
   },
-  variants: [{
-    name: String, // e.g., "Small", "Medium", "Large"
-    price: Number,
-    description: String
-  }],
-  addOns: [{
-    name: String,
-    price: Number,
-    category: String
-  }],
   ratings: {
     average: { type: Number, default: 0 },
-    count: { type: Number, default: 0 }
+    count: { type: Number, default: 0 },
   },
-  tags: [String], // e.g., "popular", "chef_special", "new"
+  tags: [String],
   isActive: { type: Boolean, default: true },
   isBestseller: { type: Boolean, default: false },
-  sortOrder: { type: Number, default: 0 }
-}, {
-  timestamps: true
-});
+  isNewArrival: { type: Boolean, default: false },
+  sortOrder: { type: Number, default: 0 },
+}, { timestamps: true });
 
-menuItemSchema.index({ category: 1, isActive: 1 });
-menuItemSchema.index({ name: 'text', description: 'text' });
+productSchema.index({ category: 1, isActive: 1 });
+productSchema.index({ name: 'text', description: 'text' });
 
-module.exports = mongoose.model('MenuItem', menuItemSchema);
+module.exports = mongoose.model('MenuItem', productSchema);

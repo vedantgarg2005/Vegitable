@@ -1,33 +1,11 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
-const crypto = require('crypto');
 const User = require('../models/User');
 const { auth } = require('../middleware/auth');
 const messageCentral = require('../services/messageCentral');
 
 const router = express.Router();
 const otpStore = new Map(); // stores verificationId keyed by phone
-const REFERRAL_REWARD = 75;
-
-function generateReferralCode(name) {
-  const prefix = name.replace(/\s+/g, '').toUpperCase().slice(0, 4);
-  const suffix = crypto.randomBytes(3).toString('hex').toUpperCase();
-  return `${prefix}${suffix}`;
-}
-
-async function applyReferralReward(newUser, referralCode) {
-  if (!referralCode) return;
-  const referrer = await User.findOne({ myReferralCode: referralCode.toUpperCase() });
-  if (!referrer || referrer._id.equals(newUser._id)) return;
-  newUser.referredBy = referrer._id;
-  referrer.wallet.balance += REFERRAL_REWARD;
-  referrer.wallet.transactions.push({ type: 'credit', amount: REFERRAL_REWARD, description: `Referral bonus - ${newUser.name} joined using your code` });
-  referrer.referralCount += 1;
-  await referrer.save();
-  newUser.wallet.balance += REFERRAL_REWARD;
-  newUser.wallet.transactions.push({ type: 'credit', amount: REFERRAL_REWARD, description: `Welcome bonus - referred by ${referrer.name}` });
-}
-
 // Register
 router.post('/register', async (req, res) => {
   try {
@@ -39,7 +17,6 @@ router.post('/register', async (req, res) => {
     }
 
     const user = new User({ name, email, password, phone, role });
-    user.myReferralCode = generateReferralCode(name);
     await user.save();
 
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
@@ -77,7 +54,7 @@ router.post('/send-otp', async (req, res) => {
 // Verify OTP and Login/Register
 router.post('/verify-otp', async (req, res) => {
   try {
-    const { phone, otp, name, email, referralCode } = req.body;
+    const { phone, otp, name, email } = req.body;
     
     const storedOtpData = otpStore.get(phone);
     if (!storedOtpData) return res.status(400).json({ message: 'OTP not sent or expired' });
@@ -122,8 +99,6 @@ router.post('/verify-otp', async (req, res) => {
       }
 
       user = new User({ name, email, phone, password: 'phone_auth' });
-      user.myReferralCode = generateReferralCode(name);
-      await applyReferralReward(user, referralCode);
       await user.save();
 
       const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
@@ -149,7 +124,7 @@ router.post('/verify-otp', async (req, res) => {
 // Complete Registration
 router.post('/complete-registration', async (req, res) => {
   try {
-    const { phone, name, referralCode } = req.body;
+    const { phone, name } = req.body;
 
     if (!phone || !name) {
       return res.status(400).json({ message: 'Phone and name are required' });
@@ -172,8 +147,6 @@ router.post('/complete-registration', async (req, res) => {
     }
 
     const user = new User({ name, phone, password: 'phone_auth' });
-    user.myReferralCode = generateReferralCode(name);
-    await applyReferralReward(user, referralCode);
     await user.save();
 
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
@@ -260,17 +233,6 @@ router.delete('/device-token', auth, async (req, res) => {
     const { token } = req.body;
     await User.findByIdAndUpdate(req.userId, { $pull: { deviceTokens: token } });
     res.json({ message: 'Token removed' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-// Validate referral code
-router.get('/referral/validate/:code', async (req, res) => {
-  try {
-    const user = await User.findOne({ myReferralCode: req.params.code.toUpperCase() }).select('name myReferralCode');
-    if (!user) return res.status(404).json({ valid: false, message: 'Invalid referral code' });
-    res.json({ valid: true, referrerName: user.name });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

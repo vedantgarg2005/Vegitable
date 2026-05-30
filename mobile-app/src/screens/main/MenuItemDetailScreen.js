@@ -22,15 +22,15 @@ export default function MenuItemDetailScreen({ route, navigation }) {
   const [quantity, setQuantity] = useState(1);
   const { addToCart } = useCart();
   const insets = useSafeAreaInsets();
-  const [restaurantOpen, setRestaurantOpen] = useState(true);
+  const [storeOpen, setStoreOpen] = useState(true);
   const [nextOpenTime, setNextOpenTime] = useState(null);
   const isOutOfStock = item.availability?.isAvailable === false;
 
   useEffect(() => {
-    fetch(`${BASE_URL}/admin/restaurant-status`)
+    fetch(`${BASE_URL}/admin/store-status`)
       .then(r => r.json())
       .then(d => {
-        setRestaurantOpen(d.isOpen ?? true);
+        setStoreOpen(d.isOpen ?? true);
         if (d.nextOpenTime) setNextOpenTime(d.nextOpenTime);
       })
       .catch(() => {});
@@ -77,11 +77,7 @@ export default function MenuItemDetailScreen({ route, navigation }) {
         {/* Title row */}
         <View style={styles.titleRow}>
           <View style={styles.titleLeft}>
-            {item.isVeg !== undefined && (
-              <View style={[styles.vegBadge, { borderColor: item.isVeg ? colors.tagVeg : colors.tagNonVeg }]}>
-                <View style={[styles.vegDot, { backgroundColor: item.isVeg ? colors.tagVeg : colors.tagNonVeg }]} />
-              </View>
-            )}
+            {item.brand && <Text style={styles.brandLabel}>{item.brand.toUpperCase()}</Text>}
             <Text style={styles.itemName}>{item.name}</Text>
           </View>
           {item.rating != null && (
@@ -128,7 +124,7 @@ export default function MenuItemDetailScreen({ route, navigation }) {
             <Ionicons name="close-circle-outline" size={rs(18)} color="#EF4444" />
             <Text style={styles.outOfStockBtnText}>Currently Out of Stock</Text>
           </View>
-        ) : restaurantOpen ? (
+        ) : storeOpen ? (
           <TouchableOpacity style={styles.addBtn} onPress={handleAddToCart} activeOpacity={0.88}>
             <LinearGradient
               colors={[colors.gradientStart, colors.gradientEnd]}
@@ -144,7 +140,7 @@ export default function MenuItemDetailScreen({ route, navigation }) {
         ) : (
           <View style={styles.closedBtn}>
             <Text style={styles.closedBtnText}>
-              {nextOpenTime ? `Next available at: ${formatTime12(nextOpenTime)}` : 'Currently closed'}
+              {nextOpenTime ? `Opens at: ${formatTime12(nextOpenTime)}` : 'Store currently closed'}
             </Text>
           </View>
         )}
@@ -183,12 +179,7 @@ const styles = StyleSheet.create({
 
   titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: vs(10) },
   titleLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: rs(8) },
-  vegBadge: {
-    width: rs(18), height: rs(18), borderRadius: rs(3),
-    borderWidth: 1.5, backgroundColor: '#fff',
-    justifyContent: 'center', alignItems: 'center',
-  },
-  vegDot: { width: rs(8), height: rs(8), borderRadius: rs(4) },
+  brandLabel: { fontSize: ms(11), fontWeight: '800', color: colors.primary, letterSpacing: 0.5, marginRight: rs(6) },
   itemName: { fontSize: ms(22), fontWeight: '800', color: colors.text, flex: 1 },
   ratingBadge: {
     flexDirection: 'row', alignItems: 'center',

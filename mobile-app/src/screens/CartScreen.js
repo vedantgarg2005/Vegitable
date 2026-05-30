@@ -9,12 +9,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCart } from '../context/CartContext';
 import { colors, shadows, borderRadius, ms, rs, vs } from '../utils/theme';
 import api, { menuAPI } from '../services/api';
-import { useOutlet } from '../context/OutletContext';
-import { FREE_DELIVERY_THRESHOLD, STANDARD_DELIVERY_FEE, getDeliveryFee, API_BASE_URL, PICKUP_ADDRESS } from '../utils/constants';
+import { FREE_DELIVERY_THRESHOLD, STANDARD_DELIVERY_FEE, getDeliveryFee, API_BASE_URL, STORE_ADDRESS } from '../utils/constants';
 
 const CartScreen = ({ navigation, route }) => {
   const { items: cartItems, total, updateQuantity, removeFromCart, addToCart } = useCart();
-  const { selectedOutlet } = useOutlet();
   const [orderType, setOrderType] = useState(route?.params?.orderType || 'delivery');
   const [suggestedItems, setSuggestedItems] = useState([]);
   const [instructions, setInstructions] = useState('');
@@ -36,15 +34,11 @@ const CartScreen = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
-    if (selectedOutlet) {
-      setDeliveryAvailable(selectedOutlet.deliveryEnabled ?? true);
-    } else {
-      fetch(`${API_BASE_URL}/admin/delivery-status`)
-        .then(r => r.json())
-        .then(d => setDeliveryAvailable(d.deliveryEnabled ?? true))
-        .catch(() => {});
-    }
-  }, [selectedOutlet]);
+    fetch(`${API_BASE_URL}/admin/delivery-status`)
+      .then(r => r.json())
+      .then(d => setDeliveryAvailable(d.deliveryEnabled ?? true))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     menuAPI.getItems()
@@ -145,11 +139,11 @@ const CartScreen = ({ navigation, route }) => {
 
       {cartItems.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyEmoji}>🌿</Text>
+          <Text style={styles.emptyEmoji}>🛒</Text>
           <Text style={styles.emptyTitle}>Your cart is empty</Text>
-          <Text style={styles.emptySubtitle}>Add some delicious items!</Text>
+          <Text style={styles.emptySubtitle}>Add some sports gear!</Text>
           <TouchableOpacity style={styles.browseBtn} onPress={() => navigation.goBack()}>
-            <Text style={styles.browseBtnText}>BROWSE MENU</Text>
+            <Text style={styles.browseBtnText}>BROWSE PRODUCTS</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -197,9 +191,7 @@ const CartScreen = ({ navigation, route }) => {
                   {idx > 0 && <View style={styles.itemDivider} />}
                   <View style={[styles.cartItem, item.availability?.isAvailable === false && { opacity: 0.5 }]}>
                     <View style={styles.itemLeft}>
-                      <View style={[styles.vegBox, { borderColor: colors.tagVeg }]}>
-                        <View style={[styles.vegDot, { backgroundColor: colors.tagVeg }]} />
-                      </View>
+                      <Ionicons name="pricetag-outline" size={rs(14)} color={colors.primary} />
                       <Text style={styles.itemName}>{item.name}</Text>
                     </View>
                     <View style={styles.qtyControls}>
@@ -242,7 +234,7 @@ const CartScreen = ({ navigation, route }) => {
                 <TextInput
                   ref={instructionRef}
                   style={styles.instructionInlineInput}
-                  placeholder="E.g. less spicy, extra sauce..."
+                  placeholder="E.g. gift wrap, specific size note..."
                   placeholderTextColor={colors.placeholder}
                   value={instructions}
                   onChangeText={setInstructions}
@@ -254,7 +246,7 @@ const CartScreen = ({ navigation, route }) => {
             {/* Craving More */}
             {suggestedItems.filter(i => !cartItems.find(c => c.id === (i._id || i.id)) && i.availability?.isAvailable !== false).length > 0 && (
               <View style={[styles.sectionCard, shadows.small]}>
-                <Text style={styles.sectionTitle}>CRAVING MORE? 🤤</Text>
+                <Text style={styles.sectionTitle}>YOU MIGHT ALSO LIKE 🏅</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.suggestList}>
                   {suggestedItems
                     .filter(i => !cartItems.find(c => c.id === (i._id || i.id)) && i.availability?.isAvailable !== false)
@@ -270,7 +262,7 @@ const CartScreen = ({ navigation, route }) => {
                               resizeMode="cover"
                             />
                           ) : (
-                            <Text style={styles.suggestEmoji}>{item.image || '🍕'}</Text>
+                            <Text style={styles.suggestEmoji}>{item.image || '👟'}</Text>
                           )}
                           <Text style={styles.suggestName} numberOfLines={2}>{item.name}</Text>
                           <Text style={styles.suggestPrice}>₹{item.price}</Text>
@@ -336,13 +328,13 @@ const CartScreen = ({ navigation, route }) => {
                   <Ionicons name="location" size={rs(18)} color={colors.primary} />
                   <Text style={styles.pickupSectionTitle}>PICKUP FROM</Text>
                 </View>
-                <Text style={styles.pickupName}>{PICKUP_ADDRESS.name}</Text>
-                <Text style={styles.pickupLine}>{PICKUP_ADDRESS.line1}</Text>
-                <Text style={styles.pickupLine}>{PICKUP_ADDRESS.line2}</Text>
-                <Text style={styles.pickupLandmark}>📍 {PICKUP_ADDRESS.landmark}</Text>
+                <Text style={styles.pickupName}>{STORE_ADDRESS.name}</Text>
+                <Text style={styles.pickupLine}>{STORE_ADDRESS.line1}</Text>
+                <Text style={styles.pickupLine}>{STORE_ADDRESS.line2}</Text>
+                <Text style={styles.pickupLandmark}>📍 {STORE_ADDRESS.landmark}</Text>
                 <View style={styles.pickupPhoneRow}>
                   <Ionicons name="call-outline" size={rs(13)} color={colors.textSecondary} />
-                  <Text style={styles.pickupPhone}>{PICKUP_ADDRESS.phone}</Text>
+                  <Text style={styles.pickupPhone}>{STORE_ADDRESS.phone}</Text>
                 </View>
               </View>
             )}
@@ -564,11 +556,6 @@ const styles = StyleSheet.create({
   },
   itemDivider: { height: 1, backgroundColor: colors.divider },
   itemLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: rs(10), flexShrink: 1 },
-  vegBox: {
-    width: rs(14), height: rs(14), borderRadius: rs(2),
-    borderWidth: 1.5, justifyContent: 'center', alignItems: 'center',
-  },
-  vegDot: { width: rs(6), height: rs(6), borderRadius: rs(3) },
   itemName: { fontSize: ms(14), fontWeight: '700', color: colors.text, fontFamily: 'Poppins_700Bold', flexShrink: 1 },
   itemPrice: { fontSize: ms(13), fontWeight: '700', color: colors.primary, fontFamily: 'Poppins_700Bold', minWidth: rs(52), textAlign: 'right' },
 

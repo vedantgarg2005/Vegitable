@@ -162,13 +162,29 @@ export default function HomeScreen({ navigation }) {
   const [nextOpenTime, setNextOpenTime] = useState(null);
 
   useEffect(() => {
+    const fetchStoreHours = () => {
+      fetch(`${API_BASE_URL}/admin/store-status`)
+        .then(r => r.json())
+        .then(d => {
+          setRestaurantOpen(d.isOpen ?? true);
+          setRestaurantHours(d.hours ?? null);
+          setNextOpenTime(d.nextOpenTime ?? null);
+        })
+        .catch(() => {});
+    };
+    fetchStoreHours();
+    const unsubscribe = navigation.addListener('focus', fetchStoreHours);
+    return unsubscribe;
+  }, [navigation]);
+
+  useEffect(() => {
     if (!deliveryAvailable && orderType === 'delivery') setOrderType('pickup');
   }, [deliveryAvailable]);
 
   // Re-fetch delivery status on focus
   useEffect(() => {
     const fetchStatus = () => {
-      fetch(`${API_BASE_URL}/admin/delivery-status`)
+      fetch(`${API_BASE_URL}/admin/store-status`)
         .then(r => r.json())
         .then(d => setDeliveryAvailable(d.deliveryEnabled ?? true))
         .catch(() => {});
@@ -241,7 +257,6 @@ export default function HomeScreen({ navigation }) {
     setRefreshing(false);
   }, [loadMenu, loadAddresses]);
 
-  useEffect(() => { loadMenu(); }, [loadMenu]);
   useEffect(() => {
     const t = setTimeout(loadMenu, 400);
     return () => clearTimeout(t);
@@ -441,7 +456,7 @@ export default function HomeScreen({ navigation }) {
               qty={qty}
               isOpen={restaurantOpen}
               nextAvailableLabel={nextOpenTime ? `Next available at: ${formatTime12(nextOpenTime)}` : 'Currently closed'}
-              onPress={() => { setSelectedItem(item); setItemQty(1); }}
+              onPress={() => navigation.navigate('ProductDetail', { item })}
               onAdd={() => addToCart(item)}
               onRemove={() => updateQuantity(item._id || item.id, qty - 1)}
             />
@@ -512,9 +527,7 @@ export default function HomeScreen({ navigation }) {
                 {/* Info */}
                 <View style={styles.itemModalInfo}>
                   <View style={styles.itemModalTitleRow}>
-                    <View style={[styles.vegBox, { borderColor: selectedItem.isVeg !== false ? colors.tagVeg : colors.tagNonVeg, marginBottom: 0, marginRight: rs(8) }]}>
-                      <View style={[styles.vegDot, { backgroundColor: selectedItem.isVeg !== false ? colors.tagVeg : colors.tagNonVeg }]} />
-                    </View>
+                    {selectedItem.brand && <Text style={styles.itemModalBrand}>{selectedItem.brand.toUpperCase()}</Text>}
                     <Text style={styles.itemModalName}>{selectedItem.name}</Text>
                   </View>
                   <Text style={styles.itemModalDesc}>{selectedItem.description}</Text>
@@ -860,6 +873,7 @@ const styles = StyleSheet.create({
   itemModalEmoji: { fontSize: ms(90) },
   itemModalInfo: { paddingHorizontal: rs(20), paddingTop: vs(16) },
   itemModalTitleRow: { flexDirection: 'row', alignItems: 'center', marginBottom: vs(6) },
+  itemModalBrand: { fontSize: ms(10), fontWeight: '800', color: colors.primary, letterSpacing: 0.5, marginRight: rs(6) },
   itemModalName: { fontSize: ms(20), fontWeight: '800', color: colors.text, flex: 1 },
   itemModalDesc: { fontSize: ms(13), color: colors.placeholder, lineHeight: ms(20), marginBottom: vs(10) },
   itemModalPrice: { fontSize: ms(22), fontWeight: '800', color: colors.primary },

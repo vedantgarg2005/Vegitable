@@ -15,6 +15,22 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
+// Add money to wallet
+router.post('/add', auth, async (req, res) => {
+  try {
+    const { amount, description } = req.body;
+    if (!amount || amount <= 0) return res.status(400).json({ message: 'Invalid amount' });
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    user.wallet.balance += Number(amount);
+    user.wallet.transactions.push({ type: 'credit', amount: Number(amount), description: description || 'Added to wallet' });
+    await user.save();
+    res.json(user.wallet);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Deduct from wallet (used internally during order payment)
 router.post('/deduct', auth, async (req, res) => {
   try {

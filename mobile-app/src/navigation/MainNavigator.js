@@ -13,7 +13,6 @@ import OrdersScreen from '../screens/main/OrdersScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import MenuItemDetailScreen from '../screens/main/MenuItemDetailScreen';
 import CheckoutScreen from '../screens/CheckoutScreen';
-import ReferralScreen from '../screens/ReferralScreen';
 import SavedAddressesScreen from '../screens/SavedAddressesScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import HelpSupportScreen from '../screens/HelpSupportScreen';
@@ -25,6 +24,8 @@ import OrderTrackingScreen from '../screens/OrderTrackingScreen';
 import WalletScreen from '../screens/WalletScreen';
 import ReviewScreen from '../screens/ReviewScreen';
 import LoginScreen from '../screens/LoginScreen';
+import WishlistScreen from '../screens/WishlistScreen';
+import ProductDetailScreen from '../screens/ProductDetailScreen';
 
 import { useCart } from '../context/CartContext';
 import { colors } from '../utils/theme';
@@ -72,11 +73,11 @@ function MainTabs() {
 
           if (route.name === 'Explore') {
             iconName = focused ? 'compass' : 'compass-outline';
-          } else if (route.name === 'MenuTab') {
-            iconName = focused ? 'restaurant' : 'restaurant-outline';
           } else if (route.name === 'CartTab') {
             iconName = focused ? 'bag' : 'bag-outline';
             badgeCount = itemCount;
+          } else if (route.name === 'OrdersTab') {
+            iconName = focused ? 'receipt' : 'receipt-outline';
           } else if (route.name === 'ProfileTab') {
             iconName = focused ? 'person' : 'person-outline';
           }
@@ -111,39 +112,9 @@ function MainTabs() {
       })}
     >
       <Tab.Screen name="Explore" component={HomeScreen} options={{ title: 'Home' }} />
-      <Tab.Screen
-        name="MenuTab"
-        component={HomeScreen}
-        options={{ title: 'Menu' }}
-        listeners={({ navigation }) => ({
-          tabPress: e => {
-            e.preventDefault();
-            navigation.navigate('Menu');
-          },
-        })}
-      />
-      <Tab.Screen
-        name="CartTab"
-        component={HomeScreen}
-        options={{ title: 'Cart' }}
-        listeners={({ navigation }) => ({
-          tabPress: e => {
-            e.preventDefault();
-            navigation.navigate('Cart');
-          },
-        })}
-      />
-      <Tab.Screen
-        name="ProfileTab"
-        component={HomeScreen}
-        options={{ title: 'Profile' }}
-        listeners={({ navigation }) => ({
-          tabPress: e => {
-            e.preventDefault();
-            navigation.navigate('Profile');
-          },
-        })}
-      />
+      <Tab.Screen name="CartTab" component={CartScreen} options={{ title: 'Cart' }} />
+      <Tab.Screen name="OrdersTab" component={OrdersScreen} options={{ title: 'Orders' }} />
+      <Tab.Screen name="ProfileTab" component={ProfileScreen} options={{ title: 'Profile' }} />
     </Tab.Navigator>
   );
 }
@@ -157,7 +128,6 @@ export default function MainNavigator() {
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="MenuItemDetail" component={MenuItemDetailScreen} />
       <Stack.Screen name="Checkout" component={CheckoutScreen} />
-      <Stack.Screen name="Referral" component={ReferralScreen} />
       <Stack.Screen name="SavedAddresses" component={SavedAddressesScreen} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} />
       <Stack.Screen name="HelpSupport" component={HelpSupportScreen} />
@@ -170,6 +140,8 @@ export default function MainNavigator() {
       <Stack.Screen name="Review" component={ReviewScreen} />
       <Stack.Screen name="Orders" component={OrdersScreen} />
       <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen name="Wishlist" component={WishlistScreen} />
+      <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />
     </Stack.Navigator>
   );
 }

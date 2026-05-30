@@ -13,7 +13,7 @@ const Fleet = require('../models/Fleet');
 const Campaign = require('../models/Campaign');
 const Notification = require('../models/Notification');
 const { auth } = require('../middleware/auth');
-const RestaurantSettings = require('../models/RestaurantSettings');
+const StoreSettings = require('../models/StoreSettings');
 
 const upload = multer({
   storage: multer.diskStorage({
@@ -25,7 +25,7 @@ const upload = multer({
 
 // deliveryEnabled is persisted in RestaurantSettings (store settings)
 async function getDeliveryEnabled() {
-  const s = await RestaurantSettings.findById('main');
+  const s = await StoreSettings.findById('main');
   return s ? s.deliveryEnabled : true;
 }
 
@@ -466,35 +466,6 @@ router.get('/analytics/popular-items', adminAuth, async (req, res) => {
   }
 });
 
-// Referral Management
-router.get('/referrals', adminAuth, async (req, res) => {
-  try {
-    const { page = 1, limit = 10, search } = req.query;
-    const query = { referredBy: { $exists: true } };
-    if (search) {
-      query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { myReferralCode: { $regex: search, $options: 'i' } },
-      ];
-    }
-    const users = await User.find(query)
-      .select('name phone email myReferralCode referredBy referralCount wallet.balance createdAt')
-      .populate('referredBy', 'name phone')
-      .limit(limit * 1)
-      .skip((page - 1) * limit)
-      .sort({ createdAt: -1 });
-    const total = await User.countDocuments(query);
-    const totalReferrals = await User.countDocuments({ referredBy: { $exists: true } });
-    const topReferrers = await User.find({ referralCount: { $gt: 0 } })
-      .select('name phone myReferralCode referralCount')
-      .sort({ referralCount: -1 })
-      .limit(5);
-    res.json({ users, totalPages: Math.ceil(total / limit), currentPage: page, total, totalReferrals, topReferrers });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
 // Public delivery status — no auth, used by mobile app
 router.get('/delivery-status', async (req, res) => {
   try {
@@ -533,7 +504,7 @@ router.get('/delivery-control', adminAuth, async (req, res) => {
 router.post('/delivery-control/toggle', adminAuth, async (req, res) => {
   try {
     const current = await getDeliveryEnabled();
-    const settings = await RestaurantSettings.findByIdAndUpdate(
+    const settings = await StoreSettings.findByIdAndUpdate(
       'main', { deliveryEnabled: !current }, { new: true, upsert: true }
     );
     res.json({ deliveryEnabled: settings.deliveryEnabled });
@@ -547,7 +518,7 @@ router.post('/delivery-control/set', adminAuth, async (req, res) => {
     return res.status(400).json({ message: 'enabled must be a boolean' });
   }
   try {
-    const settings = await RestaurantSettings.findByIdAndUpdate(
+    const settings = await StoreSettings.findByIdAndUpdate(
       'main', { deliveryEnabled: enabled }, { new: true, upsert: true }
     );
     res.json({ deliveryEnabled: settings.deliveryEnabled });
@@ -952,10 +923,10 @@ router.post('/users/:id/wallet/debit', adminAuth, async (req, res) => {
 
 // ─── Store Hours ─────────────────────────────────────────────────────────────
 
-// Public — used by mobile app
-router.get('/restaurant-status', async (req, res) => {
+// Public — used by mobile app (both endpoints for backward compat)
+router.get('/store-status', async (req, res) => {
   try {
-    const settings = await RestaurantSettings.findById('main');
+    const settings = await StoreSettings.findById('main');
     if (!settings) return res.json({ isOpen: true });
 
     const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
@@ -1002,15 +973,7 @@ router.get('/restaurant-status', async (req, res) => {
 // Admin — get full schedule
 router.get('/store-settings', adminAuth, async (req, res) => {
   try {
-    const settings = await RestaurantSettings.findById('main') || new RestaurantSettings();
-    res.json(settings);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-router.get('/restaurant-settings', adminAuth, async (req, res) => {
-  try {
-    const settings = await RestaurantSettings.findById('main') || new RestaurantSettings();
+    const settings = await StoreSettings.findById('main') || new StoreSettings();
     res.json(settings);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -1020,19 +983,7 @@ router.get('/restaurant-settings', adminAuth, async (req, res) => {
 // Admin — update schedule
 router.put('/store-settings', adminAuth, async (req, res) => {
   try {
-    const settings = await RestaurantSettings.findByIdAndUpdate(
-      'main',
-      { schedule: req.body.schedule },
-      { new: true, upsert: true, runValidators: true }
-    );
-    res.json(settings);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
-});
-router.put('/restaurant-settings', adminAuth, async (req, res) => {
-  try {
-    const settings = await RestaurantSettings.findByIdAndUpdate(
+    const settings = await StoreSettings.findByIdAndUpdate(
       'main',
       { schedule: req.body.schedule },
       { new: true, upsert: true, runValidators: true }

@@ -4,14 +4,25 @@ import { Text } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, shadows, borderRadius, ms, rs, vs } from '../utils/theme';
 import { API_BASE_URL } from '../utils/constants';
+import { useWishlist } from '../context/WishlistContext';
 
 export function isOutOfStock(item) {
   return item?.availability?.isAvailable === false;
 }
 
+export function getDiscountPercent(item) {
+  if (item?.originalPrice && item.originalPrice > item.price) {
+    return Math.round(((item.originalPrice - item.price) / item.originalPrice) * 100);
+  }
+  return 0;
+}
+
 export default function FoodCard({ item, onPress, onAdd, onRemove, qty, isOpen, nextAvailableLabel }) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const outOfStock = isOutOfStock(item);
+  const discount = getDiscountPercent(item);
+  const { toggle, isWishlisted } = useWishlist();
+  const wishlisted = isWishlisted(item._id);
 
   const handleAdd = () => {
     Animated.sequence([
@@ -28,12 +39,19 @@ export default function FoodCard({ item, onPress, onAdd, onRemove, qty, isOpen, 
       activeOpacity={outOfStock ? 1 : 0.92}
       disabled={outOfStock}
     >
+      {/* Wishlist heart */}
+      <TouchableOpacity style={styles.heartBtn} onPress={() => toggle(item)} activeOpacity={0.8}>
+        <Ionicons
+          name={wishlisted ? 'heart' : 'heart-outline'}
+          size={rs(18)}
+          color={wishlisted ? colors.error : colors.placeholder}
+        />
+      </TouchableOpacity>
+
       {/* Info on left */}
       <View style={styles.foodInfo}>
-        <View style={styles.vegBestsellerRow}>
-          <View style={[styles.vegBox, { borderColor: item.isVeg !== false ? colors.tagVeg : colors.tagNonVeg }]}>
-            <View style={[styles.vegDot, { backgroundColor: item.isVeg !== false ? colors.tagVeg : colors.tagNonVeg }]} />
-          </View>
+        <View style={styles.tagRow}>
+          {item.brand && <Text style={styles.brandLabel}>{item.brand.toUpperCase()}</Text>}
           {item.isBestseller && (
             <View style={styles.bestsellerTag}>
               <Text style={styles.bestsellerTagText}>Bestseller</Text>
@@ -42,7 +60,12 @@ export default function FoodCard({ item, onPress, onAdd, onRemove, qty, isOpen, 
         </View>
         <Text style={styles.foodName} numberOfLines={1}>{item.name}</Text>
         <Text style={styles.foodDesc} numberOfLines={2}>{item.description}</Text>
-        <Text style={styles.foodPrice}>₹{item.price}</Text>
+        <View style={styles.priceRow}>
+          <Text style={styles.foodPrice}>₹{item.price}</Text>
+          {item.originalPrice > item.price && (
+            <Text style={styles.originalPrice}>₹{item.originalPrice}</Text>
+          )}
+        </View>
       </View>
 
       {/* Image + button on right */}
@@ -55,7 +78,17 @@ export default function FoodCard({ item, onPress, onAdd, onRemove, qty, isOpen, 
               resizeMode="cover"
             />
           ) : (
-            <Text style={styles.foodEmoji}>{item.image || '🍕'}</Text>
+            <Text style={styles.foodEmoji}>{item.image || '👟'}</Text>
+          )}
+          {discount > 0 && (
+            <View style={styles.discountBadge}>
+              <Text style={styles.discountText}>{discount}% OFF</Text>
+            </View>
+          )}
+          {item.isNewArrival && !discount && (
+            <View style={[styles.discountBadge, { backgroundColor: colors.tagNew }]}>
+              <Text style={styles.discountText}>NEW</Text>
+            </View>
           )}
         </View>
         {item.ratings?.average >= 4.2 && !outOfStock && (
@@ -111,18 +144,22 @@ const styles = StyleSheet.create({
   },
   foodCardOutOfStock: { opacity: 0.45 },
   foodInfo: { flex: 1, justifyContent: 'flex-start', alignSelf: 'flex-start' },
-  vegBestsellerRow: { flexDirection: 'row', alignItems: 'center', gap: rs(8), marginBottom: vs(4) },
-  vegBox: {
-    width: rs(14), height: rs(14), borderRadius: rs(2),
-    borderWidth: 1.5, backgroundColor: '#fff',
-    justifyContent: 'center', alignItems: 'center',
-  },
-  vegDot: { width: rs(6), height: rs(6), borderRadius: rs(3) },
+  tagRow: { flexDirection: 'row', alignItems: 'center', gap: rs(6), marginBottom: vs(4) },
+  brandLabel: { fontSize: ms(10), fontWeight: '800', color: colors.primary, letterSpacing: 0.5 },
   bestsellerTag: { backgroundColor: '#FFF3CD', borderRadius: rs(4), paddingHorizontal: rs(6), paddingVertical: vs(2) },
   bestsellerTagText: { fontSize: ms(10), fontWeight: '700', color: '#B8860B' },
   foodName: { fontSize: ms(14), fontWeight: '700', color: colors.text, marginBottom: vs(4) },
   foodDesc: { fontSize: ms(12), color: colors.placeholder, lineHeight: ms(18), marginBottom: vs(6) },
-  foodPrice: { fontSize: ms(15), fontWeight: '800', color: colors.text, marginTop: vs(6) },
+  priceRow: { flexDirection: 'row', alignItems: 'center', gap: rs(6), marginTop: vs(6) },
+  foodPrice: { fontSize: ms(15), fontWeight: '800', color: colors.text },
+  originalPrice: { fontSize: ms(12), color: colors.placeholder, textDecorationLine: 'line-through' },
+  discountBadge: {
+    position: 'absolute', top: rs(6), left: rs(6),
+    backgroundColor: colors.tagSale,
+    borderRadius: borderRadius.xs,
+    paddingHorizontal: rs(5), paddingVertical: vs(2),
+  },
+  discountText: { fontSize: ms(9), fontWeight: '800', color: '#fff' },
   foodImageWrap: { position: 'relative', alignSelf: 'center', marginTop: -vs(10) },
   foodImageBg: {
     width: rs(130), height: rs(130),
@@ -132,7 +169,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   foodImage: { width: rs(130), height: rs(130) },
-  foodEmoji: { fontSize: ms(58) },
+  foodEmoji: { fontSize: ms(52) },
   bestsellerBadge: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
     backgroundColor: 'rgba(0,0,0,0.55)',
@@ -172,4 +209,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEF2F2',
   },
   outOfStockText: { fontSize: ms(10), fontWeight: '700', color: '#EF4444', textAlign: 'center' },
+  heartBtn: {
+    position: 'absolute', top: vs(10), right: rs(10),
+    zIndex: 10,
+    width: rs(30), height: rs(30), borderRadius: rs(15),
+    backgroundColor: colors.surface,
+    justifyContent: 'center', alignItems: 'center',
+    ...shadows.small,
+  },
 });

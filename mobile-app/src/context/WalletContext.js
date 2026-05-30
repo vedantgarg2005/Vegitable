@@ -15,7 +15,7 @@ export function WalletProvider({ children }) {
     if (!user) return;
     setLoading(true);
     try {
-      const { data } = await walletAPI.getWallet({ signal });
+      const { data } = await walletAPI.getWallet(signal);
       setBalance(data.balance ?? 0);
       setTransactions(data.transactions ?? []);
     } catch (error) {

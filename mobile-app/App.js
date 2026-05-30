@@ -19,11 +19,9 @@ import {
 } from '@expo-google-fonts/poppins';
 
 // Override default Text font globally
-const oldTextRender = Text.render;
 Text.defaultProps = Text.defaultProps || {};
 Text.defaultProps.style = [{ fontFamily: 'Poppins_400Regular' }];
 
-const oldInputRender = TextInput.render;
 TextInput.defaultProps = TextInput.defaultProps || {};
 TextInput.defaultProps.style = [{ fontFamily: 'Poppins_400Regular' }];
 
@@ -33,6 +31,7 @@ import MainNavigator from './src/navigation/MainNavigator';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { CartProvider } from './src/context/CartContext';
 import { WalletProvider } from './src/context/WalletContext';
+import { WishlistProvider } from './src/context/WishlistContext';
 import { theme } from './src/utils/theme';
 
 SplashScreen.preventAutoHideAsync();
@@ -111,8 +110,10 @@ export default function App() {
           <AuthProvider>
             <CartProvider>
               <WalletProvider>
+                <WishlistProvider>
                   <AppContent />
                   <FlashMessage position="top" />
+                </WishlistProvider>
               </WalletProvider>
             </CartProvider>
           </AuthProvider>

@@ -34,7 +34,6 @@ export const authAPI = {
   logout: () => api.post('/auth/logout'),
   getProfile: () => api.get('/auth/profile'),
   updateProfile: (data) => api.put('/auth/profile', data),
-  validateReferralCode: (code) => api.get(`/auth/referral/validate/${code}`),
 };
 
 export const menuAPI = {
@@ -52,7 +51,7 @@ export const orderAPI = {
 };
 
 export const walletAPI = {
-  getWallet: (config) => api.get('/wallet', config),
+  getWallet: (signal) => api.get('/wallet', { signal }),
   addMoney: (data) => api.post('/wallet/add', data),
   deduct: (data) => api.post('/wallet/deduct', data),
 };

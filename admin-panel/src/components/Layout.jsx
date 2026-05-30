@@ -34,7 +34,6 @@ const Layout = () => {
     { name: 'Products', href: '/menu', icon: Store },
     { name: 'Users', href: '/users', icon: Users },
     { name: 'Analytics', href: '/analytics', icon: BarChart3 },
-    { name: 'Referrals', href: '/referrals', icon: Gift },
     { name: 'Delivery Control', href: '/delivery-control', icon: Truck },
     { name: 'Delivery Partners', href: '/delivery-partners', icon: UserCheck },
     { name: 'Reviews', href: '/reviews', icon: Star },

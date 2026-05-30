@@ -72,10 +72,6 @@ export const promoAPI = {
   createPromo: (data) => api.post('/admin/promos', data),
 };
 
-export const referralAPI = {
-  getReferrals: (params) => api.get('/admin/referrals', { params }),
-};
-
 export const reviewsAPI = {
   getReviews: (params) => api.get('/admin/reviews', { params }),
   verifyReview: (id, isVerified) => api.patch(`/admin/reviews/${id}/verify`, { isVerified }),

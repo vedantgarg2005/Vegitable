@@ -6,11 +6,6 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: false, unique: true, sparse: true },
   phone: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  referralCode: { type: String },
-  myReferralCode: { type: String, unique: true, sparse: true },
-  referredBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  referralRewardClaimed: { type: Boolean, default: false },
-  referralCount: { type: Number, default: 0 },
   role: { 
     type: String, 
     enum: ['customer', 'admin', 'delivery_partner', 'store_staff'], 

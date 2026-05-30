@@ -133,7 +133,6 @@ export default function LoginScreen({ navigation }) {
   const [phone, setPhone]           = useState('');
   const [otp, setOtp]               = useState('');
   const [name, setName]             = useState('');
-  const [referralCode, setReferral] = useState('');
   const [step, setStep]             = useState('phone');
   const [loading, setLoading]       = useState(false);
   const [error, setError]           = useState('');
@@ -219,7 +218,7 @@ export default function LoginScreen({ navigation }) {
       const res = await fetch(`${API_BASE_URL}/auth/complete-registration`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, name, referralCode }),
+        body: JSON.stringify({ phone, name }),
       });
       const data = await res.json();
       if (res.ok) handleLoginSuccess(data.user, data.token);
@@ -355,19 +354,6 @@ export default function LoginScreen({ navigation }) {
                 />
               </View>
 
-              <Text style={[s.label, { marginTop: vs(12) }]}>Referral Code <Text style={s.optional}>(optional)</Text></Text>
-              <View style={s.inputWrap}>
-                <Ionicons name="gift-outline" size={rs(18)} color={colors.placeholder} />
-                <TextInput
-                  style={s.textInput}
-                  value={referralCode}
-                  onChangeText={setReferral}
-                  placeholder="Enter referral code"
-                  placeholderTextColor={colors.placeholder}
-                  autoCapitalize="characters"
-                />
-              </View>
-
               {error ? <ErrorRow msg={error} /> : null}
 
               <TouchableOpacity
@@ -446,9 +432,7 @@ const s = StyleSheet.create({
 
   // Fields
   label:       { fontSize: ms(12), fontWeight: '700', color: colors.textSecondary, marginBottom: vs(8), letterSpacing: 0.3 },
-  optional:    { fontWeight: '400', color: colors.placeholder },
-
-  phoneRow:    { flexDirection: 'row', alignItems: 'center', gap: rs(10), marginBottom: vs(16) },
+phoneRow:    { flexDirection: 'row', alignItems: 'center', gap: rs(10), marginBottom: vs(16) },
   countryBadge:{
     flexDirection: 'row', alignItems: 'center', gap: rs(6),
     backgroundColor: colors.background, borderRadius: borderRadius.sm,

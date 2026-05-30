@@ -24,8 +24,8 @@ const ProfileScreen = ({ navigation }) => {
   const menuItems = [
     { title: 'My Profile', icon: 'person-circle-outline', badge: null, onPress: () => navigation.navigate('MyProfile') },
     { title: 'My Orders', icon: 'receipt-outline', badge: null, onPress: () => navigation.navigate('Orders') },
+    { title: 'My Wishlist', icon: 'heart-outline', badge: null, onPress: () => navigation.navigate('Wishlist') },
     { title: 'My Wallet', icon: 'wallet-outline', badge: null, onPress: () => navigation.navigate('Wallet') },
-    { title: 'Refer & Earn ₹75', icon: 'gift-outline', badge: '₹75', onPress: () => navigation.navigate('Referral') },
     { title: 'Saved Addresses', icon: 'location-outline', badge: null, onPress: () => navigation.navigate('SavedAddresses') },
     { title: 'Notifications', icon: 'notifications-outline', badge: null, onPress: () => navigation.navigate('Notifications') },
     { title: 'Help & Support', icon: 'help-circle-outline', badge: null, onPress: () => navigation.navigate('HelpSupport') },
