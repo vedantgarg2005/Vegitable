@@ -8,7 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCart } from '../context/CartContext';
-import { useWishlist } from '../context/WishlistContext';
+import { useLanguage } from '../context/LanguageContext';
 import { colors, shadows, borderRadius, ms, rs, vs, spacing } from '../utils/theme';
 import { API_BASE_URL } from '../utils/constants';
 
@@ -31,7 +31,7 @@ export default function ProductDetailScreen({ route, navigation }) {
   const [nextOpenTime, setNextOpenTime] = useState(null);
 
   const { addToCart } = useCart();
-  const { isWishlisted, toggle: toggleWishlist } = useWishlist();
+  const { t, getItemName } = useLanguage();
   const insets = useSafeAreaInsets();
 
   const isOutOfStock = item.availability?.isAvailable === false;
@@ -64,9 +64,7 @@ export default function ProductDetailScreen({ route, navigation }) {
     ? `${API_BASE_URL.replace('/api', '')}${item.image}`
     : null;
 
-  const wishlisted = isWishlisted(item._id);
-
-  return (
+return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
 
@@ -79,13 +77,6 @@ export default function ProductDetailScreen({ route, navigation }) {
         <View style={styles.heroActions}>
           <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.goBack()}>
             <Ionicons name="arrow-back" size={rs(22)} color="#fff" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconBtn} onPress={() => toggleWishlist(item)}>
-            <Ionicons
-              name={wishlisted ? 'heart' : 'heart-outline'}
-              size={rs(22)}
-              color={wishlisted ? '#FF4D6D' : '#fff'}
-            />
           </TouchableOpacity>
         </View>
 
@@ -121,7 +112,7 @@ export default function ProductDetailScreen({ route, navigation }) {
           <View style={styles.titleRow}>
             <View style={{ flex: 1 }}>
               {item.brand && <Text style={styles.brand}>{item.brand.toUpperCase()}</Text>}
-              <Text style={styles.name}>{item.name}</Text>
+              <Text style={styles.name}>{getItemName(item)}</Text>
             </View>
             {item.ratings?.average > 0 && (
               <View style={styles.ratingBadge}>
@@ -154,7 +145,7 @@ export default function ProductDetailScreen({ route, navigation }) {
         {/* Colors */}
         {item.colors?.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Color: <Text style={styles.sectionValue}>{selectedColor}</Text></Text>
+            <Text style={styles.sectionLabel}>{t.color}: <Text style={styles.sectionValue}>{selectedColor}</Text></Text>
             <View style={styles.colorRow}>
               {item.colors.map(c => (
                 <TouchableOpacity
@@ -174,7 +165,7 @@ export default function ProductDetailScreen({ route, navigation }) {
         {availableSizes.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>
-              Size{selectedSize ? `: ${selectedSize}` : ' — Select one'}
+              {t.size}{selectedSize ? `: ${selectedSize}` : ` — ${t.selectOne}`}
               {needsSize && !selectedSize && <Text style={styles.required}> *</Text>}
             </Text>
             <View style={styles.sizeRow}>
@@ -197,28 +188,28 @@ export default function ProductDetailScreen({ route, navigation }) {
         {/* Specs */}
         {item.specifications && Object.values(item.specifications).some(Boolean) && (
           <View style={[styles.section, styles.specsCard, shadows.small]}>
-            <Text style={styles.sectionLabel}>Specifications</Text>
+            <Text style={styles.sectionLabel}>{t.specifications}</Text>
             {item.specifications.material && (
               <View style={styles.specRow}>
-                <Text style={styles.specKey}>Material</Text>
+                <Text style={styles.specKey}>{t.material}</Text>
                 <Text style={styles.specVal}>{item.specifications.material}</Text>
               </View>
             )}
             {item.specifications.weight && (
               <View style={styles.specRow}>
-                <Text style={styles.specKey}>Weight</Text>
+                <Text style={styles.specKey}>{t.weight}</Text>
                 <Text style={styles.specVal}>{item.specifications.weight}</Text>
               </View>
             )}
             {item.specifications.gender && (
               <View style={styles.specRow}>
-                <Text style={styles.specKey}>Gender</Text>
+                <Text style={styles.specKey}>{t.gender}</Text>
                 <Text style={styles.specVal}>{item.specifications.gender}</Text>
               </View>
             )}
             {item.specifications.ageGroup && (
               <View style={styles.specRow}>
-                <Text style={styles.specKey}>Age Group</Text>
+                <Text style={styles.specKey}>{t.ageGroup}</Text>
                 <Text style={styles.specVal}>{item.specifications.ageGroup}</Text>
               </View>
             )}
@@ -227,7 +218,7 @@ export default function ProductDetailScreen({ route, navigation }) {
 
         {/* Quantity */}
         <View style={[styles.section, styles.qtyCard, shadows.small]}>
-          <Text style={styles.sectionLabel}>Quantity</Text>
+          <Text style={styles.sectionLabel}>{t.quantity}</Text>
           <View style={styles.qtyControls}>
             <TouchableOpacity
               style={styles.qtyBtn}
@@ -255,12 +246,12 @@ export default function ProductDetailScreen({ route, navigation }) {
         {isOutOfStock ? (
           <View style={styles.outOfStockBtn}>
             <Ionicons name="close-circle-outline" size={rs(18)} color="#EF4444" />
-            <Text style={styles.outOfStockText}>Currently Out of Stock</Text>
+            <Text style={styles.outOfStockText}>{t.currentlyOutOfStock}</Text>
           </View>
         ) : !storeOpen ? (
           <View style={styles.closedBtn}>
             <Text style={styles.closedText}>
-              {nextOpenTime ? `Opens at: ${formatTime12(nextOpenTime)}` : 'Store currently closed'}
+              {nextOpenTime ? `${t.opensAt}: ${formatTime12(nextOpenTime)}` : t.storeCurrentlyClosed}
             </Text>
           </View>
         ) : (
@@ -276,7 +267,7 @@ export default function ProductDetailScreen({ route, navigation }) {
               style={styles.addBtnGradient}
             >
               <Text style={styles.addBtnText}>
-                {needsSize && !selectedSize ? 'Select a Size' : 'Add to Cart'}
+                {needsSize && !selectedSize ? t.selectSize : t.addToCartLabel}
               </Text>
               <View style={styles.addBtnBadge}>
                 <Text style={styles.addBtnBadgeText}>₹{(item.price * quantity).toFixed(0)}</Text>

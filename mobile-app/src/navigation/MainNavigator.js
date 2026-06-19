@@ -12,7 +12,6 @@ import CartScreen from '../screens/CartScreen';
 import OrdersScreen from '../screens/main/OrdersScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import MenuItemDetailScreen from '../screens/main/MenuItemDetailScreen';
-import CheckoutScreen from '../screens/CheckoutScreen';
 import SavedAddressesScreen from '../screens/SavedAddressesScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import HelpSupportScreen from '../screens/HelpSupportScreen';
@@ -24,7 +23,6 @@ import OrderTrackingScreen from '../screens/OrderTrackingScreen';
 import WalletScreen from '../screens/WalletScreen';
 import ReviewScreen from '../screens/ReviewScreen';
 import LoginScreen from '../screens/LoginScreen';
-import WishlistScreen from '../screens/WishlistScreen';
 import ProductDetailScreen from '../screens/ProductDetailScreen';
 
 import { useCart } from '../context/CartContext';
@@ -127,7 +125,6 @@ export default function MainNavigator() {
       <Stack.Screen name="Cart" component={CartScreen} />
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="MenuItemDetail" component={MenuItemDetailScreen} />
-      <Stack.Screen name="Checkout" component={CheckoutScreen} />
       <Stack.Screen name="SavedAddresses" component={SavedAddressesScreen} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} />
       <Stack.Screen name="HelpSupport" component={HelpSupportScreen} />
@@ -140,7 +137,6 @@ export default function MainNavigator() {
       <Stack.Screen name="Review" component={ReviewScreen} />
       <Stack.Screen name="Orders" component={OrdersScreen} />
       <Stack.Screen name="Login" component={LoginScreen} />
-      <Stack.Screen name="Wishlist" component={WishlistScreen} />
       <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />
     </Stack.Navigator>
   );

@@ -1,35 +1,47 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, StatusBar } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, StatusBar, Modal, RefreshControl } from 'react-native';
 import { Avatar } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { orderAPI } from '../services/api';
 import { colors, shadows, borderRadius, ms, rs, vs } from '../utils/theme';
 
 const ProfileScreen = ({ navigation }) => {
   const { user, logout } = useAuth();
+  const { language, changeLanguage, t } = useLanguage();
   const insets = useSafeAreaInsets();
   const [orderCount, setOrderCount] = useState(0);
+  const [langModal, setLangModal] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    if (user) {
-      orderAPI.getOrders()
-        .then(res => setOrderCount(res.data?.length || 0))
-        .catch(() => {});
-    }
+  const loadStats = useCallback(async () => {
+    if (!user) return;
+    try {
+      const res = await orderAPI.getOrders();
+      setOrderCount(res.data?.length || 0);
+    } catch {}
   }, [user]);
 
+  useEffect(() => { loadStats(); }, [loadStats]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadStats();
+    setRefreshing(false);
+  }, [loadStats]);
+
   const menuItems = [
-    { title: 'My Profile', icon: 'person-circle-outline', badge: null, onPress: () => navigation.navigate('MyProfile') },
-    { title: 'My Orders', icon: 'receipt-outline', badge: null, onPress: () => navigation.navigate('Orders') },
-    { title: 'My Wishlist', icon: 'heart-outline', badge: null, onPress: () => navigation.navigate('Wishlist') },
-    { title: 'My Wallet', icon: 'wallet-outline', badge: null, onPress: () => navigation.navigate('Wallet') },
-    { title: 'Saved Addresses', icon: 'location-outline', badge: null, onPress: () => navigation.navigate('SavedAddresses') },
-    { title: 'Notifications', icon: 'notifications-outline', badge: null, onPress: () => navigation.navigate('Notifications') },
-    { title: 'Help & Support', icon: 'help-circle-outline', badge: null, onPress: () => navigation.navigate('HelpSupport') },
-    { title: 'Terms & Conditions', icon: 'document-text-outline', badge: null, onPress: () => navigation.navigate('TermsConditions') },
+    { title: t.myProfile, icon: 'person-circle-outline', badge: null, onPress: () => navigation.navigate('MyProfile') },
+    { title: t.myOrders, icon: 'receipt-outline', badge: null, onPress: () => navigation.navigate('Orders') },
+    { title: t.myWallet, icon: 'wallet-outline', badge: null, onPress: () => navigation.navigate('Wallet') },
+    { title: t.savedAddresses, icon: 'location-outline', badge: null, onPress: () => navigation.navigate('SavedAddresses') },
+    { title: t.notifications, icon: 'notifications-outline', badge: null, onPress: () => navigation.navigate('Notifications') },
+    { title: t.language, icon: 'language-outline', badge: language === 'hi' ? 'हि' : 'EN', onPress: () => setLangModal(true) },
+    { title: t.helpSupport, icon: 'help-circle-outline', badge: null, onPress: () => navigation.navigate('HelpSupport') },
+    { title: t.termsConditions, icon: 'document-text-outline', badge: null, onPress: () => navigation.navigate('TermsConditions') },
   ];
 
   const MenuItem = ({ item }) => (
@@ -81,7 +93,7 @@ const ProfileScreen = ({ navigation }) => {
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
               style={[styles.signInGradient, { borderRadius: borderRadius.xs }]}
             >
-              <Text style={styles.signInBtnText}>Sign In to Continue</Text>
+              <Text style={styles.signInBtnText}>{t.signIn}</Text>
               <Ionicons name="arrow-forward" size={rs(18)} color="#fff" />
             </LinearGradient>
           </TouchableOpacity>
@@ -94,22 +106,43 @@ const ProfileScreen = ({ navigation }) => {
   }
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={styles.container}
+      showsVerticalScrollIndicator={false}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} tintColor={colors.primary} />}
+    >
       <StatusBar barStyle="light-content" />
       {headerContent}
 
       <View style={styles.content}>
-        {/* Menu */}
         <View style={[styles.menuCard, shadows.small]}>
           {menuItems.map((item, i) => <MenuItem key={i} item={item} />)}
         </View>
 
-        {/* Logout */}
         <TouchableOpacity style={styles.logoutBtn} onPress={logout} activeOpacity={0.8}>
           <Ionicons name="log-out-outline" size={rs(20)} color={colors.error} />
-          <Text style={styles.logoutText}>Sign Out</Text>
+          <Text style={styles.logoutText}>{t.signOut}</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Language Modal */}
+      <Modal visible={langModal} transparent animationType="fade" onRequestClose={() => setLangModal(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setLangModal(false)}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>{t.selectLanguage}</Text>
+            {[{ code: 'en', label: t.english }, { code: 'hi', label: t.hindi }].map(({ code, label }) => (
+              <TouchableOpacity
+                key={code}
+                style={[styles.langOption, language === code && styles.langOptionActive]}
+                onPress={() => { changeLanguage(code); setLangModal(false); }}
+              >
+                <Text style={[styles.langOptionText, language === code && styles.langOptionTextActive]}>{label}</Text>
+                {language === code && <Ionicons name="checkmark" size={rs(18)} color={colors.primary} />}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </ScrollView>
   );
 };
@@ -228,6 +261,40 @@ const styles = StyleSheet.create({
     backgroundColor: colors.errorLight,
   },
   logoutText: { color: colors.error, fontSize: ms(15), fontWeight: '700' },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalCard: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.md,
+    padding: rs(20),
+    width: '80%',
+    ...shadows.medium,
+  },
+  modalTitle: {
+    fontSize: ms(16),
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: vs(12),
+    fontFamily: 'Poppins_700Bold',
+  },
+  langOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: vs(12),
+    paddingHorizontal: rs(12),
+    borderRadius: borderRadius.sm,
+    marginBottom: vs(6),
+    backgroundColor: colors.background,
+  },
+  langOptionActive: { backgroundColor: colors.primarySurface },
+  langOptionText: { fontSize: ms(15), color: colors.text, fontFamily: 'Poppins_500Medium' },
+  langOptionTextActive: { color: colors.primary, fontWeight: '700' },
 });
 
 export default ProfileScreen;

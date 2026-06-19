@@ -4,21 +4,28 @@ import { Text } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, shadows, borderRadius, ms, rs, vs } from '../utils/theme';
 import { API_BASE_URL } from '../utils/constants';
+import { useLanguage } from '../context/LanguageContext';
 
 export function isOutOfStock(item) {
   return item?.availability?.isAvailable === false;
 }
 
+export function getBasePrice(item) {
+  return item?.variants?.length > 0 ? Number(item.variants[0].price) : Number(item.price || 0);
+}
+
 export function getDiscountPercent(item) {
-  if (item?.originalPrice && item.originalPrice > item.price) {
-    return Math.round(((item.originalPrice - item.price) / item.originalPrice) * 100);
-  }
-  return 0;
+  const base = getBasePrice(item);
+  const actual = base + 5;
+  return Math.round((5 / actual) * 100);
 }
 
 export default function ProductCard({ item, onPress, onAdd, onRemove, qty }) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
+  const { t, getItemName } = useLanguage();
   const outOfStock = isOutOfStock(item);
+  const basePrice = getBasePrice(item);
+  const actualPrice = basePrice + 5;
   const discount = getDiscountPercent(item);
 
   const handleAdd = () => {
@@ -45,7 +52,7 @@ export default function ProductCard({ item, onPress, onAdd, onRemove, qty }) {
             resizeMode="cover"
           />
         ) : (
-          <Text style={styles.emoji}>{item.image || '👟'}</Text>
+          <Text style={styles.emoji}>{item.image || '🥦'}</Text>
         )}
         {discount > 0 && (
           <View style={styles.discountBadge}>
@@ -61,13 +68,12 @@ export default function ProductCard({ item, onPress, onAdd, onRemove, qty }) {
 
       {/* Info */}
       <View style={styles.info}>
-        <Text style={styles.brand}>{item.brand?.toUpperCase()}</Text>
-        <Text style={styles.name} numberOfLines={2}>{item.name}</Text>
+        <Text style={styles.name} numberOfLines={2}>{getItemName(item)}</Text>
         <View style={styles.priceRow}>
-          <Text style={styles.price}>₹{item.price}</Text>
-          {item.originalPrice > item.price && (
-            <Text style={styles.originalPrice}>₹{item.originalPrice}</Text>
-          )}
+          <View style={styles.priceBox}>
+            <Text style={styles.price}>₹{basePrice}</Text>
+          </View>
+          <Text style={styles.originalPrice}>₹{actualPrice}</Text>
         </View>
         {item.ratings?.average > 0 && (
           <View style={styles.ratingRow}>
@@ -82,7 +88,7 @@ export default function ProductCard({ item, onPress, onAdd, onRemove, qty }) {
       <Animated.View style={[styles.addBtnWrap, { transform: [{ scale: scaleAnim }] }]}>
         {outOfStock ? (
           <View style={styles.outOfStockTag}>
-            <Text style={styles.outOfStockText}>Out of Stock</Text>
+            <Text style={styles.outOfStockText}>{t.outOfStockLabel}</Text>
           </View>
         ) : qty > 0 ? (
           <View style={styles.qtyControl}>
@@ -96,7 +102,7 @@ export default function ProductCard({ item, onPress, onAdd, onRemove, qty }) {
           </View>
         ) : (
           <TouchableOpacity style={styles.addBtn} onPress={handleAdd} activeOpacity={0.8}>
-            <Text style={styles.addBtnText}>ADD</Text>
+            <Text style={styles.addBtnText}>{t.addLabel}</Text>
             <Ionicons name="add" size={rs(13)} color={colors.primary} />
           </TouchableOpacity>
         )}
@@ -135,8 +141,13 @@ const styles = StyleSheet.create({
   brand: { fontSize: ms(10), fontWeight: '800', color: colors.primary, letterSpacing: 0.5, marginBottom: vs(2) },
   name: { fontSize: ms(13), fontWeight: '700', color: colors.text, marginBottom: vs(4), lineHeight: ms(18) },
   priceRow: { flexDirection: 'row', alignItems: 'center', gap: rs(6), marginBottom: vs(4) },
-  price: { fontSize: ms(15), fontWeight: '800', color: colors.text },
-  originalPrice: { fontSize: ms(12), color: colors.placeholder, textDecorationLine: 'line-through' },
+  price: { fontSize: ms(15), fontWeight: '800', color: colors.primary },
+  priceBox: {
+    backgroundColor: colors.primarySurface,
+    borderRadius: borderRadius.xs,
+    paddingHorizontal: rs(6), paddingVertical: vs(2),
+  },
+  originalPrice: { fontSize: ms(13), color: colors.placeholder, textDecorationLine: 'line-through' },
   ratingRow: { flexDirection: 'row', alignItems: 'center', gap: rs(3) },
   ratingText: { fontSize: ms(11), fontWeight: '700', color: colors.text },
   ratingCount: { fontSize: ms(10), color: colors.placeholder },

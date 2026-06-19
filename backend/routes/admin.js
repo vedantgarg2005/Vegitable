@@ -224,7 +224,7 @@ router.get('/orders', adminAuth, async (req, res) => {
 
     const orders = await Order.find(query)
       .populate('customer', 'name email phone')
-      .populate('items.product', 'name price')
+      .populate('items.menuItem', 'name price')
       .populate('delivery.partner', 'name phone')
       .limit(limit * 1)
       .skip((page - 1) * limit)
@@ -305,6 +305,7 @@ router.post('/menu', adminAuth, upload.single('image'), async (req, res) => {
   try {
     const data = { ...req.body };
     if (req.file) data.image = `/uploads/${req.file.filename}`;
+    if (data.variants) data.variants = JSON.parse(data.variants);
     const product = new Product(data);
     await product.save();
     res.status(201).json(product);
@@ -321,6 +322,7 @@ router.patch('/menu/:id', adminAuth, upload.single('image'), async (req, res) =>
       if (existing?.image) fs.unlink(path.join(__dirname, '..', existing.image), () => {});
       updates.image = `/uploads/${req.file.filename}`;
     }
+    if (updates.variants) updates.variants = JSON.parse(updates.variants);
     const product = await Product.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true });
     if (!product) return res.status(404).json({ message: 'Product not found' });
     res.json(product);
@@ -461,6 +463,19 @@ router.get('/analytics/popular-items', adminAuth, async (req, res) => {
     ]);
 
     res.json(popularItems);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Public products — no auth, used by frontend
+router.get('/products', async (req, res) => {
+  try {
+    const { category } = req.query;
+    const query = { isActive: true };
+    if (category && category !== 'all') query.category = category;
+    const products = await Product.find(query).sort({ sortOrder: 1, createdAt: -1 });
+    res.json(products);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

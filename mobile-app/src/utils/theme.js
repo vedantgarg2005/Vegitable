@@ -16,24 +16,24 @@ export const W = getWindow().width;
 export const H = getWindow().height;
 
 export const colors = {
-  // SportZone Brand — Decathlon-style electric blue
-  primary: '#0082C8',
-  primaryLight: '#33A3E0',
-  primaryDark: '#005F99',
-  primarySurface: '#E8F4FC',
+  // FreshBasket Brand — fresh green
+  primary: '#2E7D32',
+  primaryLight: '#4CAF50',
+  primaryDark: '#1B5E20',
+  primarySurface: '#E8F5E9',
 
-  // Dark navy header
-  navy: '#0A1628',
-  navyLight: '#132240',
+  // Dark green header
+  navy: '#1B3A1F',
+  navyLight: '#254D2A',
 
-  // Accent — energetic yellow (Puma/Nike style)
-  accent: '#FFD600',
-  accentLight: '#FFFDE7',
+  // Accent — green
+  accent: '#2E7D32',
+  accentLight: '#E8F5E9',
 
   // Neutrals
-  background: '#F6F4F0',
+  background: '#F5F9F5',
   surface: '#FFFFFF',
-  surfaceAlt: '#FAF8F5',
+  surfaceAlt: '#F1F8F1',
   card: '#FFFFFF',
 
   // Text
@@ -52,18 +52,18 @@ export const colors = {
   infoLight: '#E1F5FE',
 
   // UI
-  border: '#E0DDD8',
-  divider: '#EEEBE5',
+  border: '#D8E8D8',
+  divider: '#E5EEE5',
   shadow: '#000000',
   overlay: 'rgba(0,0,0,0.05)',
 
-  // Gradient — saffron
-  gradientStart: '#E8650A',
-  gradientMid: '#D45A00',
-  gradientEnd: '#B84D00',
+  // Gradient — green
+  gradientStart: '#2E7D32',
+  gradientMid: '#388E3C',
+  gradientEnd: '#1B5E20',
 
   // Product tags
-  tagNew: '#0082C8',
+  tagNew: '#2E7D32',
   tagSale: '#E53935',
 };
 

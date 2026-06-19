@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, StyleSheet, ScrollView, TouchableOpacity,
-  StatusBar, Animated, Linking, Platform,
+  StatusBar, Animated, Linking, Modal, Alert, RefreshControl,
 } from 'react-native';
 import { Text, ActivityIndicator } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,16 +10,17 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { orderAPI } from '../services/api';
 import { getSocket } from '../services/socket';
+import { useCart } from '../context/CartContext';
 import { colors, shadows, borderRadius, ms, rs, vs } from '../utils/theme';
 import { ORDER_STATUS } from '../utils/constants';
 
 const STATUS_STEPS = [
-  { key: ORDER_STATUS?.PLACED || 'placed', label: 'Order Placed', emoji: '📋', desc: 'We received your order' },
-  { key: ORDER_STATUS?.CONFIRMED || 'confirmed', label: 'Confirmed', emoji: '✅', desc: 'Restaurant accepted your order' },
-  { key: ORDER_STATUS?.PREPARING || 'preparing', label: 'Preparing', emoji: '👨‍🍳', desc: 'Chef is cooking your food' },
-  { key: ORDER_STATUS?.READY || 'ready', label: 'Ready for Pickup', emoji: '📦', desc: 'Order packed and ready' },
-  { key: ORDER_STATUS?.OUT_FOR_DELIVERY || 'out_for_delivery', label: 'Out for Delivery', emoji: '🚴', desc: 'Partner is on the way' },
-  { key: ORDER_STATUS?.DELIVERED || 'delivered', label: 'Delivered', emoji: '🎉', desc: 'Enjoy your meal!' },
+  { key: 'placed',           label: 'Order Placed',       emoji: '📋', desc: 'We have received your order' },
+  { key: 'confirmed',        label: 'Confirmed',          emoji: '✅', desc: 'Your order has been confirmed' },
+  { key: 'processing',       label: 'Processing',         emoji: '📦', desc: 'Your order is being packed' },
+  { key: 'packed',           label: 'Packed',             emoji: '🛍️', desc: 'Order packed and ready to ship' },
+  { key: 'out_for_delivery', label: 'Out for Delivery',   emoji: '🚴', desc: 'Delivery partner is on the way' },
+  { key: 'delivered',        label: 'Delivered',          emoji: '🎉', desc: 'Order delivered successfully!' },
 ];
 
 export default function OrderTrackingScreen({ route, navigation }) {
@@ -27,7 +28,40 @@ export default function OrderTrackingScreen({ route, navigation }) {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [partnerLocation, setPartnerLocation] = useState(null);
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const { addToCart, clearCart } = useCart();
   const insets = useSafeAreaInsets();
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadOrder();
+    setRefreshing(false);
+  }, []);
+
+  const handleReorder = useCallback(() => {
+    if (!order?.items?.length) return;
+    Alert.alert(
+      'Reorder',
+      'This will clear your current cart and add these items. Continue?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Yes, Reorder',
+          onPress: () => {
+            clearCart();
+            order.items.forEach(i => {
+              const menuItem = i.menuItem && typeof i.menuItem === 'object'
+                ? i.menuItem
+                : { _id: i.menuItem, name: i.name, price: i.price };
+              for (let q = 0; q < (i.quantity || 1); q++) addToCart(menuItem);
+            });
+            navigation.navigate('Cart');
+          },
+        },
+      ]
+    );
+  }, [order, addToCart, clearCart, navigation]);
   const mapRef = useRef(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
@@ -50,6 +84,9 @@ export default function OrderTrackingScreen({ route, navigation }) {
 
     socket.on('order-status-update', ({ status }) => {
       setOrder(prev => prev ? { ...prev, status: { ...prev.status, current: status } } : prev);
+      if (status === ORDER_STATUS.DELIVERED) {
+        setTimeout(() => setShowRatingModal(true), 1200);
+      }
     });
 
     socket.on('partner_location', ({ lat, lng }) => {
@@ -142,9 +179,7 @@ export default function OrderTrackingScreen({ route, navigation }) {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
 
-      <LinearGradient
-        colors={[colors.gradientStart, colors.gradientEnd]}
-        start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+      <View
         style={[styles.header, { paddingTop: insets.top + vs(8) }]}
       >
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
@@ -152,36 +187,63 @@ export default function OrderTrackingScreen({ route, navigation }) {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Track Order</Text>
         <View style={{ width: rs(40) }} />
-      </LinearGradient>
+      </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} tintColor={colors.primary} />
+        }
+      >
 
-        {/* ETA Banner — like Zomato/Swiggy big arrival time */}
+        {/* ETA Banner */}
         {!isDelivered && (
           <LinearGradient
             colors={[colors.gradientStart, colors.gradientEnd]}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
             style={styles.etaBanner}
           >
-            <View style={styles.etaLeft}>
-              <Text style={styles.etaMins}>
-                {etaMins ? `${etaMins} mins` : activeStep?.label || 'Processing'}
-              </Text>
-              <Text style={styles.etaSubtext}>
-                {etaMins ? 'Estimated delivery time' : activeStep?.desc || ''}
-              </Text>
+            <View style={styles.etaTop}>
+              <View style={styles.etaLeft}>
+                <Text style={styles.etaMins}>
+                  {etaMins ? `${etaMins} mins` : activeStep?.label || 'Processing'}
+                </Text>
+                <Text style={styles.etaSubtext}>
+                  {etaMins ? 'Estimated delivery time' : activeStep?.desc || ''}
+                </Text>
+              </View>
+              <View style={styles.etaEmojiWrap}>
+                <Text style={styles.etaEmoji}>{activeStep?.emoji || '📦'}</Text>
+              </View>
             </View>
-            <Text style={styles.etaEmoji}>{activeStep?.emoji || '🍽️'}</Text>
+            {/* Mini step progress pills */}
+            <View style={styles.etaProgress}>
+              {STATUS_STEPS.map((s, i) => {
+                const currentIndex = STATUS_STEPS.findIndex(x => x.key === order?.status?.current);
+                const done = i <= currentIndex;
+                return (
+                  <View
+                    key={s.key}
+                    style={[styles.etaPill, done && styles.etaPillDone, i === currentIndex && styles.etaPillActive]}
+                  />
+                );
+              })}
+            </View>
           </LinearGradient>
         )}
 
         {isDelivered && (
           <View style={[styles.deliveredBanner, shadows.medium]}>
             <Text style={styles.deliveredEmoji}>🎉</Text>
-            <View>
+            <View style={{ flex: 1 }}>
               <Text style={styles.deliveredTitle}>Order Delivered!</Text>
-              <Text style={styles.deliveredSub}>Hope you enjoyed your meal</Text>
+              <Text style={styles.deliveredSub}>Thank you for your order!</Text>
             </View>
+            <TouchableOpacity style={styles.reorderBtn} onPress={handleReorder} activeOpacity={0.85}>
+              <Ionicons name="refresh-outline" size={rs(14)} color="#fff" />
+              <Text style={styles.reorderBtnText}>Reorder</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -189,10 +251,15 @@ export default function OrderTrackingScreen({ route, navigation }) {
         <View style={[styles.card, shadows.medium]}>
           <View style={styles.orderIdRow}>
             <View style={styles.orderIdBadge}>
+              <Ionicons name="receipt-outline" size={rs(13)} color={colors.primary} />
               <Text style={styles.orderIdText}>#{order._id?.slice(-6)?.toUpperCase()}</Text>
             </View>
-            <Text style={styles.orderDate}>{new Date(order.createdAt).toLocaleString('en-IN')}</Text>
+            <View style={styles.orderDateWrap}>
+              <Ionicons name="calendar-outline" size={rs(12)} color={colors.placeholder} />
+              <Text style={styles.orderDate}>{new Date(order.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</Text>
+            </View>
           </View>
+          <View style={styles.orderInfoDivider} />
           <View style={styles.orderTotalRow}>
             <Text style={styles.orderTotalLabel}>Order Total</Text>
             <Text style={styles.orderTotalValue}>₹{order.pricing?.total ?? order.totalAmount}</Text>
@@ -306,14 +373,40 @@ export default function OrderTrackingScreen({ route, navigation }) {
                 <View style={styles.vegDotWrap}>
                   <View style={[styles.vegDot, { backgroundColor: colors.tagVeg }]} />
                 </View>
-                <Text style={styles.itemName}>{item.name ?? item.menuItem?.name}</Text>
+                <Text style={styles.itemName}>{item.name || (typeof item.menuItem === 'object' ? item.menuItem?.name : null) || 'Item'}</Text>
               </View>
               <View style={styles.orderItemRight}>
-                <Text style={styles.itemQty}>×{item.quantity}</Text>
+                <View style={styles.qtyBadge}>
+                  <Text style={styles.itemQty}>×{item.quantity}</Text>
+                </View>
                 <Text style={styles.itemTotal}>₹{item.quantity * item.price}</Text>
               </View>
             </View>
           ))}
+          {/* Pricing summary */}
+          {(order.pricing?.deliveryFee != null || order.pricing?.discount != null) && (
+            <>
+              <View style={styles.pricingDivider} />
+              {order.pricing?.deliveryFee != null && (
+                <View style={styles.pricingRow}>
+                  <Text style={styles.pricingLabel}>Delivery Fee</Text>
+                  <Text style={styles.pricingValue}>
+                    {order.pricing.deliveryFee === 0 ? 'FREE' : `₹${order.pricing.deliveryFee}`}
+                  </Text>
+                </View>
+              )}
+              {order.pricing?.discount > 0 && (
+                <View style={styles.pricingRow}>
+                  <Text style={styles.pricingLabel}>Discount</Text>
+                  <Text style={[styles.pricingValue, { color: colors.success }]}>−₹{order.pricing.discount}</Text>
+                </View>
+              )}
+              <View style={[styles.pricingRow, styles.pricingTotalRow]}>
+                <Text style={styles.pricingTotalLabel}>Total Paid</Text>
+                <Text style={styles.pricingTotalValue}>₹{order.pricing?.total ?? order.totalAmount}</Text>
+              </View>
+            </>
+          )}
         </View>
 
         {/* Delivery Address */}
@@ -331,6 +424,30 @@ export default function OrderTrackingScreen({ route, navigation }) {
 
         <View style={{ height: vs(24) }} />
       </ScrollView>
+
+      {/* Auto Rating Modal */}
+      <Modal visible={showRatingModal} transparent animationType="slide" onRequestClose={() => setShowRatingModal(false)}>
+        <View style={styles.ratingOverlay}>
+          <View style={styles.ratingSheet}>
+            <Text style={styles.ratingEmoji}>🎉</Text>
+            <Text style={styles.ratingTitle}>Order Delivered!</Text>
+            <Text style={styles.ratingSub}>How was your experience?</Text>
+            <TouchableOpacity
+              style={styles.ratingBtn}
+              onPress={() => {
+                setShowRatingModal(false);
+                navigation.navigate('Review', { orderId: order?._id, items: order?.items });
+              }}
+            >
+              <Ionicons name="star" size={rs(16)} color="#fff" />
+              <Text style={styles.ratingBtnText}>Rate Your Order</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setShowRatingModal(false)} style={styles.ratingSkip}>
+              <Text style={styles.ratingSkipText}>Maybe Later</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -351,6 +468,7 @@ const styles = StyleSheet.create({
   backBtnAltText: { color: '#fff', fontWeight: '700', fontSize: ms(15) },
 
   header: {
+    backgroundColor: colors.navy,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -371,14 +489,24 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     padding: rs(20),
     marginBottom: vs(12),
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
   },
+  etaTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: vs(14) },
   etaLeft: { flex: 1 },
-  etaMins: { fontSize: ms(28), fontWeight: '900', color: '#fff' },
-  etaSubtext: { fontSize: ms(13), color: 'rgba(255,255,255,0.85)', marginTop: vs(2) },
-  etaEmoji: { fontSize: ms(44) },
+  etaMins: { fontSize: ms(30), fontWeight: '900', color: '#fff', letterSpacing: -0.5 },
+  etaSubtext: { fontSize: ms(13), color: 'rgba(255,255,255,0.85)', marginTop: vs(3) },
+  etaEmojiWrap: {
+    width: rs(60), height: rs(60), borderRadius: rs(30),
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  etaEmoji: { fontSize: ms(32) },
+  etaProgress: { flexDirection: 'row', gap: rs(4) },
+  etaPill: {
+    flex: 1, height: vs(4), borderRadius: rs(4),
+    backgroundColor: 'rgba(255,255,255,0.3)',
+  },
+  etaPillDone: { backgroundColor: 'rgba(255,255,255,0.7)' },
+  etaPillActive: { backgroundColor: '#fff' },
 
   // Delivered Banner
   deliveredBanner: {
@@ -393,6 +521,13 @@ const styles = StyleSheet.create({
   deliveredEmoji: { fontSize: ms(36) },
   deliveredTitle: { fontSize: ms(18), fontWeight: '800', color: colors.success },
   deliveredSub: { fontSize: ms(13), color: colors.textSecondary, marginTop: vs(2) },
+  reorderBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: rs(5),
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.sm,
+    paddingHorizontal: rs(12), paddingVertical: vs(8),
+  },
+  reorderBtnText: { color: '#fff', fontSize: ms(12), fontWeight: '800' },
 
   card: {
     backgroundColor: colors.surface,
@@ -405,12 +540,15 @@ const styles = StyleSheet.create({
 
   orderIdRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: vs(12) },
   orderIdBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: rs(5),
     backgroundColor: colors.primarySurface,
     paddingHorizontal: rs(12), paddingVertical: vs(5),
     borderRadius: borderRadius.full,
   },
   orderIdText: { fontSize: ms(13), fontWeight: '700', color: colors.primary },
+  orderDateWrap: { flexDirection: 'row', alignItems: 'center', gap: rs(4) },
   orderDate: { fontSize: ms(12), color: colors.placeholder },
+  orderInfoDivider: { height: 1, backgroundColor: colors.divider, marginBottom: vs(12) },
   orderTotalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   orderTotalLabel: { fontSize: ms(14), color: colors.textSecondary },
   orderTotalValue: { fontSize: ms(18), fontWeight: '800', color: colors.primary },
@@ -480,9 +618,23 @@ const styles = StyleSheet.create({
   },
   vegDot: { width: rs(7), height: rs(7), borderRadius: rs(4) },
   itemName: { fontSize: ms(14), fontWeight: '500', color: colors.text, flex: 1 },
-  orderItemRight: { flexDirection: 'row', alignItems: 'center', gap: rs(12) },
-  itemQty: { fontSize: ms(13), color: colors.placeholder },
-  itemTotal: { fontSize: ms(14), fontWeight: '700', color: colors.text },
+  orderItemRight: { flexDirection: 'row', alignItems: 'center', gap: rs(10) },
+  qtyBadge: {
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: borderRadius.full,
+    paddingHorizontal: rs(8), paddingVertical: vs(2),
+    borderWidth: 1, borderColor: colors.divider,
+  },
+  itemQty: { fontSize: ms(12), color: colors.textSecondary, fontWeight: '600' },
+  itemTotal: { fontSize: ms(14), fontWeight: '700', color: colors.text, minWidth: rs(50), textAlign: 'right' },
+
+  pricingDivider: { height: 1, backgroundColor: colors.divider, marginVertical: vs(10) },
+  pricingRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: vs(4) },
+  pricingLabel: { fontSize: ms(13), color: colors.textSecondary },
+  pricingValue: { fontSize: ms(13), fontWeight: '600', color: colors.text },
+  pricingTotalRow: { marginTop: vs(4) },
+  pricingTotalLabel: { fontSize: ms(14), fontWeight: '700', color: colors.text },
+  pricingTotalValue: { fontSize: ms(15), fontWeight: '900', color: colors.primary },
 
   addressHeader: { flexDirection: 'row', alignItems: 'center', gap: rs(10), marginBottom: vs(10) },
   addressIconWrap: {
@@ -491,4 +643,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
   },
   addressText: { fontSize: ms(14), color: colors.text, lineHeight: ms(22) },
+
+  // Rating Modal
+  ratingOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  ratingSheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: rs(28), borderTopRightRadius: rs(28),
+    padding: rs(28), alignItems: 'center', paddingBottom: vs(40),
+  },
+  ratingEmoji: { fontSize: ms(52), marginBottom: vs(10) },
+  ratingTitle: { fontSize: ms(22), fontWeight: '900', color: colors.text, marginBottom: vs(6) },
+  ratingSub: { fontSize: ms(14), color: colors.placeholder, marginBottom: vs(24) },
+  ratingBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: rs(8),
+    backgroundColor: colors.primary, borderRadius: borderRadius.sm,
+    paddingVertical: vs(14), paddingHorizontal: rs(36), marginBottom: vs(12),
+  },
+  ratingBtnText: { color: '#fff', fontSize: ms(15), fontWeight: '800' },
+  ratingSkip: { paddingVertical: vs(8) },
+  ratingSkipText: { fontSize: ms(14), color: colors.placeholder, fontWeight: '600' },
 });

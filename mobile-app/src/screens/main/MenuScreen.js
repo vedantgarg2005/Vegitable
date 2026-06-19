@@ -7,6 +7,7 @@ import { colors, spacing, borderRadius, ms, rs, vs, shadows } from '../../utils/
 import { menuAPI, API_BASE_URL } from '../../services/api';
 import { API_BASE_URL as BASE_URL } from '../../utils/constants';
 import { useCart } from '../../context/CartContext';
+import { useLanguage } from '../../context/LanguageContext';
 import FoodCard from '../../components/FoodCard';
 
 function formatTime12(time24) {
@@ -38,6 +39,7 @@ export default function MenuScreen({ navigation }) {
   const [restaurantOpen, setRestaurantOpen] = useState(true);
   const [nextOpenTime, setNextOpenTime] = useState(null);
   const { addToCart, items: cartItems, updateQuantity, total, itemCount } = useCart();
+  const { t } = useLanguage();
   const insets = useSafeAreaInsets();
 
   const fetchMenu = useCallback(() => {
@@ -149,13 +151,13 @@ export default function MenuScreen({ navigation }) {
         onRefresh={onRefresh}
         ListHeaderComponent={
           <Text style={styles.resultCount}>
-            {filteredItems.length} {selectedCategory === 'All' ? 'items' : selectedCategory + ' items'}
+            {filteredItems.length} {selectedCategory === 'All' ? t.items : selectedCategory + ' ' + t.items}
           </Text>
         }
         ListEmptyComponent={
           <View style={styles.empty}>
             <Text style={styles.emptyEmoji}>🏅</Text>
-            <Text style={styles.emptyTitle}>Nothing found</Text>
+            <Text style={styles.emptyTitle}>{t.nothingFound}</Text>
           </View>
         }
       />
@@ -165,13 +167,13 @@ export default function MenuScreen({ navigation }) {
         <View style={[styles.cartBar, { paddingBottom: insets.bottom > 0 ? insets.bottom : vs(20) }]}>
           <Text style={styles.cartBarPrice}>₹{total.toFixed(0)}</Text>
           <View style={styles.cartBarDivider} />
-          <Text style={styles.cartBarItems}>{itemCount} item{itemCount > 1 ? 's' : ''}</Text>
+          <Text style={styles.cartBarItems}>{itemCount} {t.items}</Text>
           <TouchableOpacity
             style={styles.viewCartBtn}
             onPress={() => navigation.navigate('Cart')}
             activeOpacity={0.85}
           >
-            <Text style={styles.viewCartText}>View Cart</Text>
+            <Text style={styles.viewCartText}>{t.viewCart}</Text>
             <Ionicons name="arrow-forward" size={rs(15)} color="#fff" />
           </TouchableOpacity>
         </View>
@@ -187,7 +189,7 @@ export default function MenuScreen({ navigation }) {
         <Pressable style={styles.overlay} onPress={() => setMenuPopupVisible(false)}>
           <Pressable style={styles.popup} onPress={() => {}}>
             <View style={styles.popupHeader}>
-              <Text style={styles.popupTitle}>Browse Products</Text>
+              <Text style={styles.popupTitle}>{t.shopByCategory}</Text>
               <TouchableOpacity onPress={() => setMenuPopupVisible(false)}>
                 <Ionicons name="close" size={rs(22)} color={colors.text} />
               </TouchableOpacity>

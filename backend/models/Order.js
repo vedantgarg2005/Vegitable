@@ -2,23 +2,25 @@ const mongoose = require('mongoose');
 
 const orderSchema = new mongoose.Schema({
   orderNumber: { type: String, unique: true },
-  store: { type: mongoose.Schema.Types.ObjectId, ref: 'Store', required: true },
+  store: { type: mongoose.Schema.Types.ObjectId, ref: 'Store' },
   customer: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   orderType: {
     type: String,
-    enum: ['delivery', 'store_pickup'],
+    enum: ['delivery', 'pickup', 'store_pickup'],
     required: true
   },
   items: [{
-    product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
+    menuItem: { type: mongoose.Schema.Types.ObjectId, ref: 'MenuItem' },
+    name: { type: String },
+    image: { type: String },
     quantity: { type: Number, required: true },
-    size: String,
-    color: String,
-    price: Number // price at time of order
+    price: Number,
+    specialInstructions: String,
+    addOns: [{ name: String, price: Number }]
   }],
   pricing: {
     subtotal: { type: Number, required: true },
-    tax: { type: Number, required: true },
+    tax: { type: Number, default: 0 },
     deliveryFee: { type: Number, default: 0 },
     discount: { type: Number, default: 0 },
     total: { type: Number, required: true }
@@ -78,7 +80,7 @@ const orderSchema = new mongoose.Schema({
 
 orderSchema.pre('save', function(next) {
   if (this.isNew) {
-    this.orderNumber = 'SPZ' + Date.now() + Math.floor(Math.random() * 1000);
+    this.orderNumber = 'VGT' + Date.now() + Math.floor(Math.random() * 1000);
   }
   next();
 });

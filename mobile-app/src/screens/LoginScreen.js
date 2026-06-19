@@ -236,8 +236,8 @@ export default function LoginScreen({ navigation }) {
           <View style={s.logoWrap}>
             <Text style={s.logoEmoji}>🌿</Text>
           </View>
-          <Text style={s.brandName}>Khatri Veg Chaap</Text>
-          <Text style={s.brandTagline}>Pure veg, pure taste</Text>
+          <Text style={s.brandName}>FreshBasket</Text>
+          <Text style={s.brandTagline}>Farm fresh, delivered daily</Text>
         </View>
 
         {/* ── Step progress ── */}
@@ -297,7 +297,7 @@ export default function LoginScreen({ navigation }) {
                 disabled={loading || phone.length < 10}
                 activeOpacity={0.85}
               >
-                <LinearGradient colors={['#E8650A', '#B84D00']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.btnGrad}>
+                <LinearGradient colors={[colors.primary, colors.primaryDark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.btnGrad}>
                   {loading
                     ? <ActivityIndicator color="#fff" size="small" />
                     : <><Text style={s.btnText}>Send OTP</Text><Ionicons name="arrow-forward" size={rs(18)} color="#fff" /></>}
@@ -320,7 +320,7 @@ export default function LoginScreen({ navigation }) {
                 disabled={loading || otp.length < 4}
                 activeOpacity={0.85}
               >
-                <LinearGradient colors={['#E8650A', '#B84D00']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.btnGrad}>
+                <LinearGradient colors={[colors.primary, colors.primaryDark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.btnGrad}>
                   {loading
                     ? <ActivityIndicator color="#fff" size="small" />
                     : <><Text style={s.btnText}>Verify OTP</Text><Ionicons name="shield-checkmark" size={rs(18)} color="#fff" /></>}
@@ -362,7 +362,7 @@ export default function LoginScreen({ navigation }) {
                 disabled={loading || !name.trim()}
                 activeOpacity={0.85}
               >
-                <LinearGradient colors={['#E8650A', '#B84D00']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.btnGrad}>
+                <LinearGradient colors={[colors.primary, colors.primaryDark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.btnGrad}>
                   {loading
                     ? <ActivityIndicator color="#fff" size="small" />
                     : <Text style={s.btnText}>Get Started 🎉</Text>}

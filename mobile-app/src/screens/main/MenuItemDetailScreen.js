@@ -5,6 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCart } from '../../context/CartContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { colors, spacing, shadows, borderRadius, ms, rs, vs } from '../../utils/theme';
 import { API_BASE_URL } from '../../services/api';
 import { API_BASE_URL as BASE_URL } from '../../utils/constants';
@@ -21,6 +22,7 @@ export default function MenuItemDetailScreen({ route, navigation }) {
   const { item } = route.params;
   const [quantity, setQuantity] = useState(1);
   const { addToCart } = useCart();
+  const { t, getItemName } = useLanguage();
   const insets = useSafeAreaInsets();
   const [storeOpen, setStoreOpen] = useState(true);
   const [nextOpenTime, setNextOpenTime] = useState(null);
@@ -67,7 +69,7 @@ export default function MenuItemDetailScreen({ route, navigation }) {
         {isOutOfStock && (
           <View style={styles.outOfStockHeroBadge}>
             <Ionicons name="close-circle" size={rs(14)} color="#fff" />
-            <Text style={styles.outOfStockHeroText}>Out of Stock</Text>
+            <Text style={styles.outOfStockHeroText}>{t.outOfStockLabel}</Text>
           </View>
         )}
       </LinearGradient>
@@ -78,7 +80,7 @@ export default function MenuItemDetailScreen({ route, navigation }) {
         <View style={styles.titleRow}>
           <View style={styles.titleLeft}>
             {item.brand && <Text style={styles.brandLabel}>{item.brand.toUpperCase()}</Text>}
-            <Text style={styles.itemName}>{item.name}</Text>
+            <Text style={styles.itemName}>{getItemName(item)}</Text>
           </View>
           {item.rating != null && (
             <View style={styles.ratingBadge}>
@@ -102,7 +104,7 @@ export default function MenuItemDetailScreen({ route, navigation }) {
 
         {/* Quantity selector */}
         <View style={[styles.quantityCard, shadows.small]}>
-          <Text style={styles.quantityLabel}>Quantity</Text>
+          <Text style={styles.quantityLabel}>{t.quantity}</Text>
           <View style={styles.quantityControls}>
             <TouchableOpacity style={styles.qtyBtn} onPress={decrement} activeOpacity={0.8}>
               <Ionicons name={quantity === 1 ? 'trash-outline' : 'remove'} size={rs(18)} color={colors.primary} />
@@ -122,7 +124,7 @@ export default function MenuItemDetailScreen({ route, navigation }) {
         {isOutOfStock ? (
           <View style={styles.outOfStockBtn}>
             <Ionicons name="close-circle-outline" size={rs(18)} color="#EF4444" />
-            <Text style={styles.outOfStockBtnText}>Currently Out of Stock</Text>
+            <Text style={styles.outOfStockBtnText}>{t.currentlyOutOfStock}</Text>
           </View>
         ) : storeOpen ? (
           <TouchableOpacity style={styles.addBtn} onPress={handleAddToCart} activeOpacity={0.88}>
@@ -131,7 +133,7 @@ export default function MenuItemDetailScreen({ route, navigation }) {
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
               style={styles.addBtnGradient}
             >
-              <Text style={styles.addBtnText}>Add to Cart</Text>
+              <Text style={styles.addBtnText}>{t.addToCartLabel}</Text>
               <View style={styles.addBtnBadge}>
                 <Text style={styles.addBtnBadgeText}>₹{(item.price * quantity).toFixed(2)}</Text>
               </View>
@@ -140,7 +142,7 @@ export default function MenuItemDetailScreen({ route, navigation }) {
         ) : (
           <View style={styles.closedBtn}>
             <Text style={styles.closedBtnText}>
-              {nextOpenTime ? `Opens at: ${formatTime12(nextOpenTime)}` : 'Store currently closed'}
+              {nextOpenTime ? `${t.opensAt}: ${formatTime12(nextOpenTime)}` : t.storeCurrentlyClosed}
             </Text>
           </View>
         )}

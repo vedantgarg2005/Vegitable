@@ -6,7 +6,8 @@ const { auth } = require('../middleware/auth');
 const router = express.Router();
 
 const FREE_DELIVERY_THRESHOLD = 199;
-const STANDARD_DELIVERY_FEE = 30;
+const STANDARD_DELIVERY_FEE = 20;
+const MIN_ORDER_VALUE = 99;
 
 function calculateDeliveryFee(subtotal) {
   return subtotal >= FREE_DELIVERY_THRESHOLD ? 0 : STANDARD_DELIVERY_FEE;
@@ -32,6 +33,9 @@ router.post('/', auth, async (req, res) => {
     const subtotal = pricing?.subtotal;
     if (typeof subtotal !== 'number' || subtotal <= 0) {
       return res.status(400).json({ message: 'Invalid subtotal' });
+    }
+    if (subtotal < MIN_ORDER_VALUE) {
+      return res.status(400).json({ message: `Minimum order value is ₹${MIN_ORDER_VALUE}` });
     }
     if (!orderType) {
       return res.status(400).json({ message: 'orderType is required' });
@@ -100,9 +104,19 @@ router.get('/assigned', auth, async (req, res) => {
 router.get('/my-orders', auth, async (req, res) => {
   try {
     const orders = await Order.find({ customer: req.userId })
-      .populate('items.menuItem')
+      .populate('items.menuItem', 'name price image')
       .sort({ createdAt: -1 });
-    res.json(orders);
+    // Ensure item name is always present
+    const result = orders.map(order => {
+      const obj = order.toObject();
+      obj.items = obj.items.map(item => ({
+        ...item,
+        name: item.name || item.menuItem?.name || 'Item',
+        image: item.image || item.menuItem?.image,
+      }));
+      return obj;
+    });
+    res.json(result);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -140,11 +154,17 @@ router.patch('/:id/status', auth, async (req, res) => {
 router.get('/:id', auth, async (req, res) => {
   try {
     const order = await Order.findById(req.params.id)
-      .populate('customer items.menuItem delivery.partner');
+      .populate('customer items.menuItem delivery.partner', 'name price image phone');
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
     }
-    res.json(order);
+    const obj = order.toObject();
+    obj.items = obj.items.map(item => ({
+      ...item,
+      name: item.name || item.menuItem?.name || 'Item',
+      image: item.image || item.menuItem?.image,
+    }));
+    res.json(obj);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

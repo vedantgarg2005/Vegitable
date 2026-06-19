@@ -1,0 +1,333 @@
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Text, TextInput } from 'react-native';
+
+const translations = {
+  en: {
+    // Profile
+    profile: 'Profile',
+    myProfile: 'My Profile',
+    myOrders: 'My Orders',
+    myWallet: 'My Wallet',
+    savedAddresses: 'Saved Addresses',
+    notifications: 'Notifications',
+    helpSupport: 'Help & Support',
+    termsConditions: 'Terms & Conditions',
+    language: 'Language',
+    signOut: 'Sign Out',
+    signIn: 'Sign In to Continue',
+    selectLanguage: 'Select Language',
+    english: 'English',
+    hindi: 'हिन्दी (Hindi)',
+
+    // Home
+    deliverTo: 'DELIVER TO',
+    selectAddress: 'Select address',
+    delivery: 'Delivery',
+    pickup: 'Pickup',
+    unavailable: 'Unavailable',
+    shopByCategory: 'Shop by Category',
+    allItems: 'All Items',
+    items: 'items',
+    nothingFound: 'Nothing found',
+    tryDifferent: 'Try a different search or category',
+    viewCart: 'View Cart',
+    farmFresh: '🌱 100% Farm Fresh',
+    searchPlaceholder: 'Search for vegetables, fruits, herbs...',
+
+    // Cart
+    yourOrder: 'YOUR ORDER',
+    cartEmpty: 'Your cart is empty',
+    addFreshVeggies: 'Add some fresh veggies!',
+    browseProducts: 'BROWSE PRODUCTS',
+    itemsInOrder: 'ITEMS IN YOUR ORDER',
+    addMore: 'ADD MORE',
+    addInstruction: 'Add instruction',
+    instructionPlaceholder: 'E.g. cut vegetables, ripe fruits...',
+    youMightLike: 'YOU MIGHT ALSO LIKE 🥦',
+    applyCoupon: 'APPLY COUPON',
+    enterCoupon: 'Enter coupon code',
+    apply: 'APPLY',
+    remove: 'REMOVE',
+    viewAllOffers: 'VIEW ALL OFFERS',
+    billDetails: 'BILL DETAILS',
+    itemTotal: 'Item Total',
+    deliveryFee: 'Delivery Fee',
+    couponDiscount: 'Coupon Discount',
+    toPay: 'TO PAY',
+    placeOrder: 'PLACE ORDER',
+    freeDelivery: 'FREE 🎉',
+    addMoreForFree: 'more for FREE delivery',
+    saving: 'saving',
+    onThisOrder: 'on this order 🎉',
+    removeUnavailable: 'Remove unavailable items to place order',
+    deliveryUnavailable: 'Delivery is currently unavailable. You can still place a Takeaway order.',
+
+    // Checkout
+    checkout: 'Checkout',
+    homeDelivery: 'Home Delivery',
+    selfPickup: 'Self Pickup',
+    deliveryAddress: 'Delivery Address',
+    addDeliveryAddress: 'Add a delivery address',
+    addNewAddress: 'Add new address',
+    orderForSomeoneElse: 'Order for Someone Else',
+    deliverToFriend: 'Deliver to a friend or family member',
+    recipientName: "Recipient's name",
+    recipientPhone: "Recipient's 10-digit phone",
+    paymentMethod: 'Payment Method',
+    orderSummary: 'Order Summary',
+    subtotal: 'Subtotal',
+    discount: 'Discount',
+    total: 'Total',
+    placingOrder: 'Placing Order...',
+    pinLocation: 'Pin Your Location',
+    dragToAdjust: 'Drag the map or pin to adjust location',
+    confirmLocation: 'Confirm Location →',
+    addressDetails: 'Address Details',
+    setAsDefault: 'Set as default address',
+    saveAddress: 'Save Address',
+    free: 'FREE',
+
+    // Orders
+    orders: 'Orders',
+    noOrders: 'No orders yet',
+    startShopping: 'Start shopping to see your orders here',
+    shopNow: 'Shop Now',
+    trackOrder: 'Track Order',
+
+    // Wallet
+    wallet: 'Wallet',
+    balance: 'Balance',
+    transactions: 'Transactions',
+    noTransactions: 'No transactions yet',
+
+    // Common
+    cancel: 'Cancel',
+    save: 'Save',
+    back: 'Back',
+    loading: 'Loading...',
+    error: 'Error',
+    success: 'Success',
+    outOfStock: 'Out of Stock',
+    inStock: 'In Stock',
+    addToCart: 'ADD',
+    search: 'Search',
+    outOfStockLabel: 'Out of Stock',
+    addLabel: 'ADD',
+    currentlyOutOfStock: 'Currently Out of Stock',
+    selectPackSize: 'SELECT PACK SIZE',
+    currentlyClosed: 'Currently closed',
+    chooseDeliveryAddress: 'Choose Delivery Address',
+    useCurrentLocation: 'Use Current Location',
+    autoDetectGPS: 'Auto-detect via GPS',
+    savedAddressesLabel: 'SAVED ADDRESSES',
+    manageAddAddresses: 'Manage / Add Addresses',
+    addToCartLabel: 'Add to Cart',
+    quantity: 'Quantity',
+    storeCurrentlyClosed: 'Store currently closed',
+    opensAt: 'Opens at',
+    selectSize: 'Select a Size',
+    refund: 'Refund',
+    payment: 'Payment',
+    reorder: 'Reorder',
+    view: 'View',
+    rate: 'Rate',
+    signInToCheckout: 'Sign in to Checkout',
+    signInToPlaceOrder: 'Please sign in to place your order',
+    signIn: 'Sign In',
+    orderWillBeDelivered: 'Order will be delivered to your address',
+    collectFromRestaurant: 'Collect your order from the restaurant',
+    orderForSomeoneElse: 'Order for Someone Else',
+    yourOrderHistoryHere: 'Your order history will appear here after signing in',
+    browseProducts: 'Browse Products',
+    viewCart: 'View Cart',
+    specifications: 'Specifications',
+    material: 'Material',
+    weight: 'Weight',
+    gender: 'Gender',
+    ageGroup: 'Age Group',
+    color: 'Color',
+    size: 'Size',
+    selectOne: 'Select one',
+    itemCount: 'ITEMS',
+  },
+  hi: {
+    // Profile
+    profile: 'प्रोफ़ाइल',
+    myProfile: 'मेरी प्रोफ़ाइल',
+    myOrders: 'मेरे ऑर्डर',
+    myWallet: 'मेरा वॉलेट',
+    savedAddresses: 'सहेजे पते',
+    notifications: 'सूचनाएं',
+    helpSupport: 'सहायता',
+    termsConditions: 'नियम और शर्तें',
+    language: 'भाषा',
+    signOut: 'साइन आउट',
+    signIn: 'जारी रखने के लिए साइन इन करें',
+    selectLanguage: 'भाषा चुनें',
+    english: 'English',
+    hindi: 'हिन्दी (Hindi)',
+
+    // Home
+    deliverTo: 'डिलीवरी करें',
+    selectAddress: 'पता चुनें',
+    delivery: 'डिलीवरी',
+    pickup: 'पिकअप',
+    unavailable: 'उपलब्ध नहीं',
+    shopByCategory: 'श्रेणी के अनुसार खरीदें',
+    allItems: 'सभी उत्पाद',
+    items: 'उत्पाद',
+    nothingFound: 'कुछ नहीं मिला',
+    tryDifferent: 'कोई अलग खोज या श्रेणी आज़माएं',
+    viewCart: 'कार्ट देखें',
+    farmFresh: '🌱 100% ताज़ा',
+    searchPlaceholder: 'सब्ज़ियाँ, फल, जड़ी-बूटियाँ खोजें...',
+
+    // Cart
+    yourOrder: 'आपका ऑर्डर',
+    cartEmpty: 'आपका कार्ट खाली है',
+    addFreshVeggies: 'कुछ ताज़ी सब्ज़ियाँ जोड़ें!',
+    browseProducts: 'उत्पाद देखें',
+    itemsInOrder: 'आपके ऑर्डर में उत्पाद',
+    addMore: 'और जोड़ें',
+    addInstruction: 'निर्देश जोड़ें',
+    instructionPlaceholder: 'जैसे: सब्ज़ियाँ काटें, पके फल...',
+    youMightLike: 'आपको यह भी पसंद आ सकता है 🥦',
+    applyCoupon: 'कूपन लगाएं',
+    enterCoupon: 'कूपन कोड दर्ज करें',
+    apply: 'लगाएं',
+    remove: 'हटाएं',
+    viewAllOffers: 'सभी ऑफर देखें',
+    billDetails: 'बिल विवरण',
+    itemTotal: 'कुल उत्पाद',
+    deliveryFee: 'डिलीवरी शुल्क',
+    couponDiscount: 'कूपन छूट',
+    toPay: 'भुगतान करें',
+    placeOrder: 'ऑर्डर दें',
+    freeDelivery: 'मुफ़्त 🎉',
+    addMoreForFree: 'और जोड़ें मुफ़्त डिलीवरी के लिए',
+    saving: 'बचत',
+    onThisOrder: 'इस ऑर्डर पर 🎉',
+    removeUnavailable: 'ऑर्डर देने के लिए अनुपलब्ध उत्पाद हटाएं',
+    deliveryUnavailable: 'डिलीवरी अभी उपलब्ध नहीं है। आप टेकअवे ऑर्डर दे सकते हैं।',
+
+    // Checkout
+    checkout: 'चेकआउट',
+    homeDelivery: 'होम डिलीवरी',
+    selfPickup: 'खुद उठाएं',
+    deliveryAddress: 'डिलीवरी पता',
+    addDeliveryAddress: 'डिलीवरी पता जोड़ें',
+    addNewAddress: 'नया पता जोड़ें',
+    orderForSomeoneElse: 'किसी और के लिए ऑर्डर',
+    deliverToFriend: 'दोस्त या परिवार को डिलीवर करें',
+    recipientName: 'प्राप्तकर्ता का नाम',
+    recipientPhone: 'प्राप्तकर्ता का 10 अंकों का फ़ोन',
+    paymentMethod: 'भुगतान विधि',
+    orderSummary: 'ऑर्डर सारांश',
+    subtotal: 'उप-योग',
+    discount: 'छूट',
+    total: 'कुल',
+    placingOrder: 'ऑर्डर दिया जा रहा है...',
+    pinLocation: 'स्थान पिन करें',
+    dragToAdjust: 'मानचित्र या पिन खींचकर स्थान समायोजित करें',
+    confirmLocation: 'स्थान की पुष्टि करें →',
+    addressDetails: 'पते का विवरण',
+    setAsDefault: 'डिफ़ॉल्ट पता सेट करें',
+    saveAddress: 'पता सेव करें',
+    free: 'मुफ़्त',
+
+    // Orders
+    orders: 'ऑर्डर',
+    noOrders: 'अभी तक कोई ऑर्डर नहीं',
+    startShopping: 'अपने ऑर्डर यहाँ देखने के लिए खरीदारी शुरू करें',
+    shopNow: 'अभी खरीदें',
+    trackOrder: 'ऑर्डर ट्रैक करें',
+
+    // Wallet
+    wallet: 'वॉलेट',
+    balance: 'बैलेंस',
+    transactions: 'लेनदेन',
+    noTransactions: 'अभी तक कोई लेनदेन नहीं',
+
+    // Common
+    cancel: 'रद्द करें',
+    save: 'सेव करें',
+    back: 'वापस',
+    loading: 'लोड हो रहा है...',
+    error: 'त्रुटि',
+    success: 'सफल',
+    outOfStock: 'स्टॉक में नहीं',
+    inStock: 'स्टॉक में है',
+    addToCart: 'जोड़ें',
+    search: 'खोजें',
+    outOfStockLabel: 'स्टॉक में नहीं',
+    addLabel: 'जोड़ें',
+    currentlyOutOfStock: 'अभी स्टॉक में नहीं',
+    selectPackSize: 'पैक साइज़ चुनें',
+    currentlyClosed: 'अभी बंद है',
+    chooseDeliveryAddress: 'डिलीवरी पता चुनें',
+    useCurrentLocation: 'वर्तमान स्थान उपयोग करें',
+    autoDetectGPS: 'GPS से स्वतः पता लगाएं',
+    savedAddressesLabel: 'सहेजे पते',
+    manageAddAddresses: 'पते प्रबंधित / जोड़ें',
+    addToCartLabel: 'कार्ट में जोड़ें',
+    quantity: 'मात्रा',
+    storeCurrentlyClosed: 'दुकान अभी बंद है',
+    opensAt: 'खुलने का समय',
+    selectSize: 'साइज़ चुनें',
+    refund: 'वापसी',
+    payment: 'भुगतान',
+    reorder: 'फिर से ऑर्डर करें',
+    view: 'देखें',
+    rate: 'रेटिंग दें',
+    signInToCheckout: 'चेकआउट के लिए साइन इन करें',
+    signInToPlaceOrder: 'ऑर्डर देने के लिए साइन इन करें',
+    signIn: 'साइन इन करें',
+    orderWillBeDelivered: 'ऑर्डर आपके पते पर डिलीवर किया जाएगा',
+    collectFromRestaurant: 'दुकान से अपना ऑर्डर लें',
+    orderForSomeoneElse: 'किसी और के लिए ऑर्डर',
+    yourOrderHistoryHere: 'साइन इन करने के बाद यहाँ ऑर्डर दिखेंगे',
+    browseProducts: 'उत्पाद देखें',
+    viewCart: 'कार्ट देखें',
+    specifications: 'विशेषताएं',
+    material: 'सामग्री',
+    weight: 'वजन',
+    gender: 'लिंग',
+    ageGroup: 'आयु वर्ग',
+    color: 'रंग',
+    size: 'साइज़',
+    selectOne: 'एक चुनें',
+    itemCount: 'उत्पाद',
+  },
+};
+
+const LanguageContext = createContext();
+
+export const LanguageProvider = ({ children }) => {
+  const [language, setLanguage] = useState('en');
+
+  useEffect(() => {
+    AsyncStorage.getItem('app_language').then(lang => {
+      if (lang) setLanguage(lang);
+    });
+  }, []);
+
+  const changeLanguage = async (lang) => {
+    setLanguage(lang);
+    await AsyncStorage.setItem('app_language', lang);
+    const isHindi = lang === 'hi';
+    const font = isHindi ? 'NotoSansDevanagari_400Regular' : 'Poppins_400Regular';
+    Text.defaultProps = Text.defaultProps || {};
+    Text.defaultProps.style = [{ fontFamily: font }];
+    TextInput.defaultProps = TextInput.defaultProps || {};
+    TextInput.defaultProps.style = [{ fontFamily: font }];
+  };
+
+  return (
+    <LanguageContext.Provider value={{ language, changeLanguage, t: translations[language], getItemName: (item) => (language === 'hi' && item?.nameHi) ? item.nameHi : item?.name }}>
+      {children}
+    </LanguageContext.Provider>
+  );
+};
+
+export const useLanguage = () => useContext(LanguageContext);

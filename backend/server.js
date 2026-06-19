@@ -11,7 +11,7 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
-    origin: process.env.CLIENT_URL || "http://localhost:3000",
+    origin: '*',
     methods: ["GET", "POST"]
   }
 });
@@ -35,7 +35,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static('uploads'));
 
 // MongoDB connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/sportzone', {
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/freshbasket', {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
@@ -86,7 +86,6 @@ app.use('/api/addresses', require('./routes/addresses'));
 app.use('/api/search', require('./routes/search'));
 app.use('/api/tracking', require('./routes/tracking'));
 app.use('/api/wallet', require('./routes/wallet'));
-app.use('/api/payment', require('./routes/payment'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {

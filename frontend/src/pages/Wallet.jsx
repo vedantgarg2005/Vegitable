@@ -1,0 +1,147 @@
+import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
+import { ArrowDownLeft, ArrowUpRight, Plus, TrendingUp } from 'lucide-react';
+import api from '../services/api';
+
+const QUICK_AMOUNTS = [50, 100, 200, 500];
+
+export default function Wallet() {
+  const [wallet, setWallet] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [amount, setAmount] = useState('');
+  const [adding, setAdding] = useState(false);
+
+  useEffect(() => {
+    api.get('/wallet')
+      .then(({ data }) => setWallet(data))
+      .catch(() => setWallet(null))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleAdd = async e => {
+    e.preventDefault();
+    const val = Number(amount);
+    if (!val || val < 1) return toast.error('Enter a valid amount');
+    setAdding(true);
+    try {
+      const { data } = await api.post('/wallet/add', { amount: val, description: 'Added via app' });
+      setWallet(data);
+      setAmount('');
+      toast.success(`₹${val} added to wallet!`);
+    } catch {
+      toast.error('Failed to add money');
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const credits = wallet?.transactions?.filter(t => t.type === 'credit').reduce((s, t) => s + t.amount, 0) || 0;
+  const debits  = wallet?.transactions?.filter(t => t.type === 'debit').reduce((s, t) => s + t.amount, 0) || 0;
+
+  return (
+    <div className="min-h-screen" style={{ background: '#F0F7F0' }}>
+      {/* Header with balance */}
+      <div style={{ background: 'linear-gradient(135deg,#1B3A1F 0%,#2E7D32 100%)' }} className="px-4 pt-5 pb-16">
+        <div className="max-w-xl mx-auto">
+          <p className="text-[11px] font-bold tracking-widest uppercase mb-1" style={{ color: 'rgba(255,255,255,0.4)' }}>My</p>
+          <p className="text-white font-black text-xl mb-6">Wallet</p>
+
+          {/* Balance glass card */}
+          <div className="rounded-2xl p-5" style={{ background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.2)' }}>
+            <p className="text-xs font-bold tracking-widest uppercase" style={{ color: 'rgba(255,255,255,0.6)' }}>Available Balance</p>
+            {loading
+              ? <div className="h-12 w-36 bg-white/20 rounded-xl animate-pulse mt-2"/>
+              : <p className="text-5xl font-black text-white mt-1">₹{wallet?.balance ?? 0}</p>
+            }
+            <div className="flex gap-4 mt-4">
+              <div className="flex items-center gap-1.5">
+                <ArrowDownLeft size={13} className="text-green-300"/>
+                <span className="text-xs font-semibold text-white/70">In ₹{credits}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <ArrowUpRight size={13} className="text-red-300"/>
+                <span className="text-xs font-semibold text-white/70">Out ₹{debits}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-xl mx-auto px-4 -mt-8 pb-24 space-y-3">
+        {/* Add Money */}
+        <div className="bg-white rounded-2xl shadow-sm p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: '#E8F5E9' }}>
+              <Plus size={15} style={{ color: '#2E7D32' }}/>
+            </div>
+            <p className="font-black text-gray-800">Add Money</p>
+          </div>
+          <div className="flex gap-2 mb-3">
+            {QUICK_AMOUNTS.map(a => (
+              <button key={a} onClick={() => setAmount(String(a))}
+                className="flex-1 py-2.5 rounded-xl text-sm font-bold border-2 transition-all active:scale-95"
+                style={{
+                  borderColor: amount === String(a) ? '#2E7D32' : 'transparent',
+                  background: amount === String(a) ? '#E8F5E9' : '#F9FAFB',
+                  color: amount === String(a) ? '#1B5E20' : '#6B7280',
+                }}>
+                ₹{a}
+              </button>
+            ))}
+          </div>
+          <form onSubmit={handleAdd} className="flex gap-2">
+            <input type="number" value={amount} onChange={e => setAmount(e.target.value)}
+              placeholder="Enter custom amount"
+              className="flex-1 border-2 border-gray-100 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:border-green-400 bg-gray-50 transition-all"/>
+            <button type="submit" disabled={adding}
+              className="text-white px-5 py-2.5 rounded-xl font-black text-sm flex items-center gap-1.5 transition-all active:scale-95 disabled:opacity-60"
+              style={{ background: '#2E7D32' }}>
+              {adding ? '...' : <><Plus size={15}/> Add</>}
+            </button>
+          </form>
+        </div>
+
+        {/* Transactions */}
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+          <div className="flex items-center gap-2 px-5 py-4" style={{ borderBottom: '1px solid #E8F5E9' }}>
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: '#E8F5E9' }}>
+              <TrendingUp size={15} style={{ color: '#2E7D32' }}/>
+            </div>
+            <p className="font-black text-gray-800">Transactions</p>
+          </div>
+          {loading ? (
+            <div className="p-5 space-y-3">
+              {[1, 2, 3].map(i => <div key={i} className="h-12 bg-gray-100 rounded-xl animate-pulse"/>)}
+            </div>
+          ) : !wallet?.transactions?.length ? (
+            <div className="text-center py-12">
+              <p className="text-3xl mb-2">💸</p>
+              <p className="text-gray-400 text-sm font-medium">No transactions yet</p>
+            </div>
+          ) : (
+            <div>
+              {[...wallet.transactions].reverse().map((tx, i) => (
+                <div key={i} className="flex items-center gap-3 px-5 py-3.5" style={{ borderBottom: i < wallet.transactions.length - 1 ? '1px solid #F3F4F6' : 'none' }}>
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0`}
+                    style={{ background: tx.type === 'credit' ? '#E8F5E9' : '#FFEBEE' }}>
+                    {tx.type === 'credit'
+                      ? <ArrowDownLeft size={16} style={{ color: '#2E7D32' }}/>
+                      : <ArrowUpRight size={16} style={{ color: '#C62828' }}/>
+                    }
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-800 truncate">{tx.description || 'Transaction'}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{new Date(tx.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                  </div>
+                  <span className="font-black text-sm" style={{ color: tx.type === 'credit' ? '#2E7D32' : '#C62828' }}>
+                    {tx.type === 'credit' ? '+' : '-'}₹{tx.amount}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -62,9 +62,5 @@ export const reviewAPI = {
   getMyReviews: () => api.get('/reviews/my-reviews'),
 };
 
-export const paymentAPI = {
-  createOrder: (orderId) => api.post('/payment/create-order', { orderId }),
-  verify: (orderId, cfOrderId) => api.post('/payment/verify', { orderId, cfOrderId }),
-};
 
 export default api;

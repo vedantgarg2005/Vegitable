@@ -67,17 +67,13 @@ export default function ReviewScreen({ route, navigation }) {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
-      <LinearGradient
-        colors={[colors.gradientStart, colors.gradientEnd]}
-        start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-        style={[styles.header, { paddingTop: insets.top + vs(8) }]}
-      >
+      <View style={[styles.header, { paddingTop: insets.top + vs(8) }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={rs(22)} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Rate Your Order</Text>
         <View style={{ width: rs(40) }} />
-      </LinearGradient>
+      </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Text style={styles.subtitle}>How was your food? Your feedback helps us improve 🍽️</Text>
@@ -132,6 +128,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
 
   header: {
+    backgroundColor: colors.navy,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: rs(16), paddingBottom: vs(14),
   },

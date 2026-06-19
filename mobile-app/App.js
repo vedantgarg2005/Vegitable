@@ -17,13 +17,21 @@ import {
   Poppins_800ExtraBold,
   Poppins_900Black,
 } from '@expo-google-fonts/poppins';
+import {
+  NotoSansDevanagari_400Regular,
+  NotoSansDevanagari_700Bold,
+} from '@expo-google-fonts/noto-sans-devanagari';
 
-// Override default Text font globally
-Text.defaultProps = Text.defaultProps || {};
-Text.defaultProps.style = [{ fontFamily: 'Poppins_400Regular' }];
-
-TextInput.defaultProps = TextInput.defaultProps || {};
-TextInput.defaultProps.style = [{ fontFamily: 'Poppins_400Regular' }];
+// Override default Text font globally — switches to Devanagari when Hindi is active
+async function applyFontForLanguage() {
+  const lang = await AsyncStorage.getItem('app_language');
+  const isHindi = lang === 'hi';
+  Text.defaultProps = Text.defaultProps || {};
+  Text.defaultProps.style = [{ fontFamily: isHindi ? 'NotoSansDevanagari_400Regular' : 'Poppins_400Regular' }];
+  TextInput.defaultProps = TextInput.defaultProps || {};
+  TextInput.defaultProps.style = [{ fontFamily: isHindi ? 'NotoSansDevanagari_400Regular' : 'Poppins_400Regular' }];
+}
+applyFontForLanguage();
 
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -31,7 +39,7 @@ import MainNavigator from './src/navigation/MainNavigator';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { CartProvider } from './src/context/CartContext';
 import { WalletProvider } from './src/context/WalletContext';
-import { WishlistProvider } from './src/context/WishlistContext';
+import { LanguageProvider } from './src/context/LanguageContext';
 import { theme } from './src/utils/theme';
 
 SplashScreen.preventAutoHideAsync();
@@ -58,14 +66,19 @@ export async function registerPushToken() {
   await api.post('/auth/device-token', { token });
 }
 
+import OnboardingScreen from './src/screens/OnboardingScreen';
+
 function AppContent() {
   const { user, loading } = useAuth();
   const [isReady, setIsReady] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
     async function prepare() {
       try {
         await new Promise(resolve => setTimeout(resolve, 2000));
+        const done = await AsyncStorage.getItem('onboarding_done');
+        if (!done) setShowOnboarding(true);
       } catch (e) {
         console.warn(e);
       } finally {
@@ -80,8 +93,10 @@ function AppContent() {
     if (user) registerPushToken();
   }, [user]);
 
-  if (!isReady || loading) {
-    return null;
+  if (!isReady || loading) return null;
+
+  if (showOnboarding) {
+    return <OnboardingScreen onDone={() => setShowOnboarding(false)} />;
   }
 
   return (
@@ -99,6 +114,8 @@ export default function App() {
     Poppins_700Bold,
     Poppins_800ExtraBold,
     Poppins_900Black,
+    NotoSansDevanagari_400Regular,
+    NotoSansDevanagari_700Bold,
   });
 
   if (!fontsLoaded) return null;
@@ -108,14 +125,14 @@ export default function App() {
       <SafeAreaProvider>
         <PaperProvider theme={theme}>
           <AuthProvider>
+            <LanguageProvider>
             <CartProvider>
               <WalletProvider>
-                <WishlistProvider>
                   <AppContent />
                   <FlashMessage position="top" />
-                </WishlistProvider>
               </WalletProvider>
             </CartProvider>
+            </LanguageProvider>
           </AuthProvider>
         </PaperProvider>
       </SafeAreaProvider>

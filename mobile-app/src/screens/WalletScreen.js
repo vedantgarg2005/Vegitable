@@ -1,15 +1,24 @@
 import React from 'react';
-import { View, ScrollView, StyleSheet, StatusBar } from 'react-native';
+import { View, ScrollView, StyleSheet, StatusBar, RefreshControl } from 'react-native';
 import { Text, ActivityIndicator } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { useWallet } from '../context/WalletContext';
+import { useLanguage } from '../context/LanguageContext';
 import { colors, spacing, shadows, borderRadius, ms, rs, vs } from '../utils/theme';
 
 export default function WalletScreen() {
-  const { balance, transactions, loading } = useWallet();
+  const { balance, transactions, loading, fetchWallet } = useWallet();
+  const { t } = useLanguage();
   const insets = useSafeAreaInsets();
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchWallet();
+    }, [fetchWallet])
+  );
 
   const formatDate = (dateString) =>
     new Date(dateString).toLocaleDateString('en-IN', {
@@ -30,19 +39,19 @@ export default function WalletScreen() {
       <StatusBar barStyle="light-content" />
 
       {/* Header + Balance */}
-      <LinearGradient
-        colors={[colors.gradientStart, colors.gradientMid, colors.gradientEnd]}
-        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-        style={[styles.header, { paddingTop: insets.top + vs(12) }]}
-      >
-        <Text style={styles.headerTitle}>My Wallet</Text>
+      <View style={[styles.header, { paddingTop: insets.top + vs(12) }]}>
+        <Text style={styles.headerTitle}>{t.myWallet}</Text>
         <View style={styles.balanceWrap}>
-          <Text style={styles.balanceLabel}>Available Balance</Text>
+          <Text style={styles.balanceLabel}>{t.balance}</Text>
           <Text style={styles.balanceAmount}>₹{balance.toFixed(2)}</Text>
         </View>
-      </LinearGradient>
+      </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={fetchWallet} colors={[colors.primary]} tintColor={colors.primary} />}
+      >
 
         {/* Transactions */}
         <View style={[styles.card, shadows.small]}>
@@ -50,14 +59,14 @@ export default function WalletScreen() {
             <View style={styles.cardIconWrap}>
               <Ionicons name="receipt-outline" size={rs(18)} color={colors.primary} />
             </View>
-            <Text style={styles.cardTitle}>Recent Transactions</Text>
+            <Text style={styles.cardTitle}>{t.transactions}</Text>
           </View>
 
           {transactions.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyEmoji}>💳</Text>
-              <Text style={styles.emptyTitle}>No transactions yet</Text>
-              <Text style={styles.emptySubtitle}>Your transaction history will appear here</Text>
+              <Text style={styles.emptyTitle}>{t.noTransactions}</Text>
+              <Text style={styles.emptySubtitle}>{t.noTransactions}</Text>
             </View>
           ) : (
             transactions.map((txn, i) => {
@@ -75,7 +84,7 @@ export default function WalletScreen() {
                     />
                   </View>
                   <View style={styles.txnInfo}>
-                    <Text style={styles.txnType}>{isCredit ? 'Refund' : 'Payment'}</Text>
+                    <Text style={styles.txnType}>{isCredit ? t.refund : t.payment}</Text>
                     <Text style={styles.txnDate}>{formatDate(txn.createdAt)}</Text>
                   </View>
                   <Text style={[styles.txnAmount, { color: isCredit ? colors.success : colors.error }]}>
@@ -98,6 +107,7 @@ const styles = StyleSheet.create({
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
   header: {
+    backgroundColor: colors.navy,
     paddingHorizontal: spacing.md,
     paddingBottom: vs(28),
     borderBottomLeftRadius: rs(28),

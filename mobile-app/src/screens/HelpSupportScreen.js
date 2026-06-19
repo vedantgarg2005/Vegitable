@@ -1,163 +1,207 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking,
+  View, StyleSheet, TouchableOpacity, FlatList,
+  TextInput, KeyboardAvoidingView, Platform, Linking, StatusBar,
 } from 'react-native';
+import { Text } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, shadows, borderRadius, ms, rs, vs } from '../utils/theme';
 
-const FAQS = [
-  { q: 'How do I track my order?', a: 'Go to Orders tab → tap your active order → you will see live tracking on the map.' },
-  { q: 'Can I cancel my order?', a: 'You can cancel within 2 minutes of placing the order. Go to Orders → tap the order → Cancel Order.' },
-  { q: 'How does the wallet work?', a: 'Add money to your wallet and use it at checkout. Referral rewards and refunds are also credited to your wallet.' },
-  { q: 'What if I received a wrong item?', a: 'Contact us within 30 minutes of delivery via the chat or call option below. We will arrange a replacement or refund.' },
-  { q: 'How do I apply a promo code?', a: 'At checkout, tap "Apply Promo Code" and enter your code. Valid codes will be applied automatically.' },
-  { q: 'How do referrals work?', a: 'Share your referral code from the Profile → Refer & Earn section. When a friend signs up using your code, both of you get ₹75 in your wallets.' },
-  { q: 'What are the delivery charges?', a: 'Delivery charges depend on your distance from the restaurant. Orders above ₹299 get free delivery.' },
+const BOT_NAME = 'FreshBasket Support';
+
+const QUICK = [
+  { label: '📦 Track my order', reply: 'Go to the Orders tab → tap your active order → you\'ll see live tracking on the map.' },
+  { label: '❌ Cancel order', reply: 'You can cancel within 2 minutes of placing. Go to Orders → tap the order → Cancel Order.' },
+  { label: '💰 Wallet help', reply: 'Add money to your wallet and use it at checkout. Refunds are also credited to your wallet automatically.' },
+  { label: '🔄 Wrong item', reply: 'So sorry to hear that! Please contact us within 30 minutes of delivery. We\'ll arrange a replacement or full refund.' },
+  { label: '🎟️ Promo code', reply: 'At Cart screen, tap "View All Offers" and apply your code. Valid codes are applied instantly.' },
+  { label: '🚚 Delivery charges', reply: 'Orders above ₹299 get FREE delivery. Below that, a small delivery fee applies based on distance.' },
 ];
 
 const CONTACT = [
-  { icon: 'call-outline', label: 'Call Us', sub: '+91 98765 43210', action: () => Linking.openURL('tel:+919876543210') },
-  { icon: 'mail-outline', label: 'Email Support', sub: 'support@fooddelivery.in', action: () => Linking.openURL('mailto:support@fooddelivery.in') },
-  { icon: 'logo-whatsapp', label: 'WhatsApp', sub: 'Chat with us', action: () => Linking.openURL('https://wa.me/919876543210') },
+  { icon: 'call-outline', label: 'Call Us', action: () => Linking.openURL('tel:+919876543210') },
+  { icon: 'logo-whatsapp', label: 'WhatsApp', action: () => Linking.openURL('https://wa.me/919876543210') },
+  { icon: 'mail-outline', label: 'Email', action: () => Linking.openURL('mailto:support@freshbasket.in') },
 ];
 
-function FAQItem({ item }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <TouchableOpacity style={styles.faqItem} onPress={() => setOpen(o => !o)} activeOpacity={0.75}>
-      <View style={styles.faqHeader}>
-        <Text style={styles.faqQ}>{item.q}</Text>
-        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={rs(18)} color={colors.placeholder} />
-      </View>
-      {open && <Text style={styles.faqA}>{item.a}</Text>}
-    </TouchableOpacity>
-  );
-}
+let msgId = 0;
+const msg = (text, fromUser) => ({ id: String(++msgId), text, fromUser, time: new Date() });
 
 export default function HelpSupportScreen({ navigation }) {
   const insets = useSafeAreaInsets();
+  const listRef = useRef(null);
+  const [messages, setMessages] = useState([
+    msg('👋 Hi! I\'m your FreshBasket support assistant. How can I help you today?\n\nTap a quick option below or type your question.', false),
+  ]);
+  const [input, setInput] = useState('');
+  const [showQuick, setShowQuick] = useState(true);
+
+  const addMsg = (text, fromUser) => {
+    setMessages(prev => [...prev, msg(text, fromUser)]);
+    setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
+  };
+
+  const send = (text) => {
+    if (!text.trim()) return;
+    addMsg(text, true);
+    setInput('');
+    setShowQuick(false);
+    setTimeout(() => {
+      addMsg('Thanks for reaching out! Our team will get back to you shortly. For urgent help, use the contact options below.', false);
+    }, 800);
+  };
+
+  const pickQuick = (item) => {
+    addMsg(item.label, true);
+    setShowQuick(false);
+    setTimeout(() => addMsg(item.reply, false), 600);
+  };
+
+  const renderMsg = ({ item }) => (
+    <View style={[styles.msgRow, item.fromUser && styles.msgRowUser]}>
+      {!item.fromUser && (
+        <View style={styles.botAvatar}>
+          <Text style={styles.botAvatarText}>🌿</Text>
+        </View>
+      )}
+      <View style={[styles.bubble, item.fromUser ? styles.bubbleUser : styles.bubbleBot]}>
+        <Text style={[styles.bubbleText, item.fromUser && styles.bubbleTextUser]}>{item.text}</Text>
+        <Text style={[styles.bubbleTime, item.fromUser && styles.bubbleTimeUser]}>
+          {item.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        </Text>
+      </View>
+    </View>
+  );
 
   return (
-    <View style={styles.container}>
-      <LinearGradient
-        colors={[colors.gradientStart, colors.gradientEnd]}
-        style={[styles.header, { paddingTop: insets.top + vs(12) }]}
-      >
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <StatusBar barStyle="light-content" backgroundColor={colors.navy} />
+
+      {/* Header */}
+      <View style={[styles.header, { paddingTop: insets.top + vs(12) }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={rs(22)} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Help & Support</Text>
-        <View style={{ width: rs(30) }} />
-      </LinearGradient>
-
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Hero */}
-        <View style={[styles.heroCard, shadows.medium]}>
-          <Ionicons name="headset-outline" size={rs(40)} color={colors.primary} />
-          <Text style={styles.heroTitle}>How can we help?</Text>
-          <Text style={styles.heroSub}>We're here 24/7 to assist you</Text>
+        <View style={styles.headerInfo}>
+          <Text style={styles.headerTitle}>{BOT_NAME}</Text>
+          <View style={styles.onlineRow}>
+            <View style={styles.onlineDot} />
+            <Text style={styles.onlineText}>Online • Typically replies instantly</Text>
+          </View>
         </View>
-
-        {/* Contact options */}
-        <Text style={styles.sectionLabel}>Contact Us</Text>
-        <View style={[styles.card, shadows.small]}>
-          {CONTACT.map((item, i) => (
-            <TouchableOpacity
-              key={i}
-              style={[styles.contactRow, i < CONTACT.length - 1 && styles.contactDivider]}
-              onPress={item.action}
-              activeOpacity={0.7}
-            >
-              <View style={styles.contactIcon}>
-                <Ionicons name={item.icon} size={rs(20)} color={colors.primary} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.contactLabel}>{item.label}</Text>
-                <Text style={styles.contactSub}>{item.sub}</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={rs(16)} color={colors.placeholder} />
+        <View style={styles.headerActions}>
+          {CONTACT.map((c, i) => (
+            <TouchableOpacity key={i} style={styles.headerIconBtn} onPress={c.action} activeOpacity={0.7}>
+              <Ionicons name={c.icon} size={rs(20)} color="#fff" />
             </TouchableOpacity>
           ))}
         </View>
+      </View>
 
-        {/* FAQ */}
-        <Text style={styles.sectionLabel}>Frequently Asked Questions</Text>
-        <View style={[styles.card, shadows.small]}>
-          {FAQS.map((item, i) => (
-            <View key={i}>
-              <FAQItem item={item} />
-              {i < FAQS.length - 1 && <View style={styles.faqDivider} />}
+      {/* Messages */}
+      <FlatList
+        ref={listRef}
+        data={messages}
+        renderItem={renderMsg}
+        keyExtractor={m => m.id}
+        contentContainerStyle={styles.msgList}
+        showsVerticalScrollIndicator={false}
+        onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
+        ListFooterComponent={
+          showQuick ? (
+            <View style={styles.quickWrap}>
+              {QUICK.map((q, i) => (
+                <TouchableOpacity key={i} style={styles.quickChip} onPress={() => pickQuick(q)} activeOpacity={0.75}>
+                  <Text style={styles.quickChipText}>{q.label}</Text>
+                </TouchableOpacity>
+              ))}
             </View>
-          ))}
-        </View>
+          ) : null
+        }
+      />
 
-        {/* Policies */}
-        <Text style={styles.sectionLabel}>Policies</Text>
-        <View style={[styles.card, shadows.small]}>
-          {[
-            { label: 'Terms & Conditions', screen: 'TermsConditions' },
-            { label: 'Refund Policy', screen: 'RefundPolicy' },
-            { label: 'Shipping Policy', screen: 'ShippingPolicy' },
-          ].map((item, i, arr) => (
-            <TouchableOpacity
-              key={i}
-              style={[styles.policyRow, i < arr.length - 1 && styles.contactDivider]}
-              onPress={() => navigation.navigate(item.screen)}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="document-text-outline" size={rs(18)} color={colors.primary} />
-              <Text style={styles.policyLabel}>{item.label}</Text>
-              <Ionicons name="chevron-forward" size={rs(16)} color={colors.placeholder} />
-            </TouchableOpacity>
-          ))}
-        </View>
-      </ScrollView>
-    </View>
+      {/* Input */}
+      <View style={[styles.inputRow, { paddingBottom: insets.bottom + vs(8) }]}>
+        <TextInput
+          style={styles.input}
+          placeholder="Type your message..."
+          placeholderTextColor={colors.placeholder}
+          value={input}
+          onChangeText={setInput}
+          onSubmitEditing={() => send(input)}
+          returnKeyType="send"
+          multiline
+        />
+        <TouchableOpacity
+          style={[styles.sendBtn, !input.trim() && styles.sendBtnDisabled]}
+          onPress={() => send(input)}
+          disabled={!input.trim()}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="send" size={rs(18)} color="#fff" />
+        </TouchableOpacity>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: rs(16), paddingBottom: vs(16),
+    backgroundColor: colors.navy, flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: rs(16), paddingBottom: vs(16), gap: rs(10),
   },
   backBtn: { padding: rs(4) },
-  headerTitle: { fontSize: ms(18), fontWeight: '700', color: '#fff' },
-
-  content: { padding: rs(16), gap: vs(14), paddingBottom: vs(40) },
-
-  heroCard: {
-    backgroundColor: colors.surface, borderRadius: borderRadius.md,
-    padding: rs(24), alignItems: 'center', gap: vs(6),
+  headerInfo: { flex: 1 },
+  headerTitle: { fontSize: ms(16), fontWeight: '700', color: '#fff' },
+  onlineRow: { flexDirection: 'row', alignItems: 'center', gap: rs(5), marginTop: vs(2) },
+  onlineDot: { width: rs(7), height: rs(7), borderRadius: rs(4), backgroundColor: '#4CAF50' },
+  onlineText: { fontSize: ms(11), color: 'rgba(255,255,255,0.75)' },
+  headerActions: { flexDirection: 'row', gap: rs(4) },
+  headerIconBtn: {
+    width: rs(34), height: rs(34), borderRadius: rs(17),
+    backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center',
   },
-  heroTitle: { fontSize: ms(18), fontWeight: '800', color: colors.text },
-  heroSub: { fontSize: ms(13), color: colors.textSecondary },
-
-  sectionLabel: { fontSize: ms(13), fontWeight: '700', color: colors.textSecondary, letterSpacing: 0.5 },
-
-  card: { backgroundColor: colors.surface, borderRadius: borderRadius.md, overflow: 'hidden' },
-
-  contactRow: { flexDirection: 'row', alignItems: 'center', padding: rs(14), gap: rs(12) },
-  contactDivider: { borderBottomWidth: 1, borderBottomColor: colors.divider },
-  contactIcon: {
-    width: rs(40), height: rs(40), borderRadius: rs(12),
+  msgList: { padding: rs(16), gap: vs(10), paddingBottom: vs(8) },
+  msgRow: { flexDirection: 'row', alignItems: 'flex-end', gap: rs(8), marginBottom: vs(6) },
+  msgRowUser: { flexDirection: 'row-reverse' },
+  botAvatar: {
+    width: rs(32), height: rs(32), borderRadius: rs(16),
     backgroundColor: colors.primarySurface, justifyContent: 'center', alignItems: 'center',
+    flexShrink: 0,
   },
-  contactLabel: { fontSize: ms(14), fontWeight: '600', color: colors.text },
-  contactSub: { fontSize: ms(12), color: colors.textSecondary, marginTop: vs(1) },
-
-  faqItem: { padding: rs(14) },
-  faqHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: rs(8) },
-  faqQ: { flex: 1, fontSize: ms(14), fontWeight: '600', color: colors.text, lineHeight: ms(20) },
-  faqA: { fontSize: ms(13), color: colors.textSecondary, lineHeight: ms(20), marginTop: vs(8) },
-  faqDivider: { height: 1, backgroundColor: colors.divider, marginHorizontal: rs(14) },
-
-  policyRow: {
-    flexDirection: 'row', alignItems: 'center', gap: rs(12),
-    padding: rs(14),
+  botAvatarText: { fontSize: ms(16) },
+  bubble: {
+    maxWidth: '75%', borderRadius: borderRadius.md, padding: rs(12),
+    ...shadows.small,
   },
-  policyLabel: { flex: 1, fontSize: ms(14), fontWeight: '500', color: colors.text },
+  bubbleBot: { backgroundColor: colors.surface, borderBottomLeftRadius: rs(4) },
+  bubbleUser: { backgroundColor: colors.primary, borderBottomRightRadius: rs(4) },
+  bubbleText: { fontSize: ms(14), color: colors.text, lineHeight: ms(21) },
+  bubbleTextUser: { color: '#fff' },
+  bubbleTime: { fontSize: ms(10), color: colors.placeholder, marginTop: vs(4), alignSelf: 'flex-end' },
+  bubbleTimeUser: { color: 'rgba(255,255,255,0.7)' },
+  quickWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: rs(8), marginTop: vs(8), paddingHorizontal: rs(4) },
+  quickChip: {
+    borderWidth: 1.5, borderColor: colors.primary,
+    borderRadius: borderRadius.full, paddingHorizontal: rs(14), paddingVertical: vs(8),
+    backgroundColor: colors.primarySurface,
+  },
+  quickChipText: { fontSize: ms(12), color: colors.primary, fontWeight: '600' },
+  inputRow: {
+    flexDirection: 'row', alignItems: 'flex-end', gap: rs(10),
+    paddingHorizontal: rs(16), paddingTop: vs(10),
+    backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.divider,
+  },
+  input: {
+    flex: 1, borderWidth: 1.5, borderColor: colors.border,
+    borderRadius: borderRadius.md, paddingHorizontal: rs(14), paddingVertical: vs(10),
+    fontSize: ms(14), color: colors.text, backgroundColor: colors.background, maxHeight: vs(100),
+  },
+  sendBtn: {
+    width: rs(44), height: rs(44), borderRadius: rs(22),
+    backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center',
+  },
+  sendBtnDisabled: { backgroundColor: colors.border },
 });

@@ -58,9 +58,7 @@ const MyProfileScreen = ({ navigation }) => {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={colors.primary} translucent />
 
-      <LinearGradient
-        colors={[colors.gradientStart, colors.gradientMid, colors.gradientEnd]}
-        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+      <View
         style={[styles.header, { paddingTop: insets.top + vs(12) }]}
       >
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
@@ -68,7 +66,7 @@ const MyProfileScreen = ({ navigation }) => {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>My Profile</Text>
         <View style={{ width: rs(38) }} />
-      </LinearGradient>
+      </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
         {/* Avatar */}
@@ -173,6 +171,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
 
   header: {
+    backgroundColor: colors.navy,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',

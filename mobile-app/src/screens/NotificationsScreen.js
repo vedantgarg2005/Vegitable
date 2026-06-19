@@ -83,10 +83,7 @@ export default function NotificationsScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={[colors.gradientStart, colors.gradientEnd]}
-        style={[styles.header, { paddingTop: insets.top + vs(12) }]}
-      >
+      <View style={[styles.header, { paddingTop: insets.top + vs(12) }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={rs(22)} color="#fff" />
         </TouchableOpacity>
@@ -94,7 +91,7 @@ export default function NotificationsScreen({ navigation }) {
         {unreadCount > 0
           ? <View style={styles.badge}><Text style={styles.badgeText}>{unreadCount}</Text></View>
           : <View style={{ width: rs(30) }} />}
-      </LinearGradient>
+      </View>
 
       {loading ? (
         <ActivityIndicator color={colors.primary} size="large" style={{ marginTop: vs(40) }} />
@@ -120,6 +117,7 @@ export default function NotificationsScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   header: {
+    backgroundColor: colors.navy,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: rs(16), paddingBottom: vs(16),
   },
