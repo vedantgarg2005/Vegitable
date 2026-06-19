@@ -18,16 +18,16 @@ function formatTime12(time24) {
   return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
 }
 
-const CATEGORIES = ['All', 'Running', 'Football', 'Cricket', 'Basketball', 'Fitness', 'Accessories'];
+const CATEGORIES = ['All', 'Vegetables', 'Fruits', 'Leafy', 'Exotic', 'Herbs', 'Organic'];
 
 const CATEGORY_ICONS = {
-  All: '🏅',
-  Running: '👟',
-  Football: '⚽',
-  Cricket: '🏏',
-  Basketball: '🏀',
-  Fitness: '💪',
-  Accessories: '🎽',
+  All: '🛒',
+  Vegetables: '🥦',
+  Fruits: '🍎',
+  Leafy: '🥬',
+  Exotic: '🥭',
+  Herbs: '🌿',
+  Organic: '🌱',
 };
 
 export default function MenuScreen({ navigation }) {
@@ -68,7 +68,7 @@ export default function MenuScreen({ navigation }) {
 
   const filteredItems = menuItems.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === 'All' || item.category === selectedCategory;
+    const matchesCategory = selectedCategory === 'All' || item.category?.toLowerCase() === selectedCategory.toLowerCase();
     return matchesSearch && matchesCategory;
   });
 
@@ -105,7 +105,7 @@ export default function MenuScreen({ navigation }) {
             <Ionicons name="arrow-back" size={rs(22)} color="#fff" />
           </TouchableOpacity>
           <Searchbar
-            placeholder="Search shoes, jerseys, equipment..."
+            placeholder="Search tomatoes, onions, fruits..."
             onChangeText={setSearchQuery}
             value={searchQuery}
             style={styles.searchBar}

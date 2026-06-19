@@ -25,8 +25,7 @@ function formatTime12(time24) {
 export default function ProductDetailScreen({ route, navigation }) {
   const { item } = route.params;
   const [quantity, setQuantity] = useState(1);
-  const [selectedSize, setSelectedSize] = useState(null);
-  const [selectedColor, setSelectedColor] = useState(item.colors?.[0] || null);
+  const [selectedSize, setSelectedSize] = useState(item.variants?.[0]?.label || null);
   const [storeOpen, setStoreOpen] = useState(true);
   const [nextOpenTime, setNextOpenTime] = useState(null);
 
@@ -35,12 +34,11 @@ export default function ProductDetailScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
 
   const isOutOfStock = item.availability?.isAvailable === false;
-  const discount = item.originalPrice > item.price
-    ? Math.round(((item.originalPrice - item.price) / item.originalPrice) * 100)
+  const selectedVariant = item.variants?.find(v => v.label === selectedSize);
+  const displayPrice = selectedVariant?.price ?? item.price;
+  const discount = item.originalPrice > displayPrice
+    ? Math.round(((item.originalPrice - displayPrice) / item.originalPrice) * 100)
     : 0;
-
-  const availableSizes = item.sizes?.filter(s => s.stock > 0) || [];
-  const needsSize = availableSizes.length > 0;
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/admin/store-status`)
@@ -53,12 +51,11 @@ export default function ProductDetailScreen({ route, navigation }) {
   }, []);
 
   const handleAddToCart = useCallback(() => {
-    if (needsSize && !selectedSize) return;
     for (let i = 0; i < quantity; i++) {
-      addToCart({ ...item, selectedSize, selectedColor });
+      addToCart(selectedVariant ? { ...item, price: selectedVariant.price, selectedVariant } : item);
     }
     navigation.goBack();
-  }, [addToCart, item, quantity, selectedSize, selectedColor, needsSize, navigation]);
+  }, [addToCart, item, quantity, selectedVariant, navigation]);
 
   const imageUri = item.image?.startsWith('/uploads')
     ? `${API_BASE_URL.replace('/api', '')}${item.image}`
@@ -70,8 +67,8 @@ return (
 
       {/* Hero */}
       <LinearGradient
-        colors={[colors.navy, '#1B3A6B', '#0A1628']}
-        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+        colors={[colors.primary, colors.primaryLight, colors.primarySurface]}
+        start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
         style={[styles.hero, { paddingTop: insets.top + vs(8) }]}
       >
         <View style={styles.heroActions}>
@@ -125,13 +122,13 @@ return (
 
           {/* Price */}
           <View style={styles.priceRow}>
-            <Text style={styles.price}>₹{item.price}</Text>
-            {item.originalPrice > item.price && (
+            <Text style={styles.price}>₹{displayPrice}</Text>
+            {item.originalPrice > displayPrice && (
               <Text style={styles.originalPrice}>₹{item.originalPrice}</Text>
             )}
             {discount > 0 && (
               <View style={styles.saveBadge}>
-                <Text style={styles.saveText}>Save ₹{item.originalPrice - item.price}</Text>
+                <Text style={styles.saveText}>Save ₹{item.originalPrice - displayPrice}</Text>
               </View>
             )}
           </View>
@@ -142,77 +139,27 @@ return (
           <Text style={styles.description}>{item.description}</Text>
         ) : null}
 
-        {/* Colors */}
-        {item.colors?.length > 0 && (
+        {/* Variant / Pack size picker (replaces size/color for grocery) */}
+        {item.variants?.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>{t.color}: <Text style={styles.sectionValue}>{selectedColor}</Text></Text>
-            <View style={styles.colorRow}>
-              {item.colors.map(c => (
-                <TouchableOpacity
-                  key={c}
-                  style={[styles.colorChip, selectedColor === c && styles.colorChipActive]}
-                  onPress={() => setSelectedColor(c)}
-                  activeOpacity={0.8}
-                >
-                  <Text style={[styles.colorChipText, selectedColor === c && styles.colorChipTextActive]}>{c}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        )}
-
-        {/* Sizes */}
-        {availableSizes.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>
-              {t.size}{selectedSize ? `: ${selectedSize}` : ` — ${t.selectOne}`}
-              {needsSize && !selectedSize && <Text style={styles.required}> *</Text>}
-            </Text>
+            <Text style={styles.sectionLabel}>Pack Size</Text>
             <View style={styles.sizeRow}>
-              {availableSizes.map(s => (
+              {item.variants.map(v => (
                 <TouchableOpacity
-                  key={s.size}
-                  style={[styles.sizeChip, selectedSize === s.size && styles.sizeChipActive]}
-                  onPress={() => setSelectedSize(s.size)}
+                  key={v.label}
+                  style={[styles.sizeChip, selectedSize === v.label && styles.sizeChipActive]}
+                  onPress={() => setSelectedSize(v.label)}
                   activeOpacity={0.8}
                 >
-                  <Text style={[styles.sizeChipText, selectedSize === s.size && styles.sizeChipTextActive]}>
-                    {s.size}
+                  <Text style={[styles.sizeChipText, selectedSize === v.label && styles.sizeChipTextActive]}>
+                    {v.label}
+                  </Text>
+                  <Text style={[styles.sizeChipText, selectedSize === v.label && styles.sizeChipTextActive, { fontSize: ms(11) }]}>
+                    ₹{v.price}
                   </Text>
                 </TouchableOpacity>
               ))}
             </View>
-          </View>
-        )}
-
-        {/* Specs */}
-        {item.specifications && Object.values(item.specifications).some(Boolean) && (
-          <View style={[styles.section, styles.specsCard, shadows.small]}>
-            <Text style={styles.sectionLabel}>{t.specifications}</Text>
-            {item.specifications.material && (
-              <View style={styles.specRow}>
-                <Text style={styles.specKey}>{t.material}</Text>
-                <Text style={styles.specVal}>{item.specifications.material}</Text>
-              </View>
-            )}
-            {item.specifications.weight && (
-              <View style={styles.specRow}>
-                <Text style={styles.specKey}>{t.weight}</Text>
-                <Text style={styles.specVal}>{item.specifications.weight}</Text>
-              </View>
-            )}
-            {item.specifications.gender && (
-              <View style={styles.specRow}>
-                <Text style={styles.specKey}>{t.gender}</Text>
-                <Text style={styles.specVal}>{item.specifications.gender}</Text>
-              </View>
-            )}
-            {item.specifications.ageGroup && (
-              <View style={styles.specRow}>
-                <Text style={styles.specKey}>{t.ageGroup}</Text>
-                <Text style={styles.specVal}>{item.specifications.ageGroup}</Text>
-              </View>
-            )}
           </View>
         )}
 
@@ -256,21 +203,18 @@ return (
           </View>
         ) : (
           <TouchableOpacity
-            style={[styles.addBtn, needsSize && !selectedSize && styles.addBtnDisabled]}
+            style={styles.addBtn}
             onPress={handleAddToCart}
             activeOpacity={0.88}
-            disabled={needsSize && !selectedSize}
           >
             <LinearGradient
               colors={[colors.primary, colors.primaryDark]}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
               style={styles.addBtnGradient}
             >
-              <Text style={styles.addBtnText}>
-                {needsSize && !selectedSize ? t.selectSize : t.addToCartLabel}
-              </Text>
+              <Text style={styles.addBtnText}>{t.addToCartLabel}</Text>
               <View style={styles.addBtnBadge}>
-                <Text style={styles.addBtnBadgeText}>₹{(item.price * quantity).toFixed(0)}</Text>
+                <Text style={styles.addBtnBadgeText}>₹{(displayPrice * quantity).toFixed(0)}</Text>
               </View>
             </LinearGradient>
           </TouchableOpacity>

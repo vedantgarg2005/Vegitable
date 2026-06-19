@@ -84,7 +84,7 @@ export default function FoodCard({ item, onPress, onAdd, onRemove, qty, isOpen, 
                   <TouchableOpacity style={styles.qtyBtn} onPress={onRemove}>
                     <Ionicons name="remove" size={rs(14)} color={colors.primary} />
                   </TouchableOpacity>
-                  <Text style={styles.qtyText}>1</Text>
+                  <Text style={styles.qtyText}>{qty}</Text>
                   <TouchableOpacity style={[styles.qtyBtn, styles.qtyBtnFilled]} onPress={handleAdd}>
                     <Ionicons name="add" size={rs(14)} color="#fff" />
                   </TouchableOpacity>
@@ -95,7 +95,7 @@ export default function FoodCard({ item, onPress, onAdd, onRemove, qty, isOpen, 
                     <TouchableOpacity style={styles.qtyBtn} onPress={onRemove}>
                       <Ionicons name="remove" size={rs(14)} color={colors.primary} />
                     </TouchableOpacity>
-                    <Text style={styles.qtyText}>1</Text>
+                    <Text style={styles.qtyText}>{qty}</Text>
                     <TouchableOpacity style={[styles.qtyBtn, styles.qtyBtnFilled]} onPress={handleAdd}>
                       <Ionicons name="add" size={rs(14)} color="#fff" />
                     </TouchableOpacity>

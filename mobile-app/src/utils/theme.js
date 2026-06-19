@@ -16,54 +16,46 @@ export const W = getWindow().width;
 export const H = getWindow().height;
 
 export const colors = {
-  // FreshBasket Brand — fresh green
-  primary: '#2E7D32',
-  primaryLight: '#4CAF50',
-  primaryDark: '#1B5E20',
+  // BigBasket Brand
+  primary: '#1A4D2E',
+  primaryLight: '#2E7D32',
+  primaryDark: '#0F2E1A',
   primarySurface: '#E8F5E9',
 
-  // Dark green header
-  navy: '#1B3A1F',
-  navyLight: '#254D2A',
+  accent: '#F9C00E',
+  accentDark: '#E6AE00',
 
-  // Accent — green
-  accent: '#2E7D32',
-  accentLight: '#E8F5E9',
+  navy: '#1A4D2E',
+  navyLight: '#2E7D32',
 
-  // Neutrals
-  background: '#F5F9F5',
+  background: '#F4F6F3',
   surface: '#FFFFFF',
-  surfaceAlt: '#F1F8F1',
+  surfaceAlt: '#F0F4EF',
   card: '#FFFFFF',
 
-  // Text
   text: '#1A1A1A',
   textSecondary: '#555555',
   placeholder: '#999999',
 
-  // Semantic
   error: '#D32F2F',
   errorLight: '#FFEAEA',
-  success: '#2E7D32',
+  success: '#1A4D2E',
   successLight: '#E8F5E9',
   warning: '#F57C00',
   warningLight: '#FFF3E0',
   info: '#0277BD',
   infoLight: '#E1F5FE',
 
-  // UI
   border: '#D8E8D8',
-  divider: '#E5EEE5',
+  divider: '#EBEBEB',
   shadow: '#000000',
   overlay: 'rgba(0,0,0,0.05)',
 
-  // Gradient — green
-  gradientStart: '#2E7D32',
-  gradientMid: '#388E3C',
-  gradientEnd: '#1B5E20',
+  gradientStart: '#1A4D2E',
+  gradientMid: '#2E7D32',
+  gradientEnd: '#0F2E1A',
 
-  // Product tags
-  tagNew: '#2E7D32',
+  tagNew: '#1A4D2E',
   tagSale: '#E53935',
 };
 

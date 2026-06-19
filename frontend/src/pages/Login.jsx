@@ -21,11 +21,11 @@ function StepBar({ step }) {
         return (
           <div key={s} className="flex items-start">
             <div className="flex flex-col items-center gap-1">
-              <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-all ${
-                done   ? 'border-green-500 bg-green-500 text-white' :
-                active ? 'border-white bg-green-700 text-white' :
-                         'border-white/30 text-white/40'
-              }`}>
+              <div className={`w-8 h-8 rounded-md border flex items-center justify-center text-xs font-bold transition-all ${
+                done   ? 'border-white bg-white text-black' :
+                active ? 'border-white bg-transparent text-white' :
+                         'border-white/20 text-white/30'
+              }`} style={{ borderWidth: 1.5 }}>
                 {done ? '✓' : i + 1}
               </div>
               <span className={`text-[10px] font-semibold ${ active ? 'text-white' : 'text-white/40' }`}>
@@ -33,7 +33,7 @@ function StepBar({ step }) {
               </span>
             </div>
             {i < STEPS.length - 1 && (
-              <div className={`h-0.5 w-12 mt-4 mx-1 transition-all ${ done ? 'bg-green-500' : 'bg-white/20' }`}/>
+              <div className={`h-px w-12 mt-4 mx-1 transition-all ${ done ? 'bg-white/60' : 'bg-white/15' }`}/>
             )}
           </div>
         );
@@ -73,9 +73,8 @@ function OtpBoxes({ value, onChange }) {
           value={digits[i] || ''}
           onChange={e => handleKey(i, e.target.value)}
           onPaste={handlePaste}
-          className={`w-14 h-16 text-center text-2xl font-extrabold rounded-xl border-2 outline-none transition-all ${
-            digits[i] ? 'border-green-500 bg-green-50 text-green-800' : 'border-gray-200 bg-gray-50 text-gray-800'
-          } focus:border-green-500 focus:bg-green-50`}
+          className="w-14 h-16 text-center text-2xl font-extrabold outline-none transition-all"
+          style={{ borderRadius: 8, border: '1.5px solid', borderColor: digits[i] ? '#0a0a0a' : '#e5e5e5', background: digits[i] ? '#fafafa' : 'white', color: '#0a0a0a' }}
         />
       ))}
     </div>
@@ -155,20 +154,20 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-5 py-8"
-      style={{ background: 'linear-gradient(160deg, #1B3A2D 0%, #254D3C 50%, #1B3A2D 100%)' }}>
+      style={{ background: '#0a0a0a' }}>
 
       {/* Step Bar */}
       <StepBar step={step}/>
 
       {/* Card */}
       <div key={cardKey}
-        className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl"
-        style={{ animation: 'slideUp 0.3s ease' }}>
+        className="w-full max-w-sm bg-white p-6"
+        style={{ animation: 'slideUp 0.25s ease', borderRadius: 12, border: '1px solid #e5e5e5' }}>
 
         {/* Card Header */}
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-11 h-11 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
-            style={{ background: '#E8F5E9' }}>
+          <div className="w-10 h-10 rounded-lg flex items-center justify-center text-lg flex-shrink-0"
+            style={{ background: '#f5f5f5', border: '1px solid #e5e5e5' }}>
             {STEP_META[step].icon}
           </div>
           <div>
@@ -182,14 +181,14 @@ export default function Login() {
             </p>
           </div>
         </div>
-        <div className="h-px bg-gray-100 mb-5"/>
+        <div style={{ height: 1, background: '#f0f0f0', marginBottom: 20 }}/>
 
         {/* Phone Step */}
         {step === 'phone' && (
           <>
             <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Mobile Number</p>
             <div className="flex items-center gap-2 mb-4">
-              <div className="flex items-center gap-1.5 border-2 border-gray-200 rounded-xl px-3 py-3 bg-gray-50 flex-shrink-0">
+              <div className="flex items-center gap-1.5 px-3 py-3 flex-shrink-0" style={{ border: '1.5px solid #e5e5e5', borderRadius: 8, background: '#fafafa' }}>
                 <span className="text-base">🇮🇳</span>
                 <span className="text-sm font-bold text-gray-700">+91</span>
               </div>
@@ -199,7 +198,7 @@ export default function Login() {
                   value={phone}
                   onChange={e => { setPhone(e.target.value.replace(/[^0-9]/g, '').slice(0, 10)); setError(''); }}
                   placeholder="10-digit number"
-                  className={inputCls}
+                  className="" style={{ width: '100%', border: 'none', background: 'transparent', fontSize: 13, fontWeight: 600, outline: 'none', fontFamily: 'inherit', color: '#0a0a0a' }}
                 />
                 {phone.length === 10 && (
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500 text-lg">✓</span>
@@ -223,12 +222,12 @@ export default function Login() {
               Verify OTP 🛡️
             </OrangeButton>
             <div className="flex justify-between items-center mt-4">
-              <button onClick={() => { goStep('phone'); setOtp(''); }} className="text-green-700 text-sm font-bold hover:underline">
+              <button onClick={() => { goStep('phone'); setOtp(''); }} className="text-sm font-bold hover:underline" style={{ color: '#555', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
                 ← Change Number
               </button>
               {resendTimer > 0
                 ? <span className="text-gray-400 text-sm font-semibold">Resend in {resendTimer}s</span>
-                : <button onClick={sendOtp} className="text-green-700 text-sm font-bold hover:underline">Resend OTP</button>
+                : <button onClick={sendOtp} className="text-sm font-bold hover:underline" style={{ color: '#555', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Resend OTP</button>
               }
             </div>
           </>
@@ -238,9 +237,7 @@ export default function Login() {
         {step === 'register' && (
           <>
             <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Full Name</p>
-            <div className={`flex items-center gap-2 border-2 rounded-xl px-4 py-3 mb-4 transition-all ${
-              name.trim() ? 'border-green-500 bg-green-50' : 'border-gray-200 bg-gray-50'
-            }`}>
+            <div className="flex items-center gap-2 px-4 py-3 mb-4" style={{ border: '1.5px solid #e5e5e5', borderRadius: 8, background: '#fafafa' }}>
               <span className="text-gray-400">👤</span>
               <input
                 type="text" autoFocus
@@ -258,11 +255,11 @@ export default function Login() {
         )}
       </div>
 
-      <p className="text-center text-white/35 text-xs mt-6 leading-relaxed">
+      <p className="text-center text-xs mt-6 leading-relaxed" style={{ color: 'rgba(255,255,255,0.2)' }}>
         By continuing, you agree to our{' '}
-        <span className="text-white/60 font-semibold cursor-pointer">Terms of Service</span>
+        <span style={{ color: 'rgba(255,255,255,0.4)', cursor: 'pointer' }}>Terms of Service</span>
         {' '}&{' '}
-        <span className="text-white/60 font-semibold cursor-pointer">Privacy Policy</span>
+        <span style={{ color: 'rgba(255,255,255,0.4)', cursor: 'pointer' }}>Privacy Policy</span>
       </p>
 
       <style>{`
@@ -279,8 +276,8 @@ function OrangeButton({ onClick, loading, disabled, children }) {
   return (
     <button
       onClick={onClick} disabled={loading || disabled}
-      className="w-full py-3.5 rounded-xl font-extrabold text-white text-base flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50"
-      style={{ background: loading || disabled ? '#ccc' : 'linear-gradient(90deg, #E8650A, #B84D00)' }}
+      className="w-full py-3.5 font-extrabold text-white text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-40"
+      style={{ background: '#0a0a0a', borderRadius: 8, border: 'none', cursor: loading || disabled ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}
     >
       {loading ? <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"/> : children}
     </button>

@@ -236,8 +236,8 @@ export default function LoginScreen({ navigation }) {
           <View style={s.logoWrap}>
             <Text style={s.logoEmoji}>🌿</Text>
           </View>
-          <Text style={s.brandName}>FreshBasket</Text>
-          <Text style={s.brandTagline}>Farm fresh, delivered daily</Text>
+          <Text style={s.brandName}>Vegitable</Text>
+          <Text style={s.brandTagline}>Fresh veggies, delivered daily</Text>
         </View>
 
         {/* ── Step progress ── */}

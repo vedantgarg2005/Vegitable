@@ -56,6 +56,10 @@ export const walletAPI = {
   deduct: (data) => api.post('/wallet/deduct', data),
 };
 
+export const productRequestAPI = {
+  submit: (data) => api.post('/product-requests', data),
+};
+
 export const reviewAPI = {
   addReview: (data) => api.post('/reviews', data),
   getItemReviews: (menuItemId) => api.get(`/reviews/item/${menuItemId}`),

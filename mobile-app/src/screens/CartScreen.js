@@ -410,19 +410,40 @@ const CartScreen = ({ navigation, route }) => {
                 <View key={item.id || item._id}>
                   {idx > 0 && <View style={styles.itemDivider} />}
                   <View style={[styles.cartItem, item.availability?.isAvailable === false && { opacity: 0.5 }]}>
-                    <View style={styles.itemLeft}>
-                      <Ionicons name="pricetag-outline" size={rs(14)} color={colors.primary} />
-                      <Text style={styles.itemName}>{item.name}</Text>
+                    {/* Image column */}
+                    <View style={styles.itemImageCol}>
+                      {item.image ? (
+                        <Image
+                          source={{ uri: item.image.startsWith('/uploads') ? `${API_BASE_URL.replace('/api', '')}${item.image}` : item.image }}
+                          style={styles.itemImage}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <View style={styles.itemImagePlaceholder}>
+                          <Ionicons name="leaf-outline" size={rs(22)} color={colors.primary} />
+                        </View>
+                      )}
+                      {(item.unit || item.selectedVariant?.label || item.variants?.[0]?.label) ? (
+                        <Text style={styles.itemWeight} numberOfLines={1}>
+                          {item.selectedVariant?.label || item.variants?.[0]?.label || item.unit}
+                        </Text>
+                      ) : null}
                     </View>
-                    <View style={styles.qtyControls}>
-                      <TouchableOpacity style={styles.qtyBtn} onPress={() => updateQty(item.id, item.quantity - 1)}>
-                        <Ionicons name={item.quantity === 1 ? 'trash-outline' : 'remove'} size={rs(14)} color={colors.primary} />
-                      </TouchableOpacity>
-                      <Text style={styles.qtyText}>{item.quantity}</Text>
-                      <TouchableOpacity style={[styles.qtyBtn, styles.qtyBtnFilled]} onPress={() => updateQty(item.id, item.quantity + 1)}>
-                        <Ionicons name="add" size={rs(14)} color="#fff" />
-                      </TouchableOpacity>
-                      <Text style={styles.itemPrice}>₹{(item.price * item.quantity).toFixed(2)}</Text>
+                    {/* Info + controls */}
+                    <View style={styles.itemRight}>
+                      <Text style={styles.itemName} numberOfLines={2}>{item.name}</Text>
+                      <View style={styles.itemBottomRow}>
+                        <Text style={styles.itemPrice}>₹{(item.price * item.quantity).toFixed(0)}</Text>
+                        <View style={styles.qtyControls}>
+                          <TouchableOpacity style={styles.qtyBtn} onPress={() => updateQty(item.id, item.quantity - 1)}>
+                            <Ionicons name={item.quantity === 1 ? 'trash-outline' : 'remove'} size={rs(14)} color={colors.primary} />
+                          </TouchableOpacity>
+                          <Text style={styles.qtyText}>{item.quantity}</Text>
+                          <TouchableOpacity style={[styles.qtyBtn, styles.qtyBtnFilled]} onPress={() => updateQty(item.id, item.quantity + 1)}>
+                            <Ionicons name="add" size={rs(14)} color="#fff" />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
                     </View>
                   </View>
                   {item.availability?.isAvailable === false && (
@@ -462,54 +483,6 @@ const CartScreen = ({ navigation, route }) => {
                 />
               )}
             </View>
-
-
-
-            {/* Craving More */}
-            {suggestedItems.filter(i => !cartItems.find(c => c.id === (i._id || i.id)) && i.availability?.isAvailable !== false).length > 0 && (
-              <View style={[styles.sectionCard, shadows.small]}>
-                <Text style={styles.sectionTitle}>{t.youMightLike}</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.suggestList}>
-                  {suggestedItems
-                    .filter(i => !cartItems.find(c => c.id === (i._id || i.id)) && i.availability?.isAvailable !== false)
-                    .slice(0, 10)
-                    .map(item => {
-                      const cartItem = cartItems.find(c => c.id === (item._id || item.id));
-                      return (
-                        <View key={item._id || item.id} style={[styles.suggestCard, shadows.small]}>
-                          {item.image && item.image.startsWith('/uploads') ? (
-                            <Image
-                              source={{ uri: `${API_BASE_URL.replace('/api', '')}${item.image}` }}
-                              style={styles.suggestImage}
-                              resizeMode="cover"
-                            />
-                          ) : (
-                            <Text style={styles.suggestEmoji}>{item.image || '👟'}</Text>
-                          )}
-                          <Text style={styles.suggestName} numberOfLines={2}>{item.name}</Text>
-                          <Text style={styles.suggestPrice}>₹{item.price}</Text>
-                          {cartItem ? (
-                            <View style={styles.suggestStepper}>
-                              <TouchableOpacity onPress={() => updateQty(cartItem.id, cartItem.quantity - 1)}>
-                                <Ionicons name="remove" size={rs(14)} color={colors.primary} />
-                              </TouchableOpacity>
-                              <Text style={styles.suggestStepperCount}>{cartItem.quantity}</Text>
-                              <TouchableOpacity onPress={() => addToCart(item)}>
-                                <Ionicons name="add" size={rs(14)} color={colors.primary} />
-                              </TouchableOpacity>
-                            </View>
-                          ) : (
-                            <TouchableOpacity style={styles.suggestAddBtn} onPress={() => addToCart(item)}>
-                              <Text style={styles.suggestAddBtnText}>{t.addLabel}</Text>
-                              <Ionicons name="add" size={rs(12)} color={colors.primary} />
-                            </TouchableOpacity>
-                          )}
-                        </View>
-                      );
-                    })}
-                </ScrollView>
-              </View>
-            )}
 
             {/* Coupon */}
             <View style={[styles.sectionCard, shadows.small]}>
@@ -1157,15 +1130,30 @@ const styles = StyleSheet.create({
   addAddressFullText: { fontSize: ms(14), fontWeight: '800', color: '#fff' },
 
   cartItem: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'center', paddingVertical: vs(10),
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: vs(12),
+    gap: rs(12),
   },
+  itemImageCol: { alignItems: 'center', gap: vs(4) },
+  itemImage: { width: rs(72), height: rs(72), borderRadius: borderRadius.md },
+  itemImagePlaceholder: {
+    width: rs(72), height: rs(72), borderRadius: borderRadius.md,
+    backgroundColor: colors.primarySurface, justifyContent: 'center', alignItems: 'center',
+  },
+  itemWeight: {
+    fontSize: ms(10), fontWeight: '600', color: colors.textSecondary,
+    backgroundColor: colors.surfaceAlt, borderRadius: borderRadius.full,
+    paddingHorizontal: rs(7), paddingVertical: vs(2), overflow: 'hidden',
+    maxWidth: rs(72), textAlign: 'center',
+  },
+  itemRight: { flex: 1, justifyContent: 'space-between', gap: vs(8) },
+  itemName: { fontSize: ms(14), fontWeight: '700', color: colors.text, lineHeight: ms(20) },
+  itemBottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  itemPrice: { fontSize: ms(15), fontWeight: '800', color: colors.primary },
   itemDivider: { height: 1, backgroundColor: colors.divider },
-  itemLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: rs(10), flexShrink: 1 },
-  itemName: { fontSize: ms(14), fontWeight: '700', color: colors.text, fontFamily: 'Poppins_700Bold', flexShrink: 1 },
-  itemPrice: { fontSize: ms(13), fontWeight: '700', color: colors.primary, fontFamily: 'Poppins_700Bold', minWidth: rs(52), textAlign: 'right' },
 
-  qtyControls: { flexDirection: 'row', alignItems: 'center', gap: rs(8) },
+  qtyControls: { flexDirection: 'row', alignItems: 'center', gap: rs(6) },
   qtyBtn: {
     width: rs(32), height: rs(32), borderRadius: rs(4),
     borderWidth: 1.5, borderColor: colors.primary,

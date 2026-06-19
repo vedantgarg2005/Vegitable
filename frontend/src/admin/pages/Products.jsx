@@ -5,7 +5,9 @@ import toast from 'react-hot-toast';
 import { Plus, Search, LayoutGrid, List, Package, Tag, TrendingUp, AlertTriangle, Pencil, Trash2, X, Star } from 'lucide-react';
 
 const CATEGORIES = ['vegetables', 'fruits', 'leafy', 'exotic', 'herbs', 'organic', 'other'];
+const UNITS = ['gm', 'Kg', 'piece', 'dozen', 'litre'];
 const emptyForm = { name: '', description: '', category: '', isActive: true, isBestseller: false, variants: [] };
+const emptyVariant = { labelQty: '', unit: 'gm', price: '', marketPrice: '', discountPrice: '', stock: 0 };
 
 export default function Products() {
   const [filters, setFilters] = useState({ page: 1, limit: 50, category: '', search: '' });
@@ -60,7 +62,15 @@ export default function Products() {
 
   const handleEdit = (item) => {
     setEditingItem(item);
-    setFormData({ name: item.name, description: item.description, category: item.category, isActive: item.isActive, isBestseller: item.isBestseller || false, variants: item.variants || [] });
+    setFormData({
+      name: item.name, description: item.description, category: item.category,
+      isActive: item.isActive, isBestseller: item.isBestseller || false,
+      variants: (item.variants || []).map(v => {
+        const match = v.label?.match(/^(.+?)\s+(gm|Kg|piece|dozen|litre)$/);
+        const base = match ? { ...v, labelQty: match[1], unit: match[2] } : { ...v, labelQty: v.label, unit: 'gm' };
+        return { marketPrice: '', discountPrice: '', ...base };
+      }),
+    });
     setImagePreview(item.image || '');
     setImageFile(null);
     setShowModal(true);
@@ -71,7 +81,13 @@ export default function Products() {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (createMutation.isPending || updateMutation.isPending) return;
-    const payload = { ...formData };
+    const payload = {
+      ...formData,
+      variants: formData.variants.map(v => ({
+        ...v,
+        label: v.labelQty ? `${v.labelQty} ${v.unit || 'gm'}` : v.label,
+      })),
+    };
     if (imageFile) payload.image = imageFile;
     editingItem ? updateMutation.mutate({ id: editingItem._id, data: payload }) : createMutation.mutate(payload);
   };
@@ -189,9 +205,15 @@ export default function Products() {
                 {item.description && <p className="text-xs text-gray-500 mt-1 line-clamp-2">{item.description}</p>}
                 {item.variants?.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-2">
-                    {item.variants.slice(0, 3).map((v, i) => (
-                      <span key={i} className="text-xs bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded border border-blue-100">{v.label} ₹{v.price}</span>
-                    ))}
+                    {item.variants.slice(0, 3).map((v, i) => {
+                      const disc = v.marketPrice && v.discountPrice ? Math.round((1 - v.discountPrice / v.marketPrice) * 100) : null;
+                      return (
+                        <span key={i} className="text-xs bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded border border-blue-100 flex items-center gap-1">
+                          {v.label} ₹{v.discountPrice || v.price}
+                          {disc > 0 && <span className="bg-green-500 text-white px-1 rounded text-[10px]">{disc}%off</span>}
+                        </span>
+                      );
+                    })}
                     {item.variants.length > 3 && <span className="text-xs text-gray-400">+{item.variants.length - 3}</span>}
                   </div>
                 )}
@@ -241,9 +263,15 @@ export default function Products() {
                   <td className="px-4 py-3 capitalize text-gray-600 text-xs"><span className="bg-gray-100 px-2 py-1 rounded-full">{item.category}</span></td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
-                      {item.variants?.map((v, i) => (
-                        <span key={i} className="text-xs bg-blue-50 text-blue-600 border border-blue-100 px-1.5 py-0.5 rounded">{v.label} ₹{v.price}</span>
-                      ))}
+                      {item.variants?.map((v, i) => {
+                        const disc = v.marketPrice && v.discountPrice ? Math.round((1 - v.discountPrice / v.marketPrice) * 100) : null;
+                        return (
+                          <span key={i} className="text-xs bg-blue-50 text-blue-600 border border-blue-100 px-1.5 py-0.5 rounded flex items-center gap-1">
+                            {v.label} ₹{v.discountPrice || v.price}
+                            {disc > 0 && <span className="bg-green-500 text-white px-1 rounded text-[10px]">{disc}%off</span>}
+                          </span>
+                        );
+                      })}
                     </div>
                   </td>
                   <td className="px-4 py-3">
@@ -315,19 +343,24 @@ export default function Products() {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-sm font-medium text-gray-700 flex items-center gap-1"><Tag className="w-3.5 h-3.5" /> Variants</label>
-                  <button type="button" onClick={() => setFormData(f => ({ ...f, variants: [...f.variants, { label: '', price: '', stock: 0 }] }))} className="text-xs font-medium text-blue-600 hover:text-blue-700 bg-blue-50 px-2 py-1 rounded-lg">+ Add</button>
+                  <button type="button" onClick={() => setFormData(f => ({ ...f, variants: [...f.variants, { ...emptyVariant }] }))} className="text-xs font-medium text-blue-600 hover:text-blue-700 bg-blue-50 px-2 py-1 rounded-lg">+ Add</button>
                 </div>
                 {formData.variants.length > 0 && (
                   <div className="space-y-2 bg-gray-50 rounded-xl p-3">
-                    <div className="grid grid-cols-[1fr_1fr_70px_28px] gap-2 text-xs text-gray-400 px-1">
-                      <span>Label</span><span>Price (₹)</span><span>Stock</span><span></span>
+                    <div className="grid grid-cols-[56px_1fr_1fr_1fr_1fr_56px_24px] gap-1.5 text-xs text-gray-400 px-1 mb-1">
+                      <span>Unit</span><span>Qty</span><span>Sale ₹</span><span>Market ₹</span><span>Discount ₹</span><span>Stock</span><span></span>
                     </div>
                     {formData.variants.map((v, i) => (
-                      <div key={i} className="grid grid-cols-[1fr_1fr_70px_28px] gap-2 items-center">
-                        <input type="text" placeholder="e.g. 500g" value={v.label} onChange={(e) => updateVariant(i, 'label', e.target.value)} className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-400" required />
+                      <div key={i} className="grid grid-cols-[56px_1fr_1fr_1fr_1fr_56px_24px] gap-1.5 items-center">
+                        <select value={v.unit || 'gm'} onChange={(e) => updateVariant(i, 'unit', e.target.value)} className="border border-gray-200 rounded-lg px-1 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-400 bg-white">
+                          {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+                        </select>
+                        <input type="text" placeholder="500" value={v.labelQty ?? v.label} onChange={(e) => updateVariant(i, 'labelQty', e.target.value)} className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-400" required />
                         <input type="number" placeholder="0" value={v.price} onChange={(e) => updateVariant(i, 'price', e.target.value)} className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-400 [appearance:textfield]" required min="0" />
+                        <input type="number" placeholder="MRP" value={v.marketPrice} onChange={(e) => updateVariant(i, 'marketPrice', e.target.value)} className="border border-orange-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-orange-400 [appearance:textfield]" min="0" />
+                        <input type="number" placeholder="Disc" value={v.discountPrice} onChange={(e) => updateVariant(i, 'discountPrice', e.target.value)} className="border border-green-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-green-400 [appearance:textfield]" min="0" />
                         <input type="number" placeholder="0" value={v.stock} onChange={(e) => updateVariant(i, 'stock', e.target.value)} className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-400 [appearance:textfield]" min="0" />
-                        <button type="button" onClick={() => setFormData(f => ({ ...f, variants: f.variants.filter((_, idx) => idx !== i) }))} className="text-gray-300 hover:text-red-500 text-base flex items-center justify-center"><X className="w-4 h-4" /></button>
+                        <button type="button" onClick={() => setFormData(f => ({ ...f, variants: f.variants.filter((_, idx) => idx !== i) }))} className="text-gray-300 hover:text-red-500 flex items-center justify-center"><X className="w-3.5 h-3.5" /></button>
                       </div>
                     ))}
                   </div>

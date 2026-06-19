@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, StatusBar, Modal, RefreshControl } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, StatusBar, Modal, TextInput, Alert, RefreshControl } from 'react-native';
 import { Avatar } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import { orderAPI } from '../services/api';
+import { orderAPI, productRequestAPI } from '../services/api';
 import { colors, shadows, borderRadius, ms, rs, vs } from '../utils/theme';
 
 const ProfileScreen = ({ navigation }) => {
@@ -15,6 +15,10 @@ const ProfileScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const [orderCount, setOrderCount] = useState(0);
   const [langModal, setLangModal] = useState(false);
+  const [requestModal, setRequestModal] = useState(false);
+  const [productName, setProductName] = useState('');
+  const [productDesc, setProductDesc] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadStats = useCallback(async () => {
@@ -33,6 +37,22 @@ const ProfileScreen = ({ navigation }) => {
     setRefreshing(false);
   }, [loadStats]);
 
+  const submitProductRequest = async () => {
+    if (!productName.trim()) return;
+    setSubmitting(true);
+    try {
+      await productRequestAPI.submit({ productName: productName.trim(), description: productDesc.trim() });
+      setRequestModal(false);
+      setProductName('');
+      setProductDesc('');
+      Alert.alert('', t.requestProductSuccess);
+    } catch {
+      Alert.alert(t.error, 'Failed to submit request. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const menuItems = [
     { title: t.myProfile, icon: 'person-circle-outline', badge: null, onPress: () => navigation.navigate('MyProfile') },
     { title: t.myOrders, icon: 'receipt-outline', badge: null, onPress: () => navigation.navigate('Orders') },
@@ -42,6 +62,7 @@ const ProfileScreen = ({ navigation }) => {
     { title: t.language, icon: 'language-outline', badge: language === 'hi' ? 'हि' : 'EN', onPress: () => setLangModal(true) },
     { title: t.helpSupport, icon: 'help-circle-outline', badge: null, onPress: () => navigation.navigate('HelpSupport') },
     { title: t.termsConditions, icon: 'document-text-outline', badge: null, onPress: () => navigation.navigate('TermsConditions') },
+    { title: t.requestProduct, icon: 'add-circle-outline', badge: null, onPress: () => setRequestModal(true) },
   ];
 
   const MenuItem = ({ item }) => (
@@ -140,6 +161,41 @@ const ProfileScreen = ({ navigation }) => {
                 {language === code && <Ionicons name="checkmark" size={rs(18)} color={colors.primary} />}
               </TouchableOpacity>
             ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Request New Product Modal */}
+      <Modal visible={requestModal} transparent animationType="slide" onRequestClose={() => setRequestModal(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setRequestModal(false)}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>{t.requestProductTitle}</Text>
+            <TextInput
+              style={styles.input}
+              placeholder={t.requestProductName}
+              placeholderTextColor={colors.placeholder}
+              value={productName}
+              onChangeText={setProductName}
+              maxLength={100}
+            />
+            <TextInput
+              style={[styles.input, styles.inputMultiline]}
+              placeholder={t.requestProductDesc}
+              placeholderTextColor={colors.placeholder}
+              value={productDesc}
+              onChangeText={setProductDesc}
+              multiline
+              numberOfLines={3}
+              maxLength={300}
+            />
+            <TouchableOpacity
+              style={[styles.submitBtn, (!productName.trim() || submitting) && styles.submitBtnDisabled]}
+              onPress={submitProductRequest}
+              disabled={!productName.trim() || submitting}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.submitBtnText}>{submitting ? t.loading : t.requestProductSubmit}</Text>
+            </TouchableOpacity>
           </View>
         </TouchableOpacity>
       </Modal>

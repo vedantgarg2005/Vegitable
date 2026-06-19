@@ -1,33 +1,21 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { Home, ShoppingBag, Package, User, Bell, Wallet, Search } from 'lucide-react';
+import { Home, ShoppingBag, Package, User, Bell, Wallet } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 
 export default function Navbar() {
   const { user } = useAuth();
   const { cart } = useCart();
-  const navigate = useNavigate();
   const totalItems = cart.reduce((s, i) => s + i.qty, 0);
 
   const navItem = (to, Icon, label, badge) => (
-    <NavLink
-      to={to}
-      className={({ isActive }) =>
-        `bottom-nav-item${isActive ? ' active' : ''}`
-      }
-    >
+    <NavLink to={to} className={({ isActive }) => `bottom-nav-item${isActive ? ' active' : ''}`}>
       {({ isActive }) => (
         <>
           <div style={{ position: 'relative' }}>
-            <Icon size={20} strokeWidth={isActive ? 2.5 : 1.8} />
+            <Icon size={19} strokeWidth={isActive ? 2.5 : 1.8} />
             {badge > 0 && (
-              <span style={{
-                position: 'absolute', top: -6, right: -8,
-                background: '#4CAF50', color: 'white', borderRadius: '50%',
-                width: 16, height: 16, fontSize: 9, fontWeight: 900,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 2px 6px rgba(76,175,80,0.5)',
-              }}>{badge}</span>
+              <span style={{ position: 'absolute', top: -5, right: -7, background: '#0a0a0a', color: 'white', borderRadius: '50%', width: 15, height: 15, fontSize: 8, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{badge}</span>
             )}
           </div>
           <span>{label}</span>
@@ -39,62 +27,51 @@ export default function Navbar() {
   return (
     <>
       {/* ── DESKTOP TOP NAV ── */}
-      <nav
-        className="hidden sm:flex items-center justify-between px-6 py-3 sticky top-0 z-50"
-        style={{ background: '#1B3A1F', boxShadow: '0 2px 24px rgba(0,0,0,0.22)' }}
-      >
-        <Link to="/" className="flex items-center gap-2.5 group flex-shrink-0">
-          <span className="text-2xl group-hover:rotate-12 transition-transform duration-300">🌿</span>
-          <span className="text-lg font-black text-white tracking-tight">FreshBasket</span>
+      <nav className="hidden sm:flex items-center justify-between px-6 py-3 sticky top-0 z-50"
+        style={{ background: 'white', borderBottom: '1px solid #e5e5e5' }}>
+        <Link to="/" className="flex items-center gap-2 flex-shrink-0" style={{ textDecoration: 'none' }}>
+          <div style={{ width: 26, height: 26, borderRadius: 6, background: '#0a0a0a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>🌿</div>
+          <span style={{ fontSize: 14, fontWeight: 800, color: '#0a0a0a', letterSpacing: -0.2 }}>FreshBasket</span>
         </Link>
 
-        <button
-          onClick={() => navigate('/')}
-          className="hidden md:flex items-center gap-2 px-4 py-2 rounded-2xl text-sm transition-all hover:bg-white/10 mx-6 flex-1 max-w-xs"
-          style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)' }}
-        >
-          <Search size={14} />
-          <span>Search vegetables, fruits…</span>
-        </button>
-
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2">
           {user ? (
             <>
               <NavLink to="/notifications" title="Notifications"
-                className="w-9 h-9 rounded-full flex items-center justify-center transition-all hover:bg-white/20"
-                style={{ background: 'rgba(255,255,255,0.1)' }}>
-                <Bell size={17} color="white" />
+                className="w-8 h-8 rounded-md flex items-center justify-center transition-all hover:bg-gray-100"
+                style={{ border: '1px solid #e5e5e5' }}>
+                <Bell size={15} color="#555" />
               </NavLink>
               <NavLink to="/wallet" title="Wallet"
-                className="w-9 h-9 rounded-full flex items-center justify-center transition-all hover:bg-white/20"
-                style={{ background: 'rgba(255,255,255,0.1)' }}>
-                <Wallet size={17} color="white" />
+                className="w-8 h-8 rounded-md flex items-center justify-center transition-all hover:bg-gray-100"
+                style={{ border: '1px solid #e5e5e5' }}>
+                <Wallet size={15} color="#555" />
               </NavLink>
               <NavLink to="/cart" title="Cart"
-                className="relative w-9 h-9 rounded-full flex items-center justify-center transition-all hover:bg-white/20"
-                style={{ background: 'rgba(255,255,255,0.1)' }}>
-                <ShoppingBag size={17} color="white" />
+                className="relative w-8 h-8 rounded-md flex items-center justify-center transition-all hover:bg-gray-100"
+                style={{ border: totalItems > 0 ? '1px solid #0a0a0a' : '1px solid #e5e5e5', background: totalItems > 0 ? '#0a0a0a' : 'white' }}>
+                <ShoppingBag size={15} color={totalItems > 0 ? 'white' : '#555'} />
                 {totalItems > 0 && (
-                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-full text-white text-[10px] font-black flex items-center justify-center px-0.5 shadow-md"
-                    style={{ background: '#4CAF50' }}>
+                  <span className="absolute -top-1 -right-1 min-w-[16px] h-4 rounded-full text-white text-[9px] font-black flex items-center justify-center px-0.5"
+                    style={{ background: '#555', border: '1.5px solid white', fontSize: 8 }}>
                     {totalItems}
                   </span>
                 )}
               </NavLink>
               <NavLink to="/profile"
-                className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-full text-sm font-bold transition-all hover:bg-white/20 ml-1"
-                style={{ background: 'rgba(255,255,255,0.12)', color: 'white' }}>
-                <div className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-black text-white"
-                  style={{ background: 'linear-gradient(135deg,#4CAF50,#2E7D32)' }}>
+                className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-bold transition-all hover:bg-gray-50 ml-1"
+                style={{ border: '1px solid #e5e5e5', color: '#0a0a0a' }}>
+                <div className="w-5 h-5 rounded flex items-center justify-center text-[10px] font-black text-white"
+                  style={{ background: '#0a0a0a' }}>
                   {user.name?.[0]?.toUpperCase()}
                 </div>
-                <span className="hidden md:block">{user.name?.split(' ')[0]}</span>
+                <span className="hidden md:block" style={{ fontSize: 12 }}>{user.name?.split(' ')[0]}</span>
               </NavLink>
             </>
           ) : (
             <Link to="/login"
-              className="px-5 py-1.5 rounded-full text-sm font-bold transition-all hover:bg-gray-100 hover:shadow-sm"
-              style={{ background: 'white', color: '#1B3A1F' }}>
+              className="px-4 py-1.5 rounded-md text-sm font-bold transition-all hover:bg-gray-50"
+              style={{ border: '1px solid #e5e5e5', color: '#0a0a0a', textDecoration: 'none', fontSize: 12 }}>
               Login
             </Link>
           )}

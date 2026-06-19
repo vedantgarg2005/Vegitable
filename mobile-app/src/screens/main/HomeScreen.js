@@ -79,11 +79,11 @@ function WelcomeBanner({ user }) {
             <Text style={styles.welcomeGreeting}>Hey, {firstName}!</Text>
             <Text style={styles.waveEmoji}>👋</Text>
           </View>
-          <Text style={styles.summerText}>FreshBasket</Text>
-          <Text style={styles.tagline}>Farm to your door, fresh every day</Text>
+          <Text style={styles.summerText}>Vegitable</Text>
+          <Text style={styles.tagline}>Fresh veggies, delivered daily</Text>
         </View>
         <Reanimated.View style={[floatStyle, styles.heroBadge]}>
-          <Text style={styles.heroBadgeEmoji}>🛒</Text>
+          <Text style={styles.heroBadgeEmoji}>🥦</Text>
         </Reanimated.View>
       </View>
       <View style={styles.statsRow}>
