@@ -99,12 +99,6 @@ function Dashboard() {
 
   return (
     <div className="p-3 sm:p-6 bg-slate-50 min-h-screen">
-      {/* Header */}
-      <div className="mb-5 sm:mb-7">
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-sm text-gray-500 mt-1">Welcome back! Here's your FreshBasket store overview.</p>
-      </div>
-
       {/* Stats Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 mb-6">
         {statsCards.map((card, i) => <StatCard key={i} {...card} />)}

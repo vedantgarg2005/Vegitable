@@ -66,12 +66,6 @@ function Orders() {
 
   return (
     <div className="p-3 sm:p-6 bg-slate-100 min-h-screen">
-      {/* Header */}
-      <div className="mb-4 sm:mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Orders</h1>
-        <p className="text-gray-500 mt-1">Track and manage all customer orders</p>
-      </div>
-
       {/* Stat Tabs */}
       <div className="grid grid-cols-4 sm:grid-cols-4 lg:grid-cols-8 gap-2 sm:gap-3 mb-6 overflow-x-auto pb-1">
         {STATUS_TABS.map((tab) => {

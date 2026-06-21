@@ -137,7 +137,6 @@ export default function MainNavigator() {
       <Stack.Screen name="Review" component={ReviewScreen} />
       <Stack.Screen name="Orders" component={OrdersScreen} />
       <Stack.Screen name="Login" component={LoginScreen} />
-      <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />
     </Stack.Navigator>
   );
 }

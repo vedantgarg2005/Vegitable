@@ -241,17 +241,14 @@ export default function HomeScreen({ navigation }) {
   const loadMenu = useCallback(async () => {
     try {
       setLoading(true);
-      const params = {};
-      if (selectedCategory !== 'All') params.category = selectedCategory.toLowerCase().replace(' ', '_');
-      if (searchQuery) params.search = searchQuery;
-      const res = await menuAPI.getItems(params);
-      setFoodItems(res.data);
+      const res = await menuAPI.getItems({});
+      // filter out of stock globally
+      setFoodItems((res.data || []).filter(i => i.availability?.isAvailable !== false));
     } catch {
-      // silent
     } finally {
       setLoading(false);
     }
-  }, [selectedCategory, searchQuery]);
+  }, []);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -289,86 +286,48 @@ export default function HomeScreen({ navigation }) {
     </View>
   );
 
-  const ListHeader = () => (
-    <>
-      <WelcomeBanner user={user} />
+  const menuSectionHeader = null; // removed, now inline
 
-      {/* Restaurant closed banner */}
-      {!restaurantOpen && (
-        <View style={styles.closedBanner}>
-          <Ionicons name="time-outline" size={rs(16)} color="#fff" />
-          <Text style={styles.closedBannerText}>
-            We're currently closed{restaurantHours ? `. Hours: ${restaurantHours}` : ''}
-          </Text>
-        </View>
-      )}
+  const filteredItems = foodItems.filter(item => {
+    const matchSearch = !searchQuery || item.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchCat = selectedCategory === 'All' || item.category?.toLowerCase() === selectedCategory.toLowerCase();
+    return matchSearch && matchCat;
+  });
 
-      {/* Offer Banners */}
-      <FlatList
-        ref={bannerRef}
-        data={OFFERS}
-        renderItem={renderBanner}
-        keyExtractor={b => b.id}
-        horizontal
-        pagingEnabled
-        snapToInterval={BANNER_W + rs(12)}
-        snapToAlignment="start"
-        decelerationRate="fast"
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.bannerListContent}
-        getItemLayout={(_, index) => ({
-          length: BANNER_W + rs(12),
-          offset: (BANNER_W + rs(12)) * index,
-          index,
-        })}
-        onMomentumScrollEnd={e => {
-          const idx = Math.round(e.nativeEvent.contentOffset.x / (BANNER_W + rs(12)));
-          setBannerIndex(Math.min(idx, OFFERS.length - 1));
-        }}
-      />
-      {/* Banner dots */}
-      <View style={styles.bannerDots}>
-        {OFFERS.map((_, i) => (
-          <View key={i} style={[styles.dot, i === bannerIndex && styles.dotActive]} />
-        ))}
+  // Build category sections
+  const categorySections = (() => {
+    if (selectedCategory !== 'All') {
+      return filteredItems.length > 0 ? [{ name: selectedCategory, items: filteredItems }] : [];
+    }
+    const map = {};
+    filteredItems.forEach(item => {
+      const cat = item.category ? item.category.charAt(0).toUpperCase() + item.category.slice(1) : 'Other';
+      if (!map[cat]) map[cat] = [];
+      map[cat].push(item);
+    });
+    return Object.entries(map).map(([name, items]) => ({ name, items }));
+  })();
+
+  const renderCard = (item) => {
+    const qty = getQty(item._id);
+    return (
+      <View key={item._id} style={{ marginRight: rs(10) }}>
+        <FoodCard
+          item={item}
+          qty={qty}
+          compact
+          isOpen={restaurantOpen}
+          nextAvailableLabel={nextOpenTime ? `Opens at ${formatTime12(nextOpenTime)}` : 'Closed'}
+          onPress={() => { setSelectedItem(item); setItemQty(1); setSelectedVariant(item.variants?.[0] ?? null); }}
+          onAdd={() => {
+            if (item.variants?.length > 0) { setSelectedItem(item); setItemQty(1); setSelectedVariant(item.variants[0]); }
+            else addToCart(item);
+          }}
+          onRemove={() => updateQuantity(item._id || item.id, qty - 1)}
+        />
       </View>
-
-
-      {/* Shop by Sport — category scroll */}
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>{t.shopByCategory}</Text>
-      </View>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.categoriesContent}
-      >
-        {CATEGORIES.map(cat => (
-          <TouchableOpacity
-            key={cat.name}
-            onPress={() => setSelectedCategory(cat.name)}
-            style={[styles.categoryChip, selectedCategory === cat.name && styles.categoryChipActive]}
-            activeOpacity={0.8}
-          >
-            <View style={[styles.categoryEmojiWrap, selectedCategory === cat.name && styles.categoryEmojiWrapActive]}>
-              <Text style={styles.categoryEmoji}>{cat.emoji}</Text>
-            </View>
-            <Text style={[styles.categoryLabel, selectedCategory === cat.name && styles.categoryLabelActive]}>
-              {cat.name}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-
-      {/* Section label */}
-      <View style={styles.menuSectionHeader}>
-        <Text style={styles.menuSectionTitle}>
-          {selectedCategory === 'All' ? t.allItems : selectedCategory}
-        </Text>
-        <Text style={styles.menuSectionCount}>{foodItems.length} {t.items}</Text>
-      </View>
-    </>
-  );
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -376,7 +335,6 @@ export default function HomeScreen({ navigation }) {
 
       {/* Sticky Header */}
       <View style={[styles.header, { paddingTop: insets.top + vs(10) }]}>
-        {/* Location row */}
         <View style={styles.headerTop}>
           <TouchableOpacity style={styles.locationRow} activeOpacity={0.7} onPress={() => setAddrModalVisible(true)}>
             <Ionicons name="location" size={rs(18)} color={colors.primary} />
@@ -389,16 +347,10 @@ export default function HomeScreen({ navigation }) {
             </View>
           </TouchableOpacity>
           <View style={styles.headerActions}>
-            <TouchableOpacity
-              style={styles.headerIconBtn}
-              onPress={() => navigation.navigate('Notifications')}
-            >
+            <TouchableOpacity style={styles.headerIconBtn} onPress={() => navigation.navigate('Notifications')}>
               <Ionicons name="notifications-outline" size={rs(22)} color={colors.text} />
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.headerIconBtn}
-              onPress={() => navigation.navigate('Cart', { orderType })}
-            >
+            <TouchableOpacity style={styles.headerIconBtn} onPress={() => navigation.navigate('Cart', { orderType })}>
               <Ionicons name="bag-outline" size={rs(22)} color={colors.text} />
               {itemCount > 0 && (
                 <View style={styles.cartBadge}>
@@ -409,19 +361,13 @@ export default function HomeScreen({ navigation }) {
           </View>
         </View>
 
-        {/* Delivery by row */}
         <View style={styles.deliveryByRow}>
           <Ionicons name="bicycle-outline" size={rs(14)} color={colors.primary} />
-          <Text style={styles.deliveryByText}>
-            Delivery by <Text style={styles.deliveryByBold}>30–45 min</Text>
-          </Text>
+          <Text style={styles.deliveryByText}>Delivery by <Text style={styles.deliveryByBold}>30–45 min</Text></Text>
           <View style={styles.deliveryByDot} />
-          <Text style={styles.deliveryByText}>
-            {new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}
-          </Text>
+          <Text style={styles.deliveryByText}>{new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}</Text>
         </View>
 
-        {/* Search bar */}
         <View style={styles.searchBar}>
           <Ionicons name="search-outline" size={rs(18)} color={colors.placeholder} />
           <TextInput
@@ -441,68 +387,90 @@ export default function HomeScreen({ navigation }) {
         </View>
       </View>
 
-      <FlatList
-        data={foodItems}
-        numColumns={2}
-        key="grid"
-        renderItem={({ item }) => {
-          const qty = getQty(item._id);
-          return (
-            <View style={{ flex: 1 }}>
-              <FoodCard
-                item={item}
-                qty={qty}
-                compact
-                isOpen={restaurantOpen}
-                nextAvailableLabel={nextOpenTime ? `Next available at: ${formatTime12(nextOpenTime)}` : 'Currently closed'}
-                onPress={() => navigation.navigate('ProductDetail', { item })}
-                onAdd={() => {
-                  if (item.variants?.length > 0) {
-                    setSelectedItem(item);
-                    setItemQty(1);
-                    setSelectedVariant(item.variants[0]);
-                  } else {
-                    addToCart(item);
-                  }
-                }}
-                onRemove={() => updateQuantity(item._id || item.id, qty - 1)}
-              />
-            </View>
-          );
-        }}
-        keyExtractor={item => item._id}
-        contentContainerStyle={[styles.list, itemCount > 0 && styles.listWithCart]}
+      <ScrollView
         showsVerticalScrollIndicator={false}
-        ListHeaderComponent={ListHeader}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} tintColor={colors.primary} />
-        }
-        ListEmptyComponent={
-          !loading && (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyEmoji}>🥦</Text>
-              <Text style={styles.emptyTitle}>{t.nothingFound}</Text>
-              <Text style={styles.emptySubtitle}>{t.tryDifferent}</Text>
-            </View>
-          )
-        }
-        ListFooterComponent={null}
-        ListEmptyComponent={
-          loading ? (
-            <View>
-              {[1,2,3,4,5].map(i => <FoodCardSkeleton key={i} />)}
-            </View>
-          ) : (
-            !loading && (
-              <View style={styles.emptyContainer}>
-                <Text style={styles.emptyEmoji}>🥦</Text>
-                <Text style={styles.emptyTitle}>{t.nothingFound}</Text>
-                <Text style={styles.emptySubtitle}>{t.tryDifferent}</Text>
+        contentContainerStyle={[styles.list, itemCount > 0 && styles.listWithCart]}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} tintColor={colors.primary} />}
+      >
+        <WelcomeBanner user={user} />
+
+        {!restaurantOpen && (
+          <View style={styles.closedBanner}>
+            <Ionicons name="time-outline" size={rs(16)} color="#fff" />
+            <Text style={styles.closedBannerText}>We're currently closed{restaurantHours ? `. Hours: ${restaurantHours}` : ''}</Text>
+          </View>
+        )}
+
+        {/* Offer Banners */}
+        <FlatList
+          ref={bannerRef}
+          data={OFFERS}
+          renderItem={renderBanner}
+          keyExtractor={b => b.id}
+          horizontal
+          pagingEnabled
+          snapToInterval={BANNER_W + rs(12)}
+          snapToAlignment="start"
+          decelerationRate="fast"
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.bannerListContent}
+          getItemLayout={(_, index) => ({ length: BANNER_W + rs(12), offset: (BANNER_W + rs(12)) * index, index })}
+          onMomentumScrollEnd={e => {
+            const idx = Math.round(e.nativeEvent.contentOffset.x / (BANNER_W + rs(12)));
+            setBannerIndex(Math.min(idx, OFFERS.length - 1));
+          }}
+        />
+        <View style={styles.bannerDots}>
+          {OFFERS.map((_, i) => <View key={i} style={[styles.dot, i === bannerIndex && styles.dotActive]} />)}
+        </View>
+
+        {/* Category chips */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>{t.shopByCategory}</Text>
+        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesContent}>
+          {CATEGORIES.map(cat => (
+            <TouchableOpacity
+              key={cat.name}
+              onPress={() => setSelectedCategory(cat.name)}
+              style={[styles.categoryChip, selectedCategory === cat.name && styles.categoryChipActive]}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.categoryEmojiWrap, selectedCategory === cat.name && styles.categoryEmojiWrapActive]}>
+                <Text style={styles.categoryEmoji}>{cat.emoji}</Text>
               </View>
-            )
-          )
-        }
-      />
+              <Text style={[styles.categoryLabel, selectedCategory === cat.name && styles.categoryLabelActive]}>{cat.name}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        {/* Category-wise sections */}
+        {loading ? (
+          <View style={{ paddingHorizontal: rs(8) }}>
+            {[1,2,3].map(i => <FoodCardSkeleton key={i} />)}
+          </View>
+        ) : categorySections.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyEmoji}>🥦</Text>
+            <Text style={styles.emptyTitle}>{t.nothingFound}</Text>
+            <Text style={styles.emptySubtitle}>{t.tryDifferent}</Text>
+          </View>
+        ) : (
+          categorySections.map(({ name, items }) => (
+            <View key={name} style={styles.catSection}>
+              <View style={styles.catSectionHeader}>
+                <Text style={styles.catSectionTitle}>
+                  {CATEGORIES.find(c => c.name.toLowerCase() === name.toLowerCase())?.emoji || '🛒'} {name}
+                </Text>
+                <Text style={styles.catSectionCount}>{items.length} items</Text>
+              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catRow}>
+                {items.map(renderCard)}
+              </ScrollView>
+            </View>
+          ))
+        )}
+      </ScrollView>
 
       {/* Floating cart bar — like Swiggy */}
       {itemCount > 0 && (
@@ -524,73 +492,87 @@ export default function HomeScreen({ navigation }) {
         </TouchableOpacity>
       )}
 
-      {/* Item Detail Modal */}
+      {/* Item Detail Modal — Blinkit style */}
       <Modal visible={!!selectedItem} animationType="slide" transparent onRequestClose={() => setSelectedItem(null)}>
         <View style={styles.itemModalOverlay}>
           <TouchableOpacity style={styles.itemModalDismiss} onPress={() => setSelectedItem(null)} />
           <View style={styles.itemModalSheet}>
             {selectedItem && (
               <>
-                {/* Handle bar */}
                 <View style={styles.itemModalHandle} />
 
-                {/* Top row: image left, info right */}
+                {/* Close button */}
+                <TouchableOpacity style={styles.itemModalClose} onPress={() => setSelectedItem(null)}>
+                  <Ionicons name="close" size={rs(18)} color={colors.text} />
+                </TouchableOpacity>
+
+                {/* Image + name/description side by side */}
                 <View style={styles.itemModalTopRow}>
-                  {/* Image */}
                   {selectedItem.image && selectedItem.image.startsWith('/uploads') ? (
                     <Image
                       source={{ uri: `${API_BASE_URL.replace('/api', '')}${selectedItem.image}` }}
                       style={styles.itemModalThumb}
-                      resizeMode="cover"
+                      resizeMode="contain"
                     />
                   ) : (
                     <View style={styles.itemModalThumbPlaceholder}>
-                      <Text style={styles.itemModalEmoji}>{selectedItem.image || '🥦'}</Text>
+                      <Text style={styles.itemModalBigEmoji}>{selectedItem.image || '🥦'}</Text>
                     </View>
                   )}
-
-                  {/* Info: name, pack size, price */}
-                  <View style={styles.itemModalInfo}>
-                    <Text style={styles.itemModalName} numberOfLines={2}>{selectedItem.name}</Text>
-                    {(selectedItem.unit || (selectedItem.variants?.length > 0 && selectedItem.variants[0].label)) ? (
-                      <Text style={styles.itemModalPackSize}>
-                        {selectedItem.variants?.length > 0 ? selectedItem.variants[0].label : selectedItem.unit}
-                      </Text>
-                    ) : null}
-                    <Text style={styles.itemModalPrice}>₹{selectedVariant?.price ?? selectedItem.price}</Text>
-                    {selectedItem.description ? (
-                      <Text style={styles.itemModalDesc} numberOfLines={2}>{selectedItem.description}</Text>
-                    ) : null}
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.itemModalName}>{selectedItem.name}</Text>
                   </View>
                 </View>
 
-                {/* Variant / Pack size picker */}
-                {selectedItem?.variants?.length > 1 && (
-                  <View style={styles.itemModalVariantWrap}>
-                    <Text style={styles.itemModalBrand}>{t.selectPackSize}</Text>
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: rs(8), marginTop: vs(8) }}>
-                      {selectedItem.variants.map(v => (
+                {/* Divider */}
+                <View style={styles.itemModalDivider} />
+
+                {/* Variant rows — each is a full-width selectable row */}
+                {selectedItem?.variants?.length > 0 ? (
+                  <View style={styles.itemModalVariantList}>
+                    {selectedItem.variants.map((v, idx) => {
+                      const isSelected = selectedVariant?.label === v.label;
+                      const mrp = Number(v.marketPrice || 0);
+                      const disc = mrp > v.price ? Math.round(((mrp - v.price) / mrp) * 100) : 0;
+                      return (
                         <TouchableOpacity
                           key={v.label}
+                          style={[styles.variantRow, isSelected && styles.variantRowActive, idx < selectedItem.variants.length - 1 && styles.variantRowBorder]}
                           onPress={() => setSelectedVariant(v)}
-                          style={[
-                            styles.variantChip,
-                            selectedVariant?.label === v.label && styles.variantChipActive,
-                          ]}
+                          activeOpacity={0.8}
                         >
-                          <Text style={[styles.variantChipText, selectedVariant?.label === v.label && styles.variantChipTextActive]}>
-                            {v.label}
-                          </Text>
-                          <Text style={[styles.variantChipPrice, selectedVariant?.label === v.label && styles.variantChipTextActive]}>
-                            ₹{v.price}
-                          </Text>
+                          {/* Radio */}
+                          <View style={[styles.variantRadio, isSelected && styles.variantRadioActive]}>
+                            {isSelected && <View style={styles.variantRadioDot} />}
+                          </View>
+                          {/* Label + discount badge */}
+                          <View style={{ flex: 1 }}>
+                            <Text style={[styles.variantRowLabel, isSelected && styles.variantRowLabelActive]}>{v.label}</Text>
+                            <View style={styles.variantDiscountBadge}>
+                              <Text style={styles.variantDiscountBadgeText}>{disc > 0 ? `${disc}% OFF` : ''}</Text>
+                            </View>
+                          </View>
+                          {/* Price + MRP on right */}
+                          <View style={{ alignItems: 'flex-end' }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: rs(6) }}>
+                              {mrp > v.price && <Text style={styles.variantRowMrp}>₹{mrp}</Text>}
+                              <Text style={[styles.variantRowPrice, isSelected && styles.variantRowPriceActive]}>₹{v.price}</Text>
+                            </View>
+                          </View>
                         </TouchableOpacity>
-                      ))}
-                    </View>
+                      );
+                    })}
+                  </View>
+                ) : (
+                  <View style={styles.itemModalSinglePrice}>
+                    <Text style={styles.itemModalSinglePriceText}>₹{selectedItem.price}</Text>
+                    {Number(selectedItem.marketPrice) > Number(selectedItem.price) && (
+                      <Text style={styles.itemModalSingleMrp}>MRP ₹{selectedItem.marketPrice}</Text>
+                    )}
                   </View>
                 )}
 
-                {/* Quantity + Add */}
+                {/* Sticky footer: qty + add button */}
                 <View style={styles.itemModalFooter}>
                   {isOutOfStock(selectedItem) ? (
                     <View style={styles.itemModalOutOfStockBtn}>
@@ -892,8 +874,17 @@ const styles = StyleSheet.create({
   menuSectionCount: { fontSize: ms(13), color: colors.placeholder },
 
   // Food list
-  list: { paddingHorizontal: rs(6), paddingBottom: vs(90) },
+  list: { paddingBottom: vs(90) },
   listWithCart: { paddingBottom: vs(132) },
+
+  catSection: { marginTop: vs(16) },
+  catSectionHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: rs(16), marginBottom: vs(10),
+  },
+  catSectionTitle: { fontSize: ms(16), fontWeight: '800', color: colors.text },
+  catSectionCount: { fontSize: ms(12), color: colors.placeholder },
+  catRow: { paddingHorizontal: rs(16), paddingBottom: vs(4) },
 
   ratingRow: { flexDirection: 'row', alignItems: 'center', gap: rs(6), marginBottom: vs(8) },
   ratingBadge: {
@@ -905,51 +896,88 @@ const styles = StyleSheet.create({
   ratingText: { fontSize: ms(11), fontWeight: '700', color: '#fff' },
   ratingCount: { fontSize: ms(11), color: colors.placeholder },
 
-  // Item detail modal
-  itemModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  // Item detail modal — Blinkit style
+  itemModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end' },
   itemModalDismiss: { flex: 1 },
   itemModalSheet: {
     backgroundColor: colors.surface,
-    borderTopLeftRadius: rs(24), borderTopRightRadius: rs(24),
-    paddingBottom: vs(32),
+    borderTopLeftRadius: rs(20), borderTopRightRadius: rs(20),
+    paddingBottom: vs(28),
     overflow: 'hidden',
   },
   itemModalHandle: {
-    width: rs(40), height: vs(4), borderRadius: rs(2),
+    width: rs(36), height: vs(4), borderRadius: rs(2),
     backgroundColor: colors.border,
-    alignSelf: 'center', marginTop: vs(10), marginBottom: vs(12),
+    alignSelf: 'center', marginTop: vs(10), marginBottom: vs(4),
+  },
+  itemModalClose: {
+    position: 'absolute', top: vs(12), right: rs(16),
+    width: rs(30), height: rs(30), borderRadius: rs(15),
+    backgroundColor: colors.surfaceAlt,
+    justifyContent: 'center', alignItems: 'center',
+    zIndex: 10,
   },
   itemModalTopRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    paddingHorizontal: rs(20),
-    gap: rs(14),
-    marginBottom: vs(4),
+    flexDirection: 'row', alignItems: 'center', gap: rs(14),
+    paddingHorizontal: rs(20), paddingTop: vs(14), paddingBottom: vs(10),
   },
   itemModalThumb: {
-    width: rs(100), height: rs(100),
+    width: rs(80), height: rs(80),
     borderRadius: borderRadius.md,
+    backgroundColor: '#F7F9F2',
     flexShrink: 0,
   },
   itemModalThumbPlaceholder: {
-    width: rs(100), height: rs(100),
+    width: rs(80), height: rs(80),
     borderRadius: borderRadius.md,
-    backgroundColor: colors.background,
+    backgroundColor: '#F7F9F2',
     justifyContent: 'center', alignItems: 'center',
-    borderWidth: 1, borderColor: colors.border,
     flexShrink: 0,
   },
-  itemModalEmoji: { fontSize: ms(52) },
-  itemModalInfo: { flex: 1, justifyContent: 'center', gap: vs(4) },
-  itemModalBrand: { fontSize: ms(10), fontWeight: '800', color: colors.primary, letterSpacing: 0.5 },
-  itemModalName: { fontSize: ms(16), fontWeight: '800', color: colors.text, lineHeight: ms(22) },
-  itemModalPackSize: { fontSize: ms(12), color: colors.textSecondary, fontWeight: '500' },
-  itemModalDesc: { fontSize: ms(12), color: colors.placeholder, lineHeight: ms(18), marginTop: vs(2) },
-  itemModalPrice: { fontSize: ms(18), fontWeight: '800', color: colors.primary },
-  itemModalVariantWrap: { paddingHorizontal: rs(20), paddingTop: vs(12) },
+  itemModalBigEmoji: { fontSize: ms(44) },
+  itemModalName: { fontSize: ms(16), fontWeight: '800', color: colors.text, marginBottom: vs(4) },
+  itemModalDesc: { fontSize: ms(12), color: colors.placeholder, lineHeight: ms(18) },
+  itemModalDivider: { height: 1, backgroundColor: colors.divider, marginHorizontal: rs(20), marginBottom: vs(4) },
+  itemModalVariantList: { paddingHorizontal: rs(20) },
+  variantRow: {
+    flexDirection: 'row', alignItems: 'center', gap: rs(12),
+    paddingVertical: vs(13),
+  },
+  variantRowBorder: { borderBottomWidth: 1, borderBottomColor: colors.divider },
+  variantRowActive: { backgroundColor: 'transparent' },
+  variantRadio: {
+    width: rs(20), height: rs(20), borderRadius: rs(10),
+    borderWidth: 2, borderColor: colors.border,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  variantRadioActive: { borderColor: colors.primary },
+  variantRadioDot: {
+    width: rs(10), height: rs(10), borderRadius: rs(5),
+    backgroundColor: colors.primary,
+  },
+  variantRowLabel: { fontSize: ms(14), fontWeight: '700', color: colors.text },
+  variantRowLabelActive: { color: colors.primary },
+  variantDiscountBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#FFF3E0',
+    borderRadius: borderRadius.xs,
+    paddingHorizontal: rs(6), paddingVertical: vs(2),
+    marginTop: vs(3),
+  },
+  variantDiscountBadgeText: { fontSize: ms(10), fontWeight: '800', color: '#E65100' },
+  variantRowMrp: { fontSize: ms(11), color: colors.placeholder, textDecorationLine: 'line-through' },
+  variantRowPrice: { fontSize: ms(15), fontWeight: '800', color: colors.text },
+  variantRowPriceActive: { color: colors.primary },
+  itemModalSinglePrice: {
+    flexDirection: 'row', alignItems: 'center', gap: rs(8),
+    paddingHorizontal: rs(20), paddingVertical: vs(10),
+  },
+  itemModalSinglePriceText: { fontSize: ms(18), fontWeight: '900', color: colors.text },
+  itemModalSingleMrp: { fontSize: ms(13), color: colors.placeholder, textDecorationLine: 'line-through' },
   itemModalFooter: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: rs(20), paddingTop: vs(16), gap: rs(12),
+    paddingHorizontal: rs(20), paddingTop: vs(12), gap: rs(12),
+    borderTopWidth: 1, borderTopColor: colors.divider, marginTop: vs(4),
   },
   itemModalQtyRow: {
     flexDirection: 'row', alignItems: 'center',
@@ -968,7 +996,7 @@ const styles = StyleSheet.create({
   itemModalAddBtn: {
     flex: 1, backgroundColor: colors.primary,
     borderRadius: borderRadius.sm,
-    paddingVertical: vs(12),
+    paddingVertical: vs(13),
     alignItems: 'center',
   },
   itemModalAddBtnText: { color: '#fff', fontSize: ms(15), fontWeight: '800' },
@@ -1061,18 +1089,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   itemModalClosedText: { color: colors.textSecondary, fontSize: ms(13), fontWeight: '700' },
-  variantChip: {
-    borderWidth: 1.5, borderColor: colors.border,
-    borderRadius: borderRadius.sm,
-    paddingHorizontal: rs(12), paddingVertical: vs(6),
-    backgroundColor: colors.background,
-    alignItems: 'center',
-  },
-  variantChipActive: { borderColor: colors.primary, backgroundColor: colors.primarySurface },
-  variantChipText: { fontSize: ms(12), fontWeight: '700', color: colors.textSecondary },
-  variantChipPrice: { fontSize: ms(11), fontWeight: '600', color: colors.placeholder, marginTop: vs(1) },
-  variantChipTextActive: { color: colors.primary },
-  itemModalOutOfStockBtn: {
+itemModalOutOfStockBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: rs(8),
     borderRadius: borderRadius.sm,
     backgroundColor: '#FEF2F2',

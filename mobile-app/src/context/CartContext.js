@@ -91,11 +91,7 @@ export function CartProvider({ children }) {
       if (cartData) {
         dispatch({ type: 'SET_CART', payload: JSON.parse(cartData) });
       }
-      const res = await fetch(`${API_BASE_URL}/admin/restaurant-status`);
-      const data = await res.json();
-      if (!(data.isOpen ?? true)) {
-        dispatch({ type: 'CLEAR_CART' });
-      }
+
     } catch {}
   };
 

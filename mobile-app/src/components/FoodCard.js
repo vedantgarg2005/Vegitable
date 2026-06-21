@@ -13,15 +13,16 @@ export function isOutOfStock(item) {
 
 export function getDiscountPercent(item) {
   const base = item?.variants?.length > 0 ? Number(item.variants[0].price) : Number(item.price || 0);
-  const actual = base + 5;
-  return Math.round((5 / actual) * 100);
+  const mrp = item?.variants?.length > 0 ? Number(item.variants[0].marketPrice || 0) : Number(item.marketPrice || 0);
+  if (!mrp || mrp <= base) return 0;
+  return Math.round(((mrp - base) / mrp) * 100);
 }
 
 export default function FoodCard({ item, onPress, onAdd, onRemove, qty, isOpen, nextAvailableLabel, compact }) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const outOfStock = isOutOfStock(item);
   const basePrice = item?.variants?.length > 0 ? Number(item.variants[0].price) : Number(item.price || 0);
-  const actualPrice = basePrice + 5;
+  const actualPrice = item?.variants?.length > 0 ? Number(item.variants[0].marketPrice || 0) : Number(item.marketPrice || 0);
   const discount = getDiscountPercent(item);
   const { t, getItemName } = useLanguage();
 
@@ -44,6 +45,7 @@ export default function FoodCard({ item, onPress, onAdd, onRemove, qty, isOpen, 
         activeOpacity={outOfStock ? 1 : 0.93}
         disabled={outOfStock}
       >
+        {/* Image area with ADD/qty floated at bottom-right — Blinkit style */}
         <View style={styles.compactImageBg}>
           {item.image && item.image.startsWith('/uploads') ? (
             <Image
@@ -64,56 +66,43 @@ export default function FoodCard({ item, onPress, onAdd, onRemove, qty, isOpen, 
               <Text style={styles.discountText}>NEW</Text>
             </View>
           )}
-        </View>
-        <View style={styles.compactInfo}>
-          <Text style={styles.compactName} numberOfLines={2}>{getItemName(item)}</Text>
-          {packSize ? <Text style={styles.compactPackSize}>{packSize}</Text> : null}
-          <View style={styles.compactPriceRow}>
-            <Text style={styles.foodPrice}>₹{basePrice}</Text>
-            <Text style={styles.originalPrice}>₹{actualPrice}</Text>
-          </View>
-          <Animated.View style={{ transform: [{ scale: scaleAnim }], marginTop: vs(6) }}>
+          {/* ADD / qty button anchored to bottom-right of image */}
+          <Animated.View style={[styles.compactAddAnchor, { transform: [{ scale: scaleAnim }] }]}>
             {outOfStock ? (
-              <View style={styles.outOfStockTag}>
-                <Ionicons name="close-circle-outline" size={rs(10)} color="#EF4444" />
-                <Text style={styles.outOfStockText}>{t.outOfStockLabel}</Text>
+              <View style={styles.compactOutOfStock}>
+                <Text style={styles.compactOutOfStockText}>OUT</Text>
+              </View>
+            ) : !isOpen ? (
+              <View style={styles.compactClosedBtn}>
+                <Text style={styles.compactClosedText}>Closed</Text>
               </View>
             ) : qty > 0 ? (
-              qty === 1 ? (
-                <View style={styles.qtyControl}>
-                  <TouchableOpacity style={styles.qtyBtn} onPress={onRemove}>
-                    <Ionicons name="remove" size={rs(14)} color={colors.primary} />
-                  </TouchableOpacity>
-                  <Text style={styles.qtyText}>{qty}</Text>
-                  <TouchableOpacity style={[styles.qtyBtn, styles.qtyBtnFilled]} onPress={handleAdd}>
-                    <Ionicons name="add" size={rs(14)} color="#fff" />
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <View style={styles.multiQtyRow}>
-                  <View style={styles.qtyControl}>
-                    <TouchableOpacity style={styles.qtyBtn} onPress={onRemove}>
-                      <Ionicons name="remove" size={rs(14)} color={colors.primary} />
-                    </TouchableOpacity>
-                    <Text style={styles.qtyText}>{qty}</Text>
-                    <TouchableOpacity style={[styles.qtyBtn, styles.qtyBtnFilled]} onPress={handleAdd}>
-                      <Ionicons name="add" size={rs(14)} color="#fff" />
-                    </TouchableOpacity>
-                  </View>
-                  <Text style={styles.moreQtyText}>+{qty - 1} more</Text>
-                </View>
-              )
-            ) : isOpen ? (
-              <TouchableOpacity style={styles.addBtn} onPress={handleAdd} activeOpacity={0.8}>
-                <Ionicons name="add" size={rs(13)} color="#fff" />
-                <Text style={styles.addBtnText}>{t.addLabel}</Text>
-              </TouchableOpacity>
-            ) : (
-              <View style={styles.closedTag}>
-                <Text style={styles.closedTagText} numberOfLines={1}>{nextAvailableLabel}</Text>
+              <View style={styles.compactQtyControl}>
+                <TouchableOpacity style={styles.compactQtyBtn} onPress={onRemove} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+                  <Ionicons name="remove" size={rs(14)} color={colors.primary} />
+                </TouchableOpacity>
+                <Text style={styles.compactQtyText}>{qty}</Text>
+                <TouchableOpacity style={styles.compactQtyBtn} onPress={handleAdd} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+                  <Ionicons name="add" size={rs(14)} color={colors.primary} />
+                </TouchableOpacity>
               </View>
+            ) : (
+              <TouchableOpacity style={styles.compactAddBtn} onPress={handleAdd} activeOpacity={0.85}>
+                <Ionicons name="add" size={rs(16)} color={colors.primary} />
+                <Text style={styles.compactAddText}>ADD</Text>
+              </TouchableOpacity>
             )}
           </Animated.View>
+        </View>
+
+        {/* Info below image */}
+        <View style={styles.compactInfo}>
+          {packSize ? <Text style={styles.compactPackSize}>{packSize}</Text> : null}
+          <Text style={styles.compactName} numberOfLines={2}>{getItemName(item)}</Text>
+          <View style={styles.compactPriceRow}>
+            <Text style={styles.compactPrice}>₹{basePrice}</Text>
+            {actualPrice > basePrice && <Text style={styles.compactMrp}>₹{actualPrice}</Text>}
+          </View>
         </View>
       </TouchableOpacity>
     );
@@ -163,7 +152,7 @@ export default function FoodCard({ item, onPress, onAdd, onRemove, qty, isOpen, 
         <View style={styles.priceRow}>
           <Text style={styles.foodPrice}>₹{basePrice}</Text>
           <Text style={styles.originalPrice}>₹{actualPrice}</Text>
-          {discount > 0 && <Text style={styles.savingsText}>Save ₹5</Text>}
+          {discount > 0 && actualPrice > basePrice && <Text style={styles.savingsText}>Save ₹{actualPrice - basePrice}</Text>}
         </View>
 
         {/* Controls */}
@@ -200,31 +189,96 @@ export default function FoodCard({ item, onPress, onAdd, onRemove, qty, isOpen, 
 }
 
 const styles = StyleSheet.create({
-  // Compact (grid) card
+  // Compact (grid) card — Blinkit / BigBasket style
   compactCard: {
     flex: 1,
     backgroundColor: colors.surface,
-    marginHorizontal: rs(6),
-    marginVertical: vs(6),
-    borderRadius: borderRadius.xl,
+    marginHorizontal: rs(5),
+    marginVertical: vs(5),
+    borderRadius: borderRadius.lg,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: colors.border,
-    ...shadows.medium,
+    ...shadows.small,
   },
   compactImageBg: {
     width: '100%',
-    height: rs(120),
-    backgroundColor: colors.surfaceAlt,
+    height: rs(148),
+    backgroundColor: '#F7F9F2',
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
   },
-  compactEmoji: { fontSize: ms(52) },
-  compactInfo: { padding: rs(10) },
-  compactName: { fontSize: ms(13), fontWeight: '700', color: colors.text, lineHeight: ms(18), marginBottom: vs(3) },
-  compactPackSize: { fontSize: ms(10), color: colors.textSecondary, fontWeight: '600', marginBottom: vs(3) },
+  compactEmoji: { fontSize: ms(64) },
+  compactInfo: { paddingHorizontal: rs(10), paddingTop: vs(8), paddingBottom: vs(10) },
+  compactPackSize: { fontSize: ms(10), color: colors.textSecondary, fontWeight: '500', marginBottom: vs(2) },
+  compactName: { fontSize: ms(13), fontWeight: '700', color: colors.text, lineHeight: ms(18), marginBottom: vs(5) },
   compactPriceRow: { flexDirection: 'row', alignItems: 'center', gap: rs(5) },
+  compactPrice: { fontSize: ms(14), fontWeight: '800', color: colors.text },
+  compactMrp: { fontSize: ms(11), color: colors.placeholder, textDecorationLine: 'line-through' },
+
+  // ADD button anchored to bottom-right of image
+  compactAddAnchor: {
+    position: 'absolute',
+    bottom: rs(8),
+    right: rs(8),
+  },
+  compactAddBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: rs(2),
+    backgroundColor: '#fff',
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    borderRadius: borderRadius.sm,
+    paddingHorizontal: rs(10),
+    paddingVertical: vs(5),
+    ...shadows.small,
+  },
+  compactAddText: { fontSize: ms(12), fontWeight: '800', color: colors.primary },
+  compactQtyControl: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    borderRadius: borderRadius.sm,
+    overflow: 'hidden',
+    ...shadows.small,
+  },
+  compactQtyBtn: {
+    width: rs(28),
+    height: rs(28),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  compactQtyText: {
+    fontSize: ms(13),
+    fontWeight: '800',
+    color: colors.primary,
+    paddingHorizontal: rs(4),
+    minWidth: rs(20),
+    textAlign: 'center',
+  },
+  compactOutOfStock: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1.5,
+    borderColor: '#EF4444',
+    borderRadius: borderRadius.sm,
+    paddingHorizontal: rs(8),
+    paddingVertical: vs(4),
+  },
+  compactOutOfStockText: { fontSize: ms(10), fontWeight: '800', color: '#EF4444' },
+  compactClosedBtn: {
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.placeholder,
+    borderRadius: borderRadius.sm,
+    paddingHorizontal: rs(8),
+    paddingVertical: vs(4),
+  },
+  compactClosedText: { fontSize: ms(10), fontWeight: '700', color: colors.placeholder },
+
   multiQtyRow: { gap: vs(3) },
   moreQtyText: { fontSize: ms(10), fontWeight: '700', color: colors.primary, textAlign: 'center' },
 

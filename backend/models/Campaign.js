@@ -26,6 +26,7 @@ const campaignSchema = new mongoose.Schema({
     usageCount: { type: Number, default: 0 }
   },
   isActive: { type: Boolean, default: true },
+  promoCode: { type: String, uppercase: true },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
 }, {
   timestamps: true

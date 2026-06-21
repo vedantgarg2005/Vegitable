@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 
 const EMPTY_FORM = {
   name: '', type: 'discount', description: '',
+  promoCode: '',
   discount: { type: 'percentage', value: '', maxAmount: '', minOrderValue: '' },
   targetAudience: { userType: 'all' },
   validity: { startDate: '', endDate: '', usageLimit: '' },
@@ -69,10 +70,6 @@ export default function Campaigns() {
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">Campaigns</h1>
-          <p className="text-gray-500 text-sm">Manage promotional campaigns</p>
-        </div>
         <button
           onClick={() => setShowForm(true)}
           className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600"
@@ -103,6 +100,12 @@ export default function Campaigns() {
                 </div>
 
                 <div className="text-xs text-slate-500 space-y-1">
+                  {c.promoCode && (
+                    <div className="flex items-center gap-2 bg-orange-50 border border-dashed border-orange-300 rounded-lg px-3 py-1.5 w-fit">
+                      <span className="text-orange-500">🏷</span>
+                      <span className="font-mono font-bold text-orange-600 tracking-widest text-sm">{c.promoCode}</span>
+                    </div>
+                  )}
                   {c.discount?.value && (
                     <p>Discount: <span className="font-medium text-slate-700">
                       {c.discount.type === 'percentage' ? `${c.discount.value}%` : `₹${c.discount.value}`}
@@ -214,6 +217,12 @@ export default function Campaigns() {
                   <label className="text-xs font-medium text-slate-600">Usage Limit</label>
                   <input type="number" value={form.validity.usageLimit} onChange={(e) => setNested('validity.usageLimit', e.target.value)}
                     className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" placeholder="Optional" />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-xs font-medium text-slate-600">Promo Code (optional)</label>
+                  <input value={form.promoCode} onChange={(e) => setForm({ ...form, promoCode: e.target.value.toUpperCase() })}
+                    className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 text-sm font-mono uppercase" placeholder="e.g. FRESH10" />
+                  <p className="text-xs text-slate-400 mt-0.5">Entering a code makes it redeemable by customers at checkout.</p>
                 </div>
                 <div className="col-span-2">
                   <label className="text-xs font-medium text-slate-600">Description</label>

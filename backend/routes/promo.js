@@ -18,7 +18,8 @@ router.get('/active', async (req, res) => {
 // Validate promo code
 router.post('/validate', async (req, res) => {
   try {
-    const { code, orderAmount } = req.body;
+    const { code, orderAmount, orderTotal } = req.body;
+    const amount = orderAmount ?? orderTotal;
     
     const promo = await PromoCode.findOne({ 
       code: code.toUpperCase(),
@@ -34,7 +35,7 @@ router.post('/validate', async (req, res) => {
       return res.status(400).json({ message: 'Promo code usage limit exceeded' });
     }
 
-    if (orderAmount < promo.minOrderAmount) {
+    if (amount < promo.minOrderAmount) {
       return res.status(400).json({ 
         message: `Minimum order amount of ₹${promo.minOrderAmount} required` 
       });
@@ -42,7 +43,7 @@ router.post('/validate', async (req, res) => {
 
     let discount = 0;
     if (promo.discountType === 'percentage') {
-      discount = (orderAmount * promo.discountValue) / 100;
+      discount = (amount * promo.discountValue) / 100;
       if (promo.maxDiscount) {
         discount = Math.min(discount, promo.maxDiscount);
       }

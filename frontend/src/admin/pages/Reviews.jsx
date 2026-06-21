@@ -44,10 +44,6 @@ export default function Reviews() {
 
   return (
     <div className="p-3 sm:p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-800">Reviews Moderation</h1>
-        <p className="text-gray-500 text-sm">Verify, respond to, or remove customer reviews</p>
-      </div>
 
       {/* Filters */}
       <div className="bg-white rounded-xl shadow-sm p-4 flex flex-wrap gap-3">

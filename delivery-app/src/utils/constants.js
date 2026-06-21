@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 
 export const API_BASE_URL = __DEV__
-  ? 'http://172.20.10.2:5000/api'
+  ? 'http://192.168.1.8:5000/api'
   : 'https://your-production-api.com/api';
 
 export const SOCKET_URL = API_BASE_URL.replace('/api', '');

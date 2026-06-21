@@ -55,6 +55,8 @@ const CartScreen = ({ navigation, route }) => {
   const [form, setForm] = useState(EMPTY_FORM);
   const [editingAddressId, setEditingAddressId] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [variantItem, setVariantItem] = useState(null);
+  const [selectedVariant, setSelectedVariant] = useState(null);
 
   const instructionRef = useRef(null);
   const insets = useSafeAreaInsets();
@@ -516,6 +518,73 @@ const CartScreen = ({ navigation, route }) => {
             </View>
 
 
+            {/* People also liked */}
+            {suggestedItems.length > 0 && (
+              <View style={[styles.sectionCard, shadows.small]}>
+                <Text style={styles.sectionTitle}>PEOPLE ALSO LIKED</Text>
+                <FlatList
+                  horizontal
+                  data={suggestedItems}
+                  keyExtractor={item => item._id}
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.suggestList}
+                  renderItem={({ item }) => {
+                    const inCart = cartItems.find(c => (c._id || c.id) === item._id);
+                    return (
+                      <View style={styles.suggestCard}>
+                        {item.image ? (
+                          <Image
+                            source={{ uri: item.image.startsWith('/uploads') ? `${API_BASE_URL.replace('/api', '')}${item.image}` : item.image }}
+                            style={styles.suggestImage}
+                            resizeMode="cover"
+                          />
+                        ) : (
+                          <Text style={styles.suggestEmoji}>🥦</Text>
+                        )}
+                        <Text style={styles.suggestName} numberOfLines={2}>{item.name}</Text>
+                        <View style={{ alignItems: 'center' }}>
+                          <Text style={styles.suggestPrice}>
+                            ₹{item.variants?.length > 0 ? item.variants[0].price : item.price}
+                          </Text>
+                          {(() => {
+                            const p = item.variants?.length > 0 ? Number(item.variants[0].price) : Number(item.price);
+                            const m = item.variants?.length > 0 ? Number(item.variants[0].marketPrice || 0) : Number(item.marketPrice || 0);
+                            return m > p ? <Text style={styles.suggestMrp}>₹{m}</Text> : null;
+                          })()}
+                        </View>
+                        {inCart ? (
+                          <View style={styles.suggestStepper}>
+                            <TouchableOpacity onPress={() => updateQty(inCart.id, inCart.quantity - 1)}>
+                              <Ionicons name={inCart.quantity === 1 ? 'trash-outline' : 'remove'} size={rs(13)} color={colors.primary} />
+                            </TouchableOpacity>
+                            <Text style={styles.suggestStepperCount}>{inCart.quantity}</Text>
+                            <TouchableOpacity onPress={() => updateQty(inCart.id, inCart.quantity + 1)}>
+                              <Ionicons name="add" size={rs(13)} color={colors.primary} />
+                            </TouchableOpacity>
+                          </View>
+                        ) : (
+                          <TouchableOpacity
+                            style={styles.suggestAddBtn}
+                            onPress={() => {
+                              if (item.variants?.length > 0) {
+                                setVariantItem(item);
+                                setSelectedVariant(item.variants[0]);
+                              } else {
+                                addToCart({ ...item, id: item._id });
+                              }
+                            }}
+                          >
+                            <Ionicons name="add" size={rs(13)} color={colors.primary} />
+                            <Text style={styles.suggestAddBtnText}>ADD</Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    );
+                  }}
+                />
+              </View>
+            )}
+
             {/* Bill */}
             <View style={[styles.sectionCard, shadows.small]}>
               <Text style={styles.sectionTitle}>{t.billDetails}</Text>
@@ -635,15 +704,16 @@ const CartScreen = ({ navigation, route }) => {
             renderItem={({ item }) => (
               <View style={styles.offerCard}>
                 <View style={styles.offerLeft}>
-                  <View style={styles.offerCodeBadge}>
-                    <Text style={styles.offerCode}>{item.code}</Text>
-                  </View>
                   <Text style={styles.offerDesc}>
                     {item.discountType === 'percentage'
                       ? `${item.discountValue}% off${item.maxDiscount ? ` up to ₹${item.maxDiscount}` : ''}`
                       : `Flat ₹${item.discountValue} off`}
                     {item.minOrderAmount > 0 ? `  •  Min ₹${item.minOrderAmount}` : ''}
                   </Text>
+                  <View style={styles.offerCodeBadge}>
+                    <Ionicons name="pricetag-outline" size={rs(11)} color={colors.primary} />
+                    <Text style={styles.offerCode}>{item.code}</Text>
+                  </View>
                 </View>
                 <TouchableOpacity style={styles.offerApplyBtn} onPress={() => applyFromModal(item.code)}>
                   <Text style={styles.offerApplyBtnText}>{t.apply}</Text>
@@ -776,6 +846,59 @@ const CartScreen = ({ navigation, route }) => {
               {locLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.confirmBtnText}>{t.confirmLocation}</Text>}
             </TouchableOpacity>
           </View>
+        </View>
+      </Modal>
+
+      {/* Variant Picker Modal */}
+      <Modal visible={!!variantItem} animationType="slide" transparent onRequestClose={() => setVariantItem(null)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setVariantItem(null)} />
+        <View style={[styles.modalSheet, { paddingBottom: insets.bottom + vs(16) }]}>
+          <View style={styles.modalHandle} />
+          <Text style={styles.modalTitle}>SELECT SIZE</Text>
+          <Text style={{ fontSize: ms(15), fontWeight: '700', color: colors.text, marginBottom: vs(12) }}>
+            {variantItem?.name}
+          </Text>
+          {variantItem?.variants?.map(v => (
+            <TouchableOpacity
+              key={v.label}
+              style={[
+                styles.variantOption,
+                selectedVariant?.label === v.label && styles.variantOptionActive,
+              ]}
+              onPress={() => setSelectedVariant(v)}
+            >
+              <Text style={[styles.variantLabel, selectedVariant?.label === v.label && styles.variantLabelActive]}>
+                {v.label}
+              </Text>
+              <View style={{ alignItems: 'flex-end' }}>
+                <Text style={[styles.variantPrice, selectedVariant?.label === v.label && styles.variantLabelActive]}>
+                  ₹{v.price}
+                </Text>
+                {Number(v.marketPrice) > Number(v.price) && (
+                  <Text style={styles.variantMrp}>₹{v.marketPrice}</Text>
+                )}
+              </View>
+              {selectedVariant?.label === v.label && (
+                <Ionicons name="checkmark-circle" size={rs(18)} color={colors.primary} />
+              )}
+            </TouchableOpacity>
+          ))}
+          <TouchableOpacity
+            style={[styles.couponBtn, { marginTop: vs(16), paddingVertical: vs(13) }]}
+            onPress={() => {
+              if (variantItem && selectedVariant) {
+                addToCart({
+                  ...variantItem,
+                  id: variantItem._id,
+                  price: selectedVariant.price,
+                  selectedVariant,
+                });
+              }
+              setVariantItem(null);
+            }}
+          >
+            <Text style={styles.couponBtnText}>ADD TO CART — ₹{selectedVariant?.price}</Text>
+          </TouchableOpacity>
         </View>
       </Modal>
 
@@ -1226,14 +1349,18 @@ const styles = StyleSheet.create({
   offerLeft: { flex: 1, gap: vs(4) },
   offerCodeBadge: {
     alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: rs(5),
     backgroundColor: colors.primarySurface,
     borderWidth: 1.5, borderColor: colors.primary,
     borderRadius: borderRadius.xs,
-    paddingHorizontal: rs(10), paddingVertical: vs(3),
+    paddingHorizontal: rs(10), paddingVertical: vs(4),
     borderStyle: 'dashed',
+    marginTop: vs(6),
   },
-  offerCode: { fontSize: ms(13), fontWeight: '800', color: colors.primary, letterSpacing: 1, fontFamily: 'Poppins_800ExtraBold' },
-  offerDesc: { fontSize: ms(12), color: colors.textSecondary, fontFamily: 'Poppins_400Regular' },
+  offerCode: { fontSize: ms(13), fontWeight: '800', color: colors.primary, letterSpacing: 1.5, fontFamily: 'Poppins_800ExtraBold' },
+  offerDesc: { fontSize: ms(13), color: colors.text, fontWeight: '600', fontFamily: 'Poppins_400Regular' },
   offerApplyBtn: {
     borderWidth: 1.5, borderColor: colors.primary,
     borderRadius: borderRadius.xs,
@@ -1241,6 +1368,17 @@ const styles = StyleSheet.create({
   },
   offerApplyBtnText: { fontSize: ms(12), fontWeight: '800', color: colors.primary, fontFamily: 'Poppins_800ExtraBold' },
   noOffersText: { textAlign: 'center', color: colors.placeholder, fontSize: ms(13), paddingVertical: vs(24), fontFamily: 'Poppins_400Regular' },
+  variantOption: {
+    flexDirection: 'row', alignItems: 'center', gap: rs(10),
+    borderWidth: 1.5, borderColor: colors.border,
+    borderRadius: borderRadius.sm, padding: rs(12),
+    marginBottom: vs(8), backgroundColor: colors.background,
+  },
+  variantOptionActive: { borderColor: colors.primary, backgroundColor: colors.primarySurface },
+  variantLabel: { flex: 1, fontSize: ms(14), fontWeight: '600', color: colors.text },
+  variantPrice: { fontSize: ms(14), fontWeight: '800', color: colors.textSecondary },
+  variantMrp: { fontSize: ms(11), color: colors.placeholder, textDecorationLine: 'line-through' },
+  variantLabelActive: { color: colors.primary },
 
   cartBottomRow: {
     flexDirection: 'row',
@@ -1292,7 +1430,8 @@ const styles = StyleSheet.create({
   suggestEmoji: { fontSize: ms(32), marginBottom: vs(4) },
   suggestImage: { width: rs(110), height: rs(70), borderRadius: borderRadius.sm, marginBottom: vs(4) },
   suggestName: { fontSize: ms(11), fontWeight: '700', color: colors.text, textAlign: 'center', marginBottom: vs(3), fontFamily: 'Poppins_700Bold' },
-  suggestPrice: { fontSize: ms(12), fontWeight: '800', color: colors.primary, marginBottom: vs(6), fontFamily: 'Poppins_800ExtraBold' },
+  suggestPrice: { fontSize: ms(12), fontWeight: '800', color: colors.primary, marginBottom: vs(2), fontFamily: 'Poppins_800ExtraBold' },
+  suggestMrp: { fontSize: ms(10), color: colors.placeholder, textDecorationLine: 'line-through', marginBottom: vs(4) },
   suggestAddBtn: {
     flexDirection: 'row', alignItems: 'center', gap: rs(2),
     borderWidth: 1.5, borderColor: colors.primary,

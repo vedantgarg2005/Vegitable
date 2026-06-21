@@ -1,7 +1,9 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useCallback } from 'react';
 import api from '../services/api';
 
 const AuthContext = createContext();
+export const useLoginModal = () => useContext(LoginModalContext);
+export const LoginModalContext = createContext();
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
@@ -37,10 +39,16 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
+  const [loginOpen, setLoginOpen] = useState(false);
+  const openLogin  = useCallback(() => setLoginOpen(true),  []);
+  const closeLogin = useCallback(() => setLoginOpen(false), []);
+
   return (
-    <AuthContext.Provider value={{ user, login, loginWithEmail, register, logout }}>
-      {children}
-    </AuthContext.Provider>
+    <LoginModalContext.Provider value={{ loginOpen, openLogin, closeLogin }}>
+      <AuthContext.Provider value={{ user, login, loginWithEmail, register, logout }}>
+        {children}
+      </AuthContext.Provider>
+    </LoginModalContext.Provider>
   );
 }
 

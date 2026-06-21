@@ -94,7 +94,17 @@ export default function MenuItemDetailScreen({ route, navigation }) {
 
         {/* Price & category */}
         <View style={styles.metaRow}>
-          <Text style={styles.price}>₹{item.price}</Text>
+          <View>
+            <Text style={styles.price}>₹{item.price}</Text>
+            {Number(item.marketPrice) > Number(item.price) && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: rs(6), marginTop: vs(2) }}>
+                <Text style={styles.mrpText}>MRP ₹{item.marketPrice}</Text>
+                <Text style={styles.discountText}>
+                  {Math.round(((item.marketPrice - item.price) / item.marketPrice) * 100)}% OFF
+                </Text>
+              </View>
+            )}
+          </View>
           {item.category && (
             <View style={styles.categoryBadge}>
               <Text style={styles.categoryText}>{item.category}</Text>
@@ -195,6 +205,8 @@ const styles = StyleSheet.create({
 
   metaRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: vs(20) },
   price: { fontSize: ms(26), fontWeight: '800', color: colors.primary },
+  mrpText: { fontSize: ms(13), color: colors.placeholder, textDecorationLine: 'line-through' },
+  discountText: { fontSize: ms(12), fontWeight: '800', color: '#E53935' },
   categoryBadge: {
     backgroundColor: colors.primarySurface,
     paddingHorizontal: rs(12), paddingVertical: vs(5),

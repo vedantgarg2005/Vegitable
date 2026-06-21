@@ -54,10 +54,6 @@ export default function DeliveryPartners() {
   return (
     <div className="p-6 bg-slate-100 min-h-screen">
       <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Delivery Partners</h1>
-          <p className="text-gray-500 mt-1">Manage your delivery partner accounts</p>
-        </div>
         <button
           onClick={() => setShowModal(true)}
           className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-xl text-sm font-semibold hover:bg-orange-600 shadow-sm"

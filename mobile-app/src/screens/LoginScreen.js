@@ -283,6 +283,8 @@ export default function LoginScreen({ navigation }) {
                   placeholder="10-digit number"
                   placeholderTextColor={colors.placeholder}
                   autoFocus
+                  returnKeyType="send"
+                  onSubmitEditing={sendOtp}
                 />
                 {phone.length === 10 && (
                   <Ionicons name="checkmark-circle" size={rs(20)} color={colors.success} />
@@ -351,6 +353,8 @@ export default function LoginScreen({ navigation }) {
                   placeholder="Your full name"
                   placeholderTextColor={colors.placeholder}
                   autoFocus
+                  returnKeyType="done"
+                  onSubmitEditing={completeRegistration}
                 />
               </View>
 

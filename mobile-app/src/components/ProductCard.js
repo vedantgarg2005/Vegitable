@@ -14,10 +14,16 @@ export function getBasePrice(item) {
   return item?.variants?.length > 0 ? Number(item.variants[0].price) : Number(item.price || 0);
 }
 
+export function getMRP(item) {
+  if (item?.variants?.length > 0) return Number(item.variants[0].marketPrice || 0);
+  return Number(item?.marketPrice || 0);
+}
+
 export function getDiscountPercent(item) {
-  const base = getBasePrice(item);
-  const actual = base + 5;
-  return Math.round((5 / actual) * 100);
+  const price = getBasePrice(item);
+  const mrp = getMRP(item);
+  if (!mrp || mrp <= price) return 0;
+  return Math.round(((mrp - price) / mrp) * 100);
 }
 
 export default function ProductCard({ item, onPress, onAdd, onRemove, qty }) {
@@ -25,7 +31,7 @@ export default function ProductCard({ item, onPress, onAdd, onRemove, qty }) {
   const { t, getItemName } = useLanguage();
   const outOfStock = isOutOfStock(item);
   const basePrice = getBasePrice(item);
-  const actualPrice = basePrice + 5;
+  const actualPrice = getMRP(item);
   const discount = getDiscountPercent(item);
 
   const handleAdd = () => {
@@ -73,7 +79,12 @@ export default function ProductCard({ item, onPress, onAdd, onRemove, qty }) {
           <View style={styles.priceBox}>
             <Text style={styles.price}>₹{basePrice}</Text>
           </View>
-          <Text style={styles.originalPrice}>₹{actualPrice}</Text>
+          {actualPrice > basePrice && (
+            <>
+              <Text style={styles.originalPrice}>₹{actualPrice}</Text>
+              <Text style={styles.discountLabel}>{discount}% OFF</Text>
+            </>
+          )}
         </View>
         {item.ratings?.average > 0 && (
           <View style={styles.ratingRow}>
@@ -148,6 +159,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: rs(6), paddingVertical: vs(2),
   },
   originalPrice: { fontSize: ms(13), color: colors.placeholder, textDecorationLine: 'line-through' },
+  discountLabel: { fontSize: ms(11), fontWeight: '800', color: colors.tagSale },
   ratingRow: { flexDirection: 'row', alignItems: 'center', gap: rs(3) },
   ratingText: { fontSize: ms(11), fontWeight: '700', color: colors.text },
   ratingCount: { fontSize: ms(10), color: colors.placeholder },

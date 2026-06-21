@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, useLoginModal } from '../context/AuthContext';
 import api from '../services/api';
 
 const STEPS = ['phone', 'otp', 'register'];
@@ -42,7 +41,7 @@ function StepBar({ step }) {
   );
 }
 
-function OtpBoxes({ value, onChange }) {
+function OtpBoxes({ value, onChange, onEnter }) {
   const refs = [useRef(), useRef(), useRef(), useRef()];
   const digits = value.split('');
 
@@ -73,6 +72,7 @@ function OtpBoxes({ value, onChange }) {
           value={digits[i] || ''}
           onChange={e => handleKey(i, e.target.value)}
           onPaste={handlePaste}
+          onKeyDown={e => e.key === 'Enter' && onEnter?.()}
           className="w-14 h-16 text-center text-2xl font-extrabold outline-none transition-all"
           style={{ borderRadius: 8, border: '1.5px solid', borderColor: digits[i] ? '#0a0a0a' : '#e5e5e5', background: digits[i] ? '#fafafa' : 'white', color: '#0a0a0a' }}
         />
@@ -81,9 +81,9 @@ function OtpBoxes({ value, onChange }) {
   );
 }
 
-export default function Login() {
+export default function LoginModal() {
   const { login } = useAuth();
-  const navigate = useNavigate();
+  const { loginOpen, closeLogin } = useLoginModal();
 
   const [step, setStep]             = useState('phone');
   const [phone, setPhone]           = useState('');
@@ -127,7 +127,7 @@ export default function Login() {
         localStorage.setItem('user', JSON.stringify(data.user));
         login(data.user, data.token);
         toast.success('Welcome back!');
-        navigate('/');
+        closeLogin();
       } else {
         goStep('register');
       }
@@ -144,7 +144,7 @@ export default function Login() {
       localStorage.setItem('user', JSON.stringify(data.user));
       login(data.user, data.token);
       toast.success('Welcome! 🎉');
-      navigate('/');
+      closeLogin();
     } catch (e) {
       setError(e.response?.data?.message || 'Registration failed');
     } finally { setLoading(false); }
@@ -152,17 +152,27 @@ export default function Login() {
 
   const inputCls = "w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm font-semibold focus:outline-none focus:border-green-500 focus:bg-green-50 bg-gray-50 text-gray-800 placeholder-gray-400 transition-all";
 
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-5 py-8"
-      style={{ background: '#0a0a0a' }}>
+  if (!loginOpen) return null;
 
+  return (
+    <div
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center px-5"
+      style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
+      onClick={e => { if (e.target === e.currentTarget) { closeLogin(); setStep('phone'); setOtp(''); setName(''); setError(''); } }}
+    >
       {/* Step Bar */}
       <StepBar step={step}/>
 
       {/* Card */}
       <div key={cardKey}
-        className="w-full max-w-sm bg-white p-6"
+        className="w-full max-w-sm bg-white p-6 relative"
         style={{ animation: 'slideUp 0.25s ease', borderRadius: 12, border: '1px solid #e5e5e5' }}>
+
+        <button
+          onClick={() => { closeLogin(); setStep('phone'); setOtp(''); setName(''); setError(''); }}
+          className="absolute top-3 right-3 w-7 h-7 flex items-center justify-center rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-all"
+          style={{ border: '1px solid #e5e5e5', fontSize: 14 }}
+        >✕</button>
 
         {/* Card Header */}
         <div className="flex items-center gap-3 mb-4">
@@ -197,6 +207,7 @@ export default function Login() {
                   type="tel" maxLength={10} autoFocus
                   value={phone}
                   onChange={e => { setPhone(e.target.value.replace(/[^0-9]/g, '').slice(0, 10)); setError(''); }}
+                  onKeyDown={e => e.key === 'Enter' && sendOtp()}
                   placeholder="10-digit number"
                   className="" style={{ width: '100%', border: 'none', background: 'transparent', fontSize: 13, fontWeight: 600, outline: 'none', fontFamily: 'inherit', color: '#0a0a0a' }}
                 />
@@ -216,7 +227,7 @@ export default function Login() {
         {step === 'otp' && (
           <>
             <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Verification Code</p>
-            <OtpBoxes value={otp} onChange={v => { setOtp(v); setError(''); }}/>
+            <OtpBoxes value={otp} onChange={v => { setOtp(v); setError(''); }} onEnter={verifyOtp}/>
             {error && <ErrorRow msg={error}/>}
             <OrangeButton onClick={verifyOtp} loading={loading} disabled={otp.length < 4}>
               Verify OTP 🛡️
@@ -243,6 +254,7 @@ export default function Login() {
                 type="text" autoFocus
                 value={name}
                 onChange={e => { setName(e.target.value); setError(''); }}
+                onKeyDown={e => e.key === 'Enter' && completeRegistration()}
                 placeholder="Your full name"
                 className="flex-1 bg-transparent text-sm font-semibold text-gray-800 placeholder-gray-400 outline-none"
               />
@@ -255,7 +267,7 @@ export default function Login() {
         )}
       </div>
 
-      <p className="text-center text-xs mt-6 leading-relaxed" style={{ color: 'rgba(255,255,255,0.2)' }}>
+      <p className="text-center text-xs mt-4 leading-relaxed" style={{ color: 'rgba(255,255,255,0.35)' }}>
         By continuing, you agree to our{' '}
         <span style={{ color: 'rgba(255,255,255,0.4)', cursor: 'pointer' }}>Terms of Service</span>
         {' '}&{' '}

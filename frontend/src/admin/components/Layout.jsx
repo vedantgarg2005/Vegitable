@@ -170,24 +170,31 @@ const Layout = () => {
               >
                 <Menu className="h-5 w-5" />
               </button>
-
-              <div className="flex-1 min-w-0 max-w-lg">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search..."
-                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-primary-400 focus:border-transparent focus:bg-white transition-all"
-                  />
-                </div>
+              <div>
+                <h2 className="text-lg font-semibold text-slate-800">
+                  {navigation.find((n) => n.href === location.pathname)?.name || 'Dashboard'}
+                </h2>
+                <p className="text-xs text-slate-400 hidden sm:block">
+                  {navigation.find((n) => n.href === location.pathname)?.description ||
+                    (() => {
+                      const descriptions = {
+                        '/admin': 'Overview of your store performance',
+                        '/admin/orders': 'Track and manage all customer orders',
+                        '/admin/menu': 'Manage your product listings',
+                        '/admin/users': 'View and manage customers',
+                        '/admin/analytics': 'Sales and performance insights',
+                        '/admin/delivery-control': 'Monitor live deliveries',
+                        '/admin/delivery-partners': 'Manage delivery staff',
+                        '/admin/reviews': 'Customer feedback and ratings',
+                        '/admin/campaigns': 'Promotions and marketing',
+                        '/admin/notifications': 'Send and manage alerts',
+                        '/admin/wallet': 'Earnings and transactions',
+                        '/admin/store-settings': 'Configure store hours',
+                      };
+                      return descriptions[location.pathname] || '';
+                    })()}
+                </p>
               </div>
-            </div>
-
-            <div className="flex items-center space-x-4">
-              <button className="p-2 text-gray-500 hover:text-primary-500 relative transition-colors">
-                <Bell className="h-5 w-5" />
-                <span className="absolute top-1 right-1 h-2 w-2 bg-primary-500 rounded-full"></span>
-              </button>
             </div>
           </div>
         </header>

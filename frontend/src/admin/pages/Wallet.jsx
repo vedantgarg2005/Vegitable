@@ -59,10 +59,6 @@ function Wallet() {
 
   return (
     <div className="p-3 sm:p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Wallet Management</h1>
-        <p className="text-gray-600">View and manage user wallet balances</p>
-      </div>
 
       <div className="bg-white rounded-lg shadow">
         <div className="p-4 border-b">

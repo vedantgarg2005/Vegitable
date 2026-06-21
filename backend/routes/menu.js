@@ -88,19 +88,6 @@ router.put('/:id', adminAuth, upload.single('image'), async (req, res) => {
   }
 });
 
-// Toggle stock status (Admin only)
-router.patch('/:id/stock', adminAuth, async (req, res) => {
-  try {
-    const product = await Product.findById(req.params.id);
-    if (!product) return res.status(404).json({ message: 'Product not found' });
-    product.availability.isAvailable = !product.availability.isAvailable;
-    await product.save();
-    res.json({ isAvailable: product.availability.isAvailable });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
 // Delete product (Admin only)
 router.delete('/:id', adminAuth, async (req, res) => {
   try {

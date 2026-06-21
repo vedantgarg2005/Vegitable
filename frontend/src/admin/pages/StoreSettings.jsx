@@ -36,10 +36,6 @@ export default function StoreSettings() {
 
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-800">Store Hours</h1>
-        <p className="text-gray-500 text-sm">Set your weekly opening schedule</p>
-      </div>
 
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">

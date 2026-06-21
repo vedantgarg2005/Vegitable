@@ -38,30 +38,14 @@ export default function Notifications() {
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
   return (
-    <div className="min-h-screen" style={{ background: '#F0F7F0' }}>
-      {/* Header */}
-      <div style={{ background: '#1B3A1F' }} className="px-4 pt-5 pb-5">
-        <div className="max-w-xl mx-auto flex items-center justify-between">
-          <div>
-            <p className="text-[11px] font-bold tracking-widest uppercase" style={{ color: 'rgba(255,255,255,0.4)' }}>Updates</p>
-            <div className="flex items-center gap-2">
-              <p className="text-white font-black text-xl">Notifications</p>
-              {unreadCount > 0 && (
-                <span className="text-xs font-black px-2 py-0.5 rounded-full" style={{ background: '#4CAF50', color: 'white' }}>{unreadCount}</span>
-              )}
-            </div>
-          </div>
-          {unreadCount > 0 && (
-            <button onClick={markAllRead}
-              className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full transition hover:bg-white/20"
-              style={{ background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.8)' }}>
-              <CheckCheck size={13}/> Mark all read
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className="max-w-xl mx-auto px-4 pt-4 pb-24 space-y-2">
+    <div className="page pb-nav">
+      <div className="container" style={{ paddingTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {unreadCount > 0 && (
+          <button onClick={markAllRead}
+            style={{ alignSelf: 'flex-end', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: 'var(--green)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0' }}>
+            <CheckCheck size={13}/> Mark all read
+          </button>
+        )}
         {loading ? (
           <div className="space-y-2">
             {[1, 2, 3].map(i => <div key={i} className="h-20 bg-white rounded-2xl animate-pulse"/>)}

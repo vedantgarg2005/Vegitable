@@ -26,16 +26,6 @@ export default function Orders() {
 
   return (
     <div className="page pb-nav animate-fade-up">
-
-      <div className="page-header">
-        <div className="page-header-inner">
-          <div>
-            <p className="page-header-sub">History</p>
-            <h1 className="page-header-title">My Orders</h1>
-          </div>
-        </div>
-      </div>
-
       <div className="container" style={{ paddingTop: 16 }}>
         {loading ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

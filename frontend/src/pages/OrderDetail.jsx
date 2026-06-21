@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, MapPin, CreditCard, CheckCircle2, Circle } from 'lucide-react';
 import api from '../services/api';
+import { useLoginModal } from '../context/AuthContext';
 
 const STATUS_STEPS = ['placed', 'confirmed', 'processing', 'packed', 'out_for_delivery', 'delivered'];
 const STATUS_LABEL = {
@@ -27,13 +28,14 @@ export default function OrderDetail() {
   const [loading, setLoading] = useState(true);
 
   const navigate = useNavigate();
+  const { openLogin } = useLoginModal();
 
   useEffect(() => {
     api.get(`/orders/${id}`)
       .then(({ data }) => setOrder(data))
       .catch((error) => {
         if (error.response?.status === 401) {
-          navigate('/login');
+          openLogin();
         } else {
           setOrder(null);
         }

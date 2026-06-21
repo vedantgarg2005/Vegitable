@@ -35,10 +35,9 @@ export default function ProductDetailScreen({ route, navigation }) {
 
   const isOutOfStock = item.availability?.isAvailable === false;
   const selectedVariant = item.variants?.find(v => v.label === selectedSize);
-  const displayPrice = selectedVariant?.price ?? item.price;
-  const discount = item.originalPrice > displayPrice
-    ? Math.round(((item.originalPrice - displayPrice) / item.originalPrice) * 100)
-    : 0;
+  const displayPrice = Number(selectedVariant?.price ?? item.price ?? 0);
+  const mrp = Number(selectedVariant?.marketPrice || item.marketPrice || 0);
+  const discount = mrp > displayPrice ? Math.round(((mrp - displayPrice) / mrp) * 100) : 0;
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/admin/store-status`)
@@ -123,12 +122,12 @@ return (
           {/* Price */}
           <View style={styles.priceRow}>
             <Text style={styles.price}>₹{displayPrice}</Text>
-            {item.originalPrice > displayPrice && (
-              <Text style={styles.originalPrice}>₹{item.originalPrice}</Text>
+            {mrp > displayPrice && (
+              <Text style={styles.originalPrice}>₹{mrp}</Text>
             )}
             {discount > 0 && (
               <View style={styles.saveBadge}>
-                <Text style={styles.saveText}>Save ₹{item.originalPrice - displayPrice}</Text>
+                <Text style={styles.saveText}>{discount}% OFF · Save ₹{mrp - displayPrice}</Text>
               </View>
             )}
           </View>
@@ -144,21 +143,31 @@ return (
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>Pack Size</Text>
             <View style={styles.sizeRow}>
-              {item.variants.map(v => (
-                <TouchableOpacity
-                  key={v.label}
-                  style={[styles.sizeChip, selectedSize === v.label && styles.sizeChipActive]}
-                  onPress={() => setSelectedSize(v.label)}
-                  activeOpacity={0.8}
-                >
-                  <Text style={[styles.sizeChipText, selectedSize === v.label && styles.sizeChipTextActive]}>
-                    {v.label}
-                  </Text>
-                  <Text style={[styles.sizeChipText, selectedSize === v.label && styles.sizeChipTextActive, { fontSize: ms(11) }]}>
-                    ₹{v.price}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              {item.variants.map(v => {
+                const vMrp = Number(v.marketPrice || 0);
+                const vPrice = Number(v.price || 0);
+                const vDisc = vMrp > vPrice ? Math.round(((vMrp - vPrice) / vMrp) * 100) : 0;
+                return (
+                  <TouchableOpacity
+                    key={v.label}
+                    style={[styles.sizeChip, selectedSize === v.label && styles.sizeChipActive]}
+                    onPress={() => setSelectedSize(v.label)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.sizeChipText, selectedSize === v.label && styles.sizeChipTextActive]}>
+                      {v.label}
+                    </Text>
+                    <Text style={[styles.sizeChipText, selectedSize === v.label && styles.sizeChipTextActive, { fontSize: ms(11) }]}>
+                      ₹{v.price}
+                    </Text>
+                    {vDisc > 0 && (
+                      <Text style={[styles.sizeChipText, { fontSize: ms(9), color: colors.tagSale, fontWeight: '800' }]}>
+                        {vDisc}% OFF
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </View>
         )}

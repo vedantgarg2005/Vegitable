@@ -711,8 +711,28 @@ router.get('/campaigns', adminAuth, async (req, res) => {
 
 router.post('/campaigns', adminAuth, async (req, res) => {
   try {
-    const campaign = new Campaign({ ...req.body, createdBy: req.user._id });
+    const { promoCode, ...rest } = req.body;
+    const campaign = new Campaign({ ...rest, promoCode: promoCode?.toUpperCase() || undefined, createdBy: req.user._id });
     await campaign.save();
+
+    // Auto-create a PromoCode if a code is provided and it's a discount campaign
+    if (promoCode && rest.type === 'discount' && rest.discount?.value) {
+      await PromoCode.findOneAndUpdate(
+        { code: promoCode.toUpperCase() },
+        {
+          code: promoCode.toUpperCase(),
+          discountType: rest.discount.type || 'percentage',
+          discountValue: Number(rest.discount.value),
+          maxDiscount: rest.discount.maxAmount ? Number(rest.discount.maxAmount) : undefined,
+          minOrderAmount: rest.discount.minOrderValue ? Number(rest.discount.minOrderValue) : 0,
+          usageLimit: rest.validity?.usageLimit ? Number(rest.validity.usageLimit) : null,
+          expiryDate: rest.validity.endDate,
+          isActive: rest.isActive !== false,
+        },
+        { upsert: true, new: true }
+      );
+    }
+
     res.status(201).json(campaign);
   } catch (error) {
     res.status(400).json({ message: error.message });

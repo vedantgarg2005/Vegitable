@@ -1,31 +1,37 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, X, ShoppingCart, Star, ChevronRight, User, ArrowRight } from 'lucide-react';
+import { Search, X, ShoppingCart, User, ArrowRight, Bike } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
 import ProductCard from '../components/ProductCard';
 import { useCart } from '../context/CartContext';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, useLoginModal } from '../context/AuthContext';
 
 const CATEGORIES = [
-  { id: 'all',        label: 'All' },
-  { id: 'vegetables', label: 'Vegetables' },
-  { id: 'fruits',     label: 'Fruits' },
-  { id: 'leafy',      label: 'Leafy' },
-  { id: 'exotic',     label: 'Exotic' },
-  { id: 'herbs',      label: 'Herbs' },
-  { id: 'organic',    label: 'Organic' },
+  { id: 'all',        label: 'All',        emoji: '🛒' },
+  { id: 'vegetables', label: 'Vegetables', emoji: '🥦' },
+  { id: 'fruits',     label: 'Fruits',     emoji: '🍎' },
+  { id: 'leafy',      label: 'Leafy',      emoji: '🥬' },
+  { id: 'exotic',     label: 'Exotic',     emoji: '🌶️' },
+  { id: 'herbs',      label: 'Herbs',      emoji: '🌿' },
+  { id: 'organic',    label: 'Organic',    emoji: '✅' },
+];
+
+const PERKS = [
+  { emoji: '🌾', title: '100% Fresh',  sub: 'Farm to doorstep' },
+  { emoji: '⚡', title: '60 min',      sub: 'Express delivery' },
+  { emoji: '✓',  title: 'Handpicked', sub: 'Quality checked' },
 ];
 
 function SkeletonCard() {
   return (
-    <div style={{ background: 'white', borderRadius: 10, border: '1px solid #e5e5e5', overflow: 'hidden' }}>
-      <div className="skeleton" style={{ height: 130 }} />
-      <div style={{ padding: 12 }}>
-        <div className="skeleton" style={{ height: 11, width: '70%', marginBottom: 8 }} />
-        <div className="skeleton" style={{ height: 10, width: '45%', marginBottom: 12 }} />
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <div className="skeleton" style={{ height: 14, width: '30%' }} />
-          <div className="skeleton" style={{ height: 26, width: 52, borderRadius: 6 }} />
+    <div style={{ background: 'white', borderRadius: 14, border: '1.5px solid #f0f0f0', overflow: 'hidden' }}>
+      <div className="skeleton" style={{ aspectRatio: '1/1' }} />
+      <div style={{ padding: 10 }}>
+        <div className="skeleton" style={{ height: 11, width: '75%', marginBottom: 6, borderRadius: 4 }} />
+        <div className="skeleton" style={{ height: 10, width: '40%', marginBottom: 10, borderRadius: 4 }} />
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="skeleton" style={{ height: 14, width: '30%', borderRadius: 4 }} />
+          <div className="skeleton" style={{ height: 30, width: 30, borderRadius: 8 }} />
         </div>
       </div>
     </div>
@@ -35,7 +41,9 @@ function SkeletonCard() {
 export default function Home() {
   const { cart } = useCart();
   const { user } = useAuth();
+  const { openLogin } = useLoginModal();
   const totalItems = cart.reduce((s, i) => s + i.qty, 0);
+  const totalPrice = cart.reduce((s, i) => s + i.price * i.qty, 0);
 
   const [products, setProducts] = useState([]);
   const [category, setCategory] = useState('all');
@@ -58,136 +66,128 @@ export default function Home() {
   const bestsellers = products.filter(p => p.isBestseller && p.isActive !== false).slice(0, 6);
 
   return (
-    <div style={{ background: '#fafafa', minHeight: '100vh' }}>
+    <div style={{ background: '#f6faf7', minHeight: '100vh' }}>
 
-      {/* ── NAVBAR ── */}
-      <header style={{ background: 'white', borderBottom: '1px solid #e5e5e5', position: 'sticky', top: 0, zIndex: 100 }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 20px', height: 56, display: 'flex', alignItems: 'center', gap: 16 }}>
+      {/* ── TOP NAV ── */}
+      <header style={{ background: 'white', borderBottom: '1px solid #efefef', position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 1px 8px rgba(0,0,0,0.04)' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 16px', height: 58, display: 'flex', alignItems: 'center', gap: 12 }}>
 
+          {/* Logo */}
           <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', flexShrink: 0 }}>
-            <div style={{ width: 28, height: 28, borderRadius: 6, background: '#0a0a0a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}>🌿</div>
-            <span style={{ fontWeight: 800, fontSize: 15, color: '#0a0a0a', letterSpacing: -0.3 }} className="hidden sm:block">FreshBasket</span>
+            <div style={{ width: 34, height: 34, borderRadius: 10, background: 'linear-gradient(135deg,#16a34a,#15803d)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>🌿</div>
+            <span style={{ fontWeight: 800, fontSize: 15, color: '#0a0a0a', letterSpacing: -0.3 }}>FreshBasket</span>
           </Link>
 
           {/* Search */}
-          <div style={{ flex: 1, position: 'relative', maxWidth: 400 }}>
-            <Search size={13} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: '#999', pointerEvents: 'none' }} />
+          <div style={{ flex: 1, position: 'relative', maxWidth: 420 }}>
+            <Search size={13} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#aaa', pointerEvents: 'none' }} />
             <input
               type="text"
               placeholder="Search vegetables, fruits…"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              style={{ width: '100%', background: '#f5f5f5', border: '1.5px solid transparent', borderRadius: 8, padding: '8px 30px 8px 32px', color: '#0a0a0a', fontSize: 13, fontWeight: 500, outline: 'none', fontFamily: 'inherit', transition: 'border-color 0.15s, background 0.15s' }}
-              onFocus={e => { e.target.style.borderColor = '#0a0a0a'; e.target.style.background = 'white'; }}
-              onBlur={e  => { e.target.style.borderColor = 'transparent'; e.target.style.background = '#f5f5f5'; }}
+              style={{ width: '100%', background: '#f5f5f5', border: '1.5px solid transparent', borderRadius: 10, padding: '9px 32px 9px 34px', fontSize: 13, fontWeight: 500, outline: 'none', fontFamily: 'inherit', color: '#0a0a0a', transition: 'all 0.15s' }}
+              onFocus={e => { e.target.style.borderColor = '#16a34a'; e.target.style.background = 'white'; }}
+              onBlur={e =>  { e.target.style.borderColor = 'transparent'; e.target.style.background = '#f5f5f5'; }}
             />
             {search && (
-              <button onClick={() => setSearch('')} style={{ position: 'absolute', right: 9, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#999', padding: 0, lineHeight: 0 }}>
-                <X size={12} />
+              <button onClick={() => setSearch('')} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#aaa', padding: 0, lineHeight: 0 }}>
+                <X size={13} />
               </button>
             )}
           </div>
 
+          {/* Right actions */}
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-            <Link to="/cart" style={{ display: 'flex', alignItems: 'center', gap: 6, background: totalItems > 0 ? '#0a0a0a' : 'transparent', border: '1.5px solid', borderColor: totalItems > 0 ? '#0a0a0a' : '#e5e5e5', borderRadius: 8, padding: '7px 12px', textDecoration: 'none', transition: 'all 0.15s' }}>
-              <ShoppingCart size={14} color={totalItems > 0 ? 'white' : '#0a0a0a'} />
-              <span style={{ color: totalItems > 0 ? 'white' : '#0a0a0a', fontSize: 12, fontWeight: 700 }} className="hidden sm:block">
+            <Link to="/cart" style={{ display: 'flex', alignItems: 'center', gap: 6, background: totalItems > 0 ? '#16a34a' : 'white', border: '1.5px solid', borderColor: totalItems > 0 ? '#16a34a' : '#e5e5e5', borderRadius: 10, padding: '7px 13px', textDecoration: 'none', transition: 'all 0.15s' }}>
+              <ShoppingCart size={14} color={totalItems > 0 ? 'white' : '#555'} />
+              <span style={{ color: totalItems > 0 ? 'white' : '#555', fontSize: 12, fontWeight: 700 }}>
                 {totalItems > 0 ? `${totalItems} item${totalItems > 1 ? 's' : ''}` : 'Cart'}
               </span>
             </Link>
-
             {user ? (
-              <Link to="/profile" style={{ display: 'flex', alignItems: 'center', gap: 7, background: '#f5f5f5', borderRadius: 8, padding: '7px 12px', textDecoration: 'none', border: '1.5px solid #e5e5e5' }}>
-                <div style={{ width: 20, height: 20, borderRadius: 4, background: '#0a0a0a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 900, color: 'white', flexShrink: 0 }}>
+              <Link to="/profile" style={{ display: 'flex', alignItems: 'center', gap: 7, background: '#f5f5f5', borderRadius: 10, padding: '7px 13px', textDecoration: 'none', border: '1.5px solid #e5e5e5' }}>
+                <div style={{ width: 22, height: 22, borderRadius: 6, background: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 900, color: 'white' }}>
                   {user.name?.[0]?.toUpperCase()}
                 </div>
-                <span style={{ color: '#0a0a0a', fontSize: 12, fontWeight: 700 }} className="hidden sm:block">{user.name?.split(' ')[0]}</span>
+                <span style={{ color: '#0a0a0a', fontSize: 12, fontWeight: 700 }}>{user.name?.split(' ')[0]}</span>
               </Link>
             ) : (
-              <Link to="/login" style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#0a0a0a', color: 'white', borderRadius: 8, padding: '8px 14px', fontSize: 12, fontWeight: 700, textDecoration: 'none' }}>
+              <button onClick={openLogin} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#16a34a', color: 'white', borderRadius: 10, padding: '8px 16px', fontSize: 12, fontWeight: 700, border: 'none', cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(22,163,74,0.3)' }}>
                 <User size={12} /> Login
-              </Link>
+              </button>
             )}
           </div>
         </div>
       </header>
 
-      {/* ── FLOATING CART (mobile) ── */}
-      {totalItems > 0 && (
-        <Link to="/cart" className="sm:hidden"
-          style={{ position: 'fixed', bottom: 72, left: '50%', transform: 'translateX(-50%)', background: '#0a0a0a', color: 'white', borderRadius: 50, padding: '11px 20px', display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', fontWeight: 700, fontSize: 13, boxShadow: '0 4px 16px rgba(0,0,0,0.25)', zIndex: 90, whiteSpace: 'nowrap', animation: 'popIn 0.18s ease' }}>
-          <ShoppingCart size={14} />
-          <span>{totalItems} item{totalItems > 1 ? 's' : ''}</span>
-          <span style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 20, padding: '2px 10px', fontSize: 11 }}>₹{cart.reduce((s, i) => s + i.price * i.qty, 0)}</span>
-        </Link>
-      )}
-
       {/* ── HERO ── */}
-      <div style={{ background: '#0a0a0a', padding: '56px 20px 60px' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', margin: '0 0 20px' }}>
-            Express delivery · 60 min
-          </p>
-          <h1 style={{ color: 'white', fontSize: 'clamp(32px,5vw,60px)', fontWeight: 900, lineHeight: 1.08, margin: '0 0 20px', letterSpacing: -1 }}>
-            Farm-fresh<br />
-            <span style={{ color: 'rgba(255,255,255,0.35)' }}>to your door.</span>
+      <div style={{ background: 'linear-gradient(135deg,#064e3b 0%,#16a34a 55%,#4ade80 100%)', padding: '52px 20px 56px', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: -60, right: -60, width: 280, height: 280, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', bottom: -40, right: 100, width: 180, height: 180, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', pointerEvents: 'none' }} />
+        <div style={{ maxWidth: 1100, margin: '0 auto', position: 'relative' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)', color: 'white', borderRadius: 20, padding: '5px 14px', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', marginBottom: 20, border: '1px solid rgba(255,255,255,0.2)' }}>
+            <Bike size={11} /> Free delivery above ₹199
+          </span>
+          <h1 style={{ color: 'white', fontSize: 'clamp(30px,5vw,58px)', fontWeight: 900, lineHeight: 1.1, margin: '0 0 16px', letterSpacing: -1 }}>
+            Farm-fresh,<br />
+            <span style={{ color: 'rgba(255,255,255,0.5)' }}>at your door.</span>
           </h1>
-          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 15, margin: '0 0 32px', lineHeight: 1.65, maxWidth: 400 }}>
-            Handpicked daily from local farms. Delivered straight to your door in under an hour.
+          <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: 14, margin: '0 0 28px', lineHeight: 1.7, maxWidth: 380 }}>
+            Handpicked daily from local farms. Delivered in under 60 minutes.
           </p>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button
               onClick={() => shopRef.current?.scrollIntoView({ behavior: 'smooth' })}
-              style={{ background: 'white', color: '#0a0a0a', border: 'none', borderRadius: 8, padding: '12px 22px', fontSize: 13, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7, fontFamily: 'inherit' }}>
+              style={{ background: 'white', color: '#16a34a', border: 'none', borderRadius: 10, padding: '12px 24px', fontSize: 13, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7, fontFamily: 'inherit', boxShadow: '0 4px 16px rgba(0,0,0,0.15)' }}>
               Shop Now <ArrowRight size={14} />
             </button>
             {!user && (
-              <Link to="/login" style={{ display: 'flex', alignItems: 'center', background: 'transparent', color: 'rgba(255,255,255,0.5)', border: '1.5px solid rgba(255,255,255,0.15)', borderRadius: 8, padding: '12px 22px', fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>
+              <button onClick={openLogin} style={{ background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(8px)', color: 'white', border: '1.5px solid rgba(255,255,255,0.25)', borderRadius: 10, padding: '12px 24px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
                 Sign In
-              </Link>
+              </button>
             )}
           </div>
         </div>
       </div>
 
-      {/* ── PERKS BAR ── */}
-      <div style={{ background: 'white', borderBottom: '1px solid #e5e5e5' }}>
+      {/* ── PERKS ── */}
+      <div style={{ background: 'white', borderBottom: '1px solid #f0f0f0' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(3,1fr)' }}>
-          {[['🌾', '100% Fresh', 'Farm to doorstep'], ['⚡', '60 min', 'Express delivery'], ['✓', 'Handpicked', 'Quality checked daily']].map(([e, label, sub], i) => (
-            <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 20px', borderRight: i < 2 ? '1px solid #e5e5e5' : 'none' }}>
-              <span style={{ fontSize: 16, flexShrink: 0 }}>{e}</span>
+          {PERKS.map(({ emoji, title, sub }, i) => (
+            <div key={title} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '13px 20px', borderRight: i < 2 ? '1px solid #f0f0f0' : 'none' }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>{emoji}</div>
               <div>
-                <p style={{ fontSize: 12, fontWeight: 800, color: '#0a0a0a', margin: 0 }}>{label}</p>
-                <p style={{ fontSize: 11, color: '#999', margin: 0 }} className="hidden sm:block">{sub}</p>
+                <p style={{ fontSize: 12, fontWeight: 800, color: '#0a0a0a', margin: 0 }}>{title}</p>
+                <p style={{ fontSize: 11, color: '#aaa', margin: 0 }}>{sub}</p>
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 20px 120px' }} className="animate-fade-up">
+      {/* ── MAIN CONTENT ── */}
+      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '20px 16px 100px' }}>
 
-        {/* ── CATEGORIES ── */}
-        <div ref={shopRef} style={{ marginBottom: 24 }}>
-          <div style={{ display: 'flex', gap: 6, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 2 }}>
-            {CATEGORIES.map(cat => (
-              <button key={cat.id} onClick={() => setCategory(cat.id)}
-                style={{ flexShrink: 0, padding: '7px 14px', borderRadius: 6, border: '1.5px solid', cursor: 'pointer', fontWeight: 700, fontSize: 12, fontFamily: 'inherit', transition: 'all 0.15s',
-                  background: category === cat.id ? '#0a0a0a' : 'white',
-                  borderColor: category === cat.id ? '#0a0a0a' : '#e5e5e5',
-                  color: category === cat.id ? 'white' : '#555',
-                }}>
-                {cat.label}
-              </button>
-            ))}
-          </div>
+        {/* Categories */}
+        <div ref={shopRef} style={{ display: 'flex', gap: 8, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 2, marginBottom: 24 }}>
+          {CATEGORIES.map(cat => (
+            <button key={cat.id} onClick={() => setCategory(cat.id)}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, padding: '8px 16px', borderRadius: 22, border: '1.5px solid', borderColor: category === cat.id ? '#16a34a' : '#e5e5e5', background: category === cat.id ? '#16a34a' : 'white', color: category === cat.id ? 'white' : '#555', fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}>
+              <span>{cat.emoji}</span> {cat.label}
+            </button>
+          ))}
         </div>
 
-        {/* ── BESTSELLERS ── */}
+        {/* Bestsellers */}
         {category === 'all' && !search && bestsellers.length > 0 && (
           <div style={{ marginBottom: 32 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-              <p style={{ fontSize: 12, fontWeight: 700, color: '#999', textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>Bestsellers</p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 16 }}>🏆</span>
+                <p style={{ fontSize: 13, fontWeight: 800, color: '#0a0a0a', margin: 0 }}>Bestsellers</p>
+              </div>
+              <span style={{ fontSize: 11, color: '#bbb', fontWeight: 600 }}>{bestsellers.length} items</span>
             </div>
             <div className="product-grid">
               {bestsellers.map(p => <ProductCard key={p._id} product={p} />)}
@@ -195,24 +195,23 @@ export default function Home() {
           </div>
         )}
 
-        {/* ── ALL PRODUCTS ── */}
+        {/* All Products */}
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-            <p style={{ fontSize: 12, fontWeight: 700, color: '#999', textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>
-              {category === 'all' ? 'All Products' : category}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <p style={{ fontSize: 13, fontWeight: 800, color: '#0a0a0a', margin: 0 }}>
+              {search ? `Results for "${search}"` : category === 'all' ? 'All Products' : CATEGORIES.find(c => c.id === category)?.label}
             </p>
-            {!loading && (
-              <span style={{ fontSize: 11, color: '#bbb', fontWeight: 600 }}>{filtered.length} items</span>
-            )}
+            {!loading && <span style={{ fontSize: 11, color: '#bbb', fontWeight: 600 }}>{filtered.length} items</span>}
           </div>
 
           {loading ? (
             <div className="product-grid">{Array.from({ length: 10 }).map((_, i) => <SkeletonCard key={i} />)}</div>
           ) : filtered.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '80px 20px' }}>
+              <div style={{ fontSize: 48, marginBottom: 12 }}>🔍</div>
               <p style={{ fontWeight: 800, fontSize: 16, margin: '0 0 6px' }}>Nothing found</p>
-              <p style={{ fontSize: 13, color: '#999', margin: '0 0 20px' }}>Try a different category or search</p>
-              {search && <button onClick={() => setSearch('')} className="btn btn-outline" style={{ borderRadius: 6 }}>Clear Search</button>}
+              <p style={{ fontSize: 13, color: '#999', margin: '0 0 20px' }}>Try a different category or search term</p>
+              {search && <button onClick={() => setSearch('')} style={{ background: 'white', border: '1.5px solid #e5e5e5', borderRadius: 10, padding: '9px 20px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Clear Search</button>}
             </div>
           ) : (
             <div className="product-grid">{filtered.map(p => <ProductCard key={p._id} product={p} />)}</div>
@@ -220,40 +219,54 @@ export default function Home() {
         </div>
       </div>
 
+      {/* ── FLOATING CART BAR ── */}
+      {totalItems > 0 && (
+        <Link to="/cart"
+          style={{ position: 'fixed', bottom: 20, left: '50%', transform: 'translateX(-50%)', background: '#16a34a', color: 'white', borderRadius: 50, padding: '13px 24px', display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none', fontWeight: 700, fontSize: 13, boxShadow: '0 6px 24px rgba(22,163,74,0.45)', zIndex: 90, whiteSpace: 'nowrap', animation: 'popIn 0.18s ease' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <ShoppingCart size={15} />
+            <span>{totalItems} item{totalItems > 1 ? 's' : ''}</span>
+          </div>
+          <div style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.3)' }} />
+          <span style={{ fontWeight: 900 }}>₹{totalPrice}</span>
+          <ArrowRight size={14} />
+        </Link>
+      )}
+
       {/* ── FOOTER ── */}
-      <footer style={{ background: '#0a0a0a', borderTop: '1px solid #1c1c1c' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '40px 20px 24px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 28, marginBottom: 32 }}>
+      <footer style={{ background: '#064e3b', borderTop: '1px solid #065f46' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '36px 20px 24px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 28, marginBottom: 28 }}>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                <div style={{ width: 24, height: 24, borderRadius: 5, background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11 }}>🌿</div>
-                <span style={{ color: 'white', fontWeight: 800, fontSize: 13 }}>FreshBasket</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                <div style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>🌿</div>
+                <span style={{ color: 'white', fontWeight: 800, fontSize: 14 }}>FreshBasket</span>
               </div>
-              <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 12, lineHeight: 1.7, margin: 0 }}>Farm-fresh vegetables & fruits delivered within 60 minutes.</p>
+              <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, lineHeight: 1.7, margin: 0 }}>Farm-fresh vegetables & fruits delivered in 60 min.</p>
             </div>
             <div>
-              <p style={{ color: 'rgba(255,255,255,0.3)', fontWeight: 700, fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', margin: '0 0 12px' }}>Quick Links</p>
-              {[['/', 'Home'], ['/orders', 'My Orders'], ['/cart', 'Cart'], ['/profile', 'Profile']].map(([to, l]) => (
-                <Link key={to} to={to} style={{ display: 'block', color: 'rgba(255,255,255,0.35)', fontSize: 12, fontWeight: 600, textDecoration: 'none', marginBottom: 8 }}>{l}</Link>
+              <p style={{ color: 'rgba(255,255,255,0.35)', fontWeight: 700, fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', margin: '0 0 10px' }}>Quick Links</p>
+              {[['/', 'Home'], ['/orders', 'Orders'], ['/cart', 'Cart'], ['/profile', 'Profile'], ['/search', 'Search'], ['/about', 'About Us']].map(([to, l]) => (
+                <Link key={to} to={to} style={{ display: 'block', color: 'rgba(255,255,255,0.45)', fontSize: 12, fontWeight: 600, textDecoration: 'none', marginBottom: 7 }}>{l}</Link>
               ))}
             </div>
             <div>
-              <p style={{ color: 'rgba(255,255,255,0.3)', fontWeight: 700, fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', margin: '0 0 12px' }}>Categories</p>
+              <p style={{ color: 'rgba(255,255,255,0.35)', fontWeight: 700, fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', margin: '0 0 10px' }}>Categories</p>
               {['Vegetables', 'Fruits', 'Leafy', 'Herbs', 'Organic'].map(c => (
                 <button key={c} onClick={() => { setCategory(c.toLowerCase()); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                  style={{ display: 'block', color: 'rgba(255,255,255,0.35)', fontSize: 12, fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginBottom: 8, fontFamily: 'inherit' }}>{c}</button>
+                  style={{ display: 'block', color: 'rgba(255,255,255,0.45)', fontSize: 12, fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginBottom: 7, fontFamily: 'inherit' }}>{c}</button>
               ))}
             </div>
             <div>
-              <p style={{ color: 'rgba(255,255,255,0.3)', fontWeight: 700, fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', margin: '0 0 12px' }}>Contact</p>
+              <p style={{ color: 'rgba(255,255,255,0.35)', fontWeight: 700, fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', margin: '0 0 10px' }}>Contact</p>
               {['hello@freshbasket.in', '+91 98765 43210', 'Mumbai, Maharashtra', '6 AM – 10 PM Daily'].map(t => (
-                <p key={t} style={{ color: 'rgba(255,255,255,0.3)', fontSize: 12, margin: '0 0 8px' }}>{t}</p>
+                <p key={t} style={{ color: 'rgba(255,255,255,0.35)', fontSize: 12, margin: '0 0 7px' }}>{t}</p>
               ))}
             </div>
           </div>
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 20, display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: 6 }}>
-            <p style={{ color: 'rgba(255,255,255,0.15)', fontSize: 11, margin: 0 }}>© {new Date().getFullYear()} FreshBasket</p>
-            <p style={{ color: 'rgba(255,255,255,0.15)', fontSize: 11, margin: 0 }}>Made for fresh living</p>
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 18, display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
+            <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: 11, margin: 0 }}>© {new Date().getFullYear()} FreshBasket</p>
+            <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: 11, margin: 0 }}>Made for fresh living 🌿</p>
           </div>
         </div>
       </footer>

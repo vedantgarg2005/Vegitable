@@ -39,37 +39,29 @@ export default function Wallet() {
   const debits  = wallet?.transactions?.filter(t => t.type === 'debit').reduce((s, t) => s + t.amount, 0) || 0;
 
   return (
-    <div className="min-h-screen" style={{ background: '#F0F7F0' }}>
-      {/* Header with balance */}
-      <div style={{ background: 'linear-gradient(135deg,#1B3A1F 0%,#2E7D32 100%)' }} className="px-4 pt-5 pb-16">
-        <div className="max-w-xl mx-auto">
-          <p className="text-[11px] font-bold tracking-widest uppercase mb-1" style={{ color: 'rgba(255,255,255,0.4)' }}>My</p>
-          <p className="text-white font-black text-xl mb-6">Wallet</p>
+    <div className="page pb-nav" style={{ background: 'var(--bg)' }}>
+      <div className="container" style={{ paddingTop: 16, paddingBottom: 24 }}>
 
-          {/* Balance glass card */}
-          <div className="rounded-2xl p-5" style={{ background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.2)' }}>
-            <p className="text-xs font-bold tracking-widest uppercase" style={{ color: 'rgba(255,255,255,0.6)' }}>Available Balance</p>
-            {loading
-              ? <div className="h-12 w-36 bg-white/20 rounded-xl animate-pulse mt-2"/>
-              : <p className="text-5xl font-black text-white mt-1">₹{wallet?.balance ?? 0}</p>
-            }
-            <div className="flex gap-4 mt-4">
-              <div className="flex items-center gap-1.5">
-                <ArrowDownLeft size={13} className="text-green-300"/>
-                <span className="text-xs font-semibold text-white/70">In ₹{credits}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <ArrowUpRight size={13} className="text-red-300"/>
-                <span className="text-xs font-semibold text-white/70">Out ₹{debits}</span>
-              </div>
+        {/* Balance card */}
+        <div className="card" style={{ padding: 20, marginBottom: 12, background: 'linear-gradient(135deg,#14532d,#16a34a)', border: 'none' }}>
+          <p style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: 1, margin: '0 0 6px' }}>Available Balance</p>
+          {loading
+            ? <div style={{ height: 44, width: 140, borderRadius: 10, background: 'rgba(255,255,255,0.15)' }} />
+            : <p style={{ fontSize: 40, fontWeight: 900, color: 'white', margin: '0 0 12px', lineHeight: 1 }}>₹{wallet?.balance ?? 0}</p>
+          }
+          <div style={{ display: 'flex', gap: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <ArrowDownLeft size={13} color="#86efac" />
+              <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>In ₹{credits}</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <ArrowUpRight size={13} color="#fca5a5" />
+              <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>Out ₹{debits}</span>
             </div>
           </div>
         </div>
-      </div>
-
-      <div className="max-w-xl mx-auto px-4 -mt-8 pb-24 space-y-3">
         {/* Add Money */}
-        <div className="bg-white rounded-2xl shadow-sm p-5">
+        <div className="card" style={{ padding: 20, marginBottom: 12 }}>
           <div className="flex items-center gap-2 mb-3">
             <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: '#E8F5E9' }}>
               <Plus size={15} style={{ color: '#2E7D32' }}/>
@@ -102,7 +94,7 @@ export default function Wallet() {
         </div>
 
         {/* Transactions */}
-        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <div className="card" style={{ overflow: 'hidden' }}>
           <div className="flex items-center gap-2 px-5 py-4" style={{ borderBottom: '1px solid #E8F5E9' }}>
             <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: '#E8F5E9' }}>
               <TrendingUp size={15} style={{ color: '#2E7D32' }}/>
