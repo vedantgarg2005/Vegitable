@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, ScrollView, StyleSheet, Alert, TextInput,
-  TouchableOpacity, StatusBar, Modal, FlatList, Image,
+  TouchableOpacity, StatusBar, Modal, FlatList,
   KeyboardAvoidingView, Platform, ActivityIndicator,
 } from 'react-native';
 import { Text, Divider } from 'react-native-paper';
@@ -18,6 +18,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { colors, shadows, borderRadius, ms, rs, vs } from '../utils/theme';
 import api, { menuAPI } from '../services/api';
 import { FREE_DELIVERY_THRESHOLD, STANDARD_DELIVERY_FEE, getDeliveryFee, API_BASE_URL, STORE_ADDRESS, MIN_ORDER_VALUE } from '../utils/constants';
+import CachedImage from '../components/CachedImage';
 
 const ADDRESS_TYPES = ['home', 'work', 'other'];
 const TYPE_ICONS = { home: 'home-outline', work: 'briefcase-outline', other: 'location-outline' };
@@ -348,7 +349,7 @@ const CartScreen = ({ navigation, route }) => {
       <StatusBar barStyle="light-content" backgroundColor={colors.navy} />
 
       {/* Dark header */}
-      <View style={[styles.header, { paddingTop: insets.top + vs(10) }]}>
+      <View style={[styles.header, { paddingTop: insets.top + vs(12) }]}>
         <View style={styles.headerRow}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
             <Ionicons name="arrow-back" size={rs(22)} color="#fff" />
@@ -415,8 +416,8 @@ const CartScreen = ({ navigation, route }) => {
                     {/* Image column */}
                     <View style={styles.itemImageCol}>
                       {item.image ? (
-                        <Image
-                          source={{ uri: item.image.startsWith('/uploads') ? `${API_BASE_URL.replace('/api', '')}${item.image}` : item.image }}
+                        <CachedImage
+                          uri={item.image.startsWith('/uploads') ? `${API_BASE_URL.replace('/api', '')}${item.image}` : item.image}
                           style={styles.itemImage}
                           resizeMode="cover"
                         />
@@ -533,8 +534,8 @@ const CartScreen = ({ navigation, route }) => {
                     return (
                       <View style={styles.suggestCard}>
                         {item.image ? (
-                          <Image
-                            source={{ uri: item.image.startsWith('/uploads') ? `${API_BASE_URL.replace('/api', '')}${item.image}` : item.image }}
+                        <CachedImage
+                            uri={item.image.startsWith('/uploads') ? `${API_BASE_URL.replace('/api', '')}${item.image}` : item.image}
                             style={styles.suggestImage}
                             resizeMode="cover"
                           />
@@ -985,18 +986,15 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: colors.navy,
     paddingHorizontal: rs(16),
-    paddingBottom: vs(14),
+    paddingBottom: vs(16),
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: rs(12),
-    marginBottom: vs(12),
   },
   backBtn: {
-    width: rs(38), height: rs(38), borderRadius: rs(19),
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    justifyContent: 'center', alignItems: 'center',
+    padding: rs(4),
   },
   headerTitle: { flex: 1, fontSize: ms(16), fontWeight: '900', color: '#fff', letterSpacing: 1.5, fontFamily: 'Poppins_900Black' },
   headerCount: { fontSize: ms(13), color: 'rgba(255,255,255,0.7)', fontWeight: '600', fontFamily: 'Poppins_600SemiBold' },

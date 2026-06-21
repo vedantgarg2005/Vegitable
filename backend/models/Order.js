@@ -28,7 +28,7 @@ const orderSchema = new mongoose.Schema({
   payment: {
     method: {
       type: String,
-      enum: ['cash', 'card', 'wallet', 'upi', 'net_banking', 'cashfree'],
+      enum: ['cash', 'card', 'wallet', 'upi', 'net_banking', 'cashfree', 'wallet+cash'],
       required: true
     },
     status: {

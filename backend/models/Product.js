@@ -9,7 +9,8 @@ const productSchema = new mongoose.Schema({
   },
   description: { type: String, default: '' },
   price: { type: Number },
-  originalPrice: Number,
+  marketPrice: { type: Number, default: 0 },
+  sortOrder: { type: Number, default: 0 },
   image: { type: String, default: '' },
   unit: { type: String, default: 'kg' },
   variants: [{

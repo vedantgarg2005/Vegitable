@@ -1,6 +1,5 @@
 const express = require('express');
 const Review = require('../models/Review');
-const MenuItem = require('../models/MenuItem');
 const Order = require('../models/Order');
 const { auth } = require('../middleware/auth');
 
@@ -11,47 +10,37 @@ router.post('/', auth, async (req, res) => {
   try {
     const { orderId, menuItemId, rating, comment } = req.body;
     
-    // Check if user has ordered this item
+    // Verify the user has a delivered order
     const order = await Order.findOne({
       _id: orderId,
       customer: req.userId,
-      'items.menuItem': menuItemId
+      'status.current': 'delivered',
     });
-    
+
     if (!order) {
-      return res.status(400).json({ message: 'You can only review items you have ordered' });
+      return res.status(400).json({ message: 'You can only review delivered orders' });
     }
-    
+
     const review = new Review({
       customer: req.userId,
-      menuItem: menuItemId,
+      product: menuItemId,
       order: orderId,
       rating,
-      comment
+      comment,
     });
-    
+
     await review.save();
     await review.populate('customer', 'name');
-    
-    // Update menu item rating
-    const reviews = await Review.find({ menuItem: menuItemId });
-    const avgRating = reviews.reduce((acc, rev) => acc + rev.rating, 0) / reviews.length;
-    
-    await MenuItem.findByIdAndUpdate(menuItemId, {
-      rating: avgRating,
-      reviewCount: reviews.length
-    });
-    
     res.status(201).json(review);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
 });
 
-// Get reviews for menu item
+// Get reviews for a product
 router.get('/item/:itemId', async (req, res) => {
   try {
-    const reviews = await Review.find({ menuItem: req.params.itemId })
+    const reviews = await Review.find({ product: req.params.itemId })
       .populate('customer', 'name')
       .sort({ createdAt: -1 });
     res.json(reviews);
@@ -64,7 +53,7 @@ router.get('/item/:itemId', async (req, res) => {
 router.get('/my-reviews', auth, async (req, res) => {
   try {
     const reviews = await Review.find({ customer: req.userId })
-      .populate('menuItem', 'name image')
+      .populate('product', 'name image')
       .sort({ createdAt: -1 });
     res.json(reviews);
   } catch (error) {

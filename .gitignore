@@ -51,7 +51,3 @@ Thumbs.db
 # Expo
 .expo/
 .expo-shared/
-
-# Uploads
-uploads/*
-!uploads/.gitkeep

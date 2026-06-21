@@ -1,11 +1,13 @@
 import React, { useRef } from 'react';
-import { View, StyleSheet, TouchableOpacity, Image, Animated } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+import { Image } from 'expo-image';
 import { Text } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { colors, shadows, borderRadius, ms, rs, vs } from '../utils/theme';
 import { API_BASE_URL } from '../utils/constants';
 import { useLanguage } from '../context/LanguageContext';
+import DiscountBadge from './DiscountBadge';
 
 export function isOutOfStock(item) {
   return item?.availability?.isAvailable === false;
@@ -18,7 +20,7 @@ export function getDiscountPercent(item) {
   return Math.round(((mrp - base) / mrp) * 100);
 }
 
-export default function FoodCard({ item, onPress, onAdd, onRemove, qty, isOpen, nextAvailableLabel, compact }) {
+export default function FoodCard({ item, onPress, onAdd, onRemove, qty, isOpen, nextAvailableLabel, compact, cardWidth }) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const outOfStock = isOutOfStock(item);
   const basePrice = item?.variants?.length > 0 ? Number(item.variants[0].price) : Number(item.price || 0);
@@ -40,7 +42,7 @@ export default function FoodCard({ item, onPress, onAdd, onRemove, qty, isOpen, 
   if (compact) {
     return (
       <TouchableOpacity
-        style={[styles.compactCard, outOfStock && styles.foodCardOutOfStock]}
+        style={[styles.compactCard, cardWidth ? { width: cardWidth } : null]}
         onPress={() => !outOfStock && onPress()}
         activeOpacity={outOfStock ? 1 : 0.93}
         disabled={outOfStock}
@@ -51,28 +53,33 @@ export default function FoodCard({ item, onPress, onAdd, onRemove, qty, isOpen, 
             <Image
               source={{ uri: `${API_BASE_URL.replace('/api', '')}${item.image}` }}
               style={styles.foodImage}
-              resizeMode="cover"
+              contentFit="cover"
+              transition={200}
+              cachePolicy="memory-disk"
+              placeholder="L6PZfSi_.AyE_3t7t7R**0o#DgR4"
             />
           ) : (
             <Text style={styles.compactEmoji}>{item.image || '🥦'}</Text>
           )}
           {discount > 0 && (
             <View style={styles.discountBadge}>
-              <Text style={styles.discountText}>{discount}% OFF</Text>
+              <DiscountBadge discount={discount} />
             </View>
           )}
           {item.isNewArrival && !discount && (
-            <View style={[styles.discountBadge, { backgroundColor: '#2E7D32' }]}>
-              <Text style={styles.discountText}>NEW</Text>
+            <View style={styles.newBadge}>
+              <Text style={styles.newBadgeText}>NEW</Text>
+            </View>
+          )}
+          {/* SOLD OUT overlay */}
+          {outOfStock && (
+            <View style={styles.soldOutOverlay}>
+              <Text style={styles.soldOutText}>SOLD OUT</Text>
             </View>
           )}
           {/* ADD / qty button anchored to bottom-right of image */}
           <Animated.View style={[styles.compactAddAnchor, { transform: [{ scale: scaleAnim }] }]}>
-            {outOfStock ? (
-              <View style={styles.compactOutOfStock}>
-                <Text style={styles.compactOutOfStockText}>OUT</Text>
-              </View>
-            ) : !isOpen ? (
+            {outOfStock ? null : !isOpen ? (
               <View style={styles.compactClosedBtn}>
                 <Text style={styles.compactClosedText}>Closed</Text>
               </View>
@@ -121,19 +128,22 @@ export default function FoodCard({ item, onPress, onAdd, onRemove, qty, isOpen, 
           <Image
             source={{ uri: `${API_BASE_URL.replace('/api', '')}${item.image}` }}
             style={styles.foodImage}
-            resizeMode="cover"
+            contentFit="cover"
+            transition={200}
+            cachePolicy="memory-disk"
+            placeholder="L6PZfSi_.AyE_3t7t7R**0o#DgR4"
           />
         ) : (
           <Text style={styles.foodEmoji}>{item.image || '🥦'}</Text>
         )}
         {discount > 0 && (
           <View style={styles.discountBadge}>
-            <Text style={styles.discountText}>{discount}% OFF</Text>
+            <DiscountBadge discount={discount} />
           </View>
         )}
         {item.isNewArrival && !discount && (
-          <View style={[styles.discountBadge, { backgroundColor: '#2E7D32' }]}>
-            <Text style={styles.discountText}>NEW</Text>
+          <View style={styles.newBadge}>
+            <Text style={styles.newBadgeText}>NEW</Text>
           </View>
         )}
       </View>
@@ -191,9 +201,9 @@ export default function FoodCard({ item, onPress, onAdd, onRemove, qty, isOpen, 
 const styles = StyleSheet.create({
   // Compact (grid) card — Blinkit / BigBasket style
   compactCard: {
-    flex: 1,
+    width: '100%',
+    height: 220,
     backgroundColor: colors.surface,
-    marginHorizontal: rs(5),
     marginVertical: vs(5),
     borderRadius: borderRadius.lg,
     overflow: 'hidden',
@@ -203,16 +213,16 @@ const styles = StyleSheet.create({
   },
   compactImageBg: {
     width: '100%',
-    height: rs(148),
+    height: 120,
     backgroundColor: '#F7F9F2',
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
   },
   compactEmoji: { fontSize: ms(64) },
-  compactInfo: { paddingHorizontal: rs(10), paddingTop: vs(8), paddingBottom: vs(10) },
+  compactInfo: { paddingHorizontal: rs(10), paddingTop: vs(8), paddingBottom: vs(10), flex: 1 },
   compactPackSize: { fontSize: ms(10), color: colors.textSecondary, fontWeight: '500', marginBottom: vs(2) },
-  compactName: { fontSize: ms(13), fontWeight: '700', color: colors.text, lineHeight: ms(18), marginBottom: vs(5) },
+  compactName: { fontSize: ms(13), fontWeight: '700', color: colors.text, lineHeight: ms(18), marginBottom: vs(5), flex: 1 },
   compactPriceRow: { flexDirection: 'row', alignItems: 'center', gap: rs(5) },
   compactPrice: { fontSize: ms(14), fontWeight: '800', color: colors.text },
   compactMrp: { fontSize: ms(11), color: colors.placeholder, textDecorationLine: 'line-through' },
@@ -259,6 +269,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: rs(4),
     minWidth: rs(20),
     textAlign: 'center',
+  },
+  compactCardOutOfStock: {
+    borderColor: '#EF4444',
+    borderWidth: 1.5,
+  },
+  soldOutOverlay: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  soldOutText: {
+    fontSize: ms(12), fontWeight: '900', color: '#EF4444',
+    letterSpacing: 1, backgroundColor: 'rgba(255,255,255,0.85)',
+    paddingHorizontal: rs(8), paddingVertical: vs(4),
+    borderRadius: borderRadius.xs, overflow: 'hidden',
+    borderWidth: 1, borderColor: '#EF4444',
   },
   compactOutOfStock: {
     backgroundColor: '#FEF2F2',
@@ -328,12 +354,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   discountBadge: {
-    position: 'absolute', top: rs(6), left: rs(6),
-    backgroundColor: '#E53935',
-    borderRadius: borderRadius.sm,
-    paddingHorizontal: rs(6), paddingVertical: vs(3),
+    position: 'absolute', top: rs(4), left: rs(4),
   },
-  discountText: { fontSize: ms(9), fontWeight: '800', color: '#fff', letterSpacing: 0.3 },
+  newBadge: {
+    position: 'absolute', top: rs(6), left: rs(6),
+    backgroundColor: '#2E7D32',
+    borderRadius: borderRadius.full,
+    paddingHorizontal: rs(8), paddingVertical: vs(4),
+    elevation: 3,
+  },
+  newBadgeText: { fontSize: ms(11), fontWeight: '900', color: '#fff', letterSpacing: 0.4 },
   foodName: { fontSize: ms(14), fontWeight: '700', color: colors.text, lineHeight: ms(20) },
   priceRow: { flexDirection: 'row', alignItems: 'center', gap: rs(6), marginBottom: vs(4) },
   foodPrice: { fontSize: ms(16), fontWeight: '900', color: colors.primary },

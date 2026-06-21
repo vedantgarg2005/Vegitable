@@ -23,7 +23,8 @@ import OrderTrackingScreen from '../screens/OrderTrackingScreen';
 import WalletScreen from '../screens/WalletScreen';
 import ReviewScreen from '../screens/ReviewScreen';
 import LoginScreen from '../screens/LoginScreen';
-import ProductDetailScreen from '../screens/ProductDetailScreen';
+
+import AllProductsScreen from '../screens/main/AllProductsScreen';
 
 import { useCart } from '../context/CartContext';
 import { colors } from '../utils/theme';
@@ -137,6 +138,7 @@ export default function MainNavigator() {
       <Stack.Screen name="Review" component={ReviewScreen} />
       <Stack.Screen name="Orders" component={OrdersScreen} />
       <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen name="AllProducts" component={AllProductsScreen} />
     </Stack.Navigator>
   );
 }

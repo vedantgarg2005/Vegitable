@@ -8,4 +8,8 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+export const productRequestAPI = {
+  submit: (data) => api.post('/product-requests', data),
+};
+
 export default api;

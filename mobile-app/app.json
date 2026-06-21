@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "New Delhi Sweets",
-    "slug": "new-delhi-sweets",
+    "name": "Fresh Tokri",
+    "slug": "fresh-tokri",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -9,21 +9,21 @@
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#FF6B35"
+      "backgroundColor": "#16a34a"
     },
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.newdelhisweets.app"
+      "bundleIdentifier": "com.freshtokri.app"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FFFFFF"
       },
-      "package": "com.newdelhisweets.app",
+      "package": "com.freshtokri.app",
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
@@ -44,7 +44,7 @@
         "expo-notifications",
         {
           "icon": "./assets/icon.png",
-          "color": "#FF6B35"
+          "color": "#16a34a"
         }
       ],
       "expo-camera",

@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, ScrollView, StyleSheet, TouchableOpacity, StatusBar, Image } from 'react-native';
+import { View, ScrollView, StyleSheet, TouchableOpacity, StatusBar } from 'react-native';
 import { Text } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +9,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import { colors, spacing, shadows, borderRadius, ms, rs, vs } from '../../utils/theme';
 import { API_BASE_URL } from '../../services/api';
 import { API_BASE_URL as BASE_URL } from '../../utils/constants';
+import CachedImage from '../../components/CachedImage';
 
 function formatTime12(time24) {
   if (!time24) return '';
@@ -61,7 +62,7 @@ export default function MenuItemDetailScreen({ route, navigation }) {
         </TouchableOpacity>
         <View style={[styles.heroEmojiWrap, isOutOfStock && { opacity: 0.45 }]}>
           {item.image && item.image.startsWith('/uploads') ? (
-            <Image source={{ uri: `${API_BASE_URL.replace('/api', '')}${item.image}` }} style={styles.heroImage} resizeMode="cover" />
+            <CachedImage uri={`${API_BASE_URL.replace('/api', '')}${item.image}`} style={styles.heroImage} resizeMode="cover" />
           ) : (
             <Text style={styles.heroEmoji}>{item.image || '🏅'}</Text>
           )}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, TextInput, FlatList, TouchableOpacity,
-  StyleSheet, StatusBar, ActivityIndicator, Image,
+  StyleSheet, StatusBar, ActivityIndicator,
 } from 'react-native';
 import { Text } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,6 +11,7 @@ import { menuAPI } from '../services/api';
 import { useCart } from '../context/CartContext';
 import { colors, shadows, borderRadius, ms, rs, vs } from '../utils/theme';
 import { API_BASE_URL } from '../utils/constants';
+import CachedImage from '../components/CachedImage';
 
 const RECENT_KEY = 'recent_searches';
 const MAX_RECENT = 8;
@@ -80,7 +81,7 @@ export default function SearchScreen({ navigation }) {
       activeOpacity={0.85}
     >
       {item.image?.startsWith('/uploads') ? (
-        <Image source={{ uri: `${API_BASE_URL.replace('/api', '')}${item.image}` }} style={styles.resultImage} resizeMode="cover" />
+        <CachedImage uri={`${API_BASE_URL.replace('/api', '')}${item.image}`} style={styles.resultImage} resizeMode="cover" />
       ) : (
         <View style={styles.resultEmojiWrap}><Text style={styles.resultEmoji}>{item.image || '🥦'}</Text></View>
       )}

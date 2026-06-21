@@ -1,6 +1,8 @@
 const express = require('express');
 const Order = require('../models/Order');
 const Fleet = require('../models/Fleet');
+const User = require('../models/User');
+const PromoCode = require('../models/PromoCode');
 const { auth } = require('../middleware/auth');
 
 const router = express.Router();
@@ -17,7 +19,8 @@ function calculateDeliveryFee(subtotal) {
 router.get('/admin', auth, async (req, res) => {
   try {
     const orders = await Order.find()
-      .populate('customer items.menuItem deliveryAgent')
+      .populate('customer', 'name phone email')
+      .populate('delivery.partner', 'name phone')
       .sort({ createdAt: -1 });
     res.json(orders);
   } catch (error) {
@@ -31,21 +34,25 @@ router.post('/', auth, async (req, res) => {
     const { pricing, items, orderType, payment, delivery, promoCode, recipientName, recipientPhone, isGift } = req.body;
 
     const subtotal = pricing?.subtotal;
-    if (typeof subtotal !== 'number' || subtotal <= 0) {
+    if (typeof subtotal !== 'number' || subtotal <= 0)
       return res.status(400).json({ message: 'Invalid subtotal' });
-    }
-    if (subtotal < MIN_ORDER_VALUE) {
+    if (subtotal < MIN_ORDER_VALUE)
       return res.status(400).json({ message: `Minimum order value is ₹${MIN_ORDER_VALUE}` });
-    }
-    if (!orderType) {
+    if (!orderType)
       return res.status(400).json({ message: 'orderType is required' });
-    }
-    if (!payment?.method) {
+    if (!payment?.method)
       return res.status(400).json({ message: 'payment.method is required' });
-    }
-    if (!items || items.length === 0) {
+    if (!items || items.length === 0)
       return res.status(400).json({ message: 'Order must have at least one item' });
+
+    // Validate wallet balance if wallet is being used
+    const walletAmount = Number(payment.walletAmount) || 0;
+    if (walletAmount > 0) {
+      const user = await User.findById(req.userId).select('wallet');
+      if (!user || user.wallet.balance < walletAmount)
+        return res.status(400).json({ message: 'Insufficient wallet balance' });
     }
+
     const deliveryFee = orderType === 'delivery' ? calculateDeliveryFee(subtotal) : 0;
     const discount = pricing?.discount || 0;
     const total = subtotal + deliveryFee - discount;
@@ -64,7 +71,28 @@ router.post('/', auth, async (req, res) => {
     });
 
     await order.save();
-    await order.populate('items.menuItem customer');
+
+    // Deduct wallet balance atomically
+    if (walletAmount > 0) {
+      await User.findByIdAndUpdate(req.userId, {
+        $inc: { 'wallet.balance': -walletAmount },
+        $push: {
+          'wallet.transactions': {
+            type: 'debit',
+            amount: walletAmount,
+            description: `Order #${order.orderNumber}`,
+          },
+        },
+      });
+    }
+
+    // Track promo code usage
+    if (promoCode?.code) {
+      await PromoCode.findOneAndUpdate(
+        { code: promoCode.code.toUpperCase() },
+        { $inc: { usedCount: 1 } }
+      );
+    }
 
     // Auto-assign available delivery agent
     if (order.orderType === 'delivery') {
@@ -92,8 +120,8 @@ router.get('/assigned', auth, async (req, res) => {
   try {
     const orders = await Order.find({
       'delivery.partner': req.userId,
-      'status.current': { $in: ['confirmed', 'picked_up', 'out_for_delivery'] }
-    }).populate('items.menuItem').sort({ createdAt: -1 });
+      'status.current': { $in: ['confirmed', 'picked_up', 'out_for_delivery'] },
+    }).sort({ createdAt: -1 });
     res.json(orders);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -103,31 +131,26 @@ router.get('/assigned', auth, async (req, res) => {
 // Get user orders
 router.get('/my-orders', auth, async (req, res) => {
   try {
-    const orders = await Order.find({ customer: req.userId })
-      .populate('items.menuItem', 'name price image')
-      .sort({ createdAt: -1 });
-    // Ensure item name is always present
-    const result = orders.map(order => {
-      const obj = order.toObject();
-      obj.items = obj.items.map(item => ({
-        ...item,
-        name: item.name || item.menuItem?.name || 'Item',
-        image: item.image || item.menuItem?.image,
-      }));
-      return obj;
-    });
-    res.json(result);
+    const orders = await Order.find({ customer: req.userId }).sort({ createdAt: -1 });
+    res.json(orders);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
 
-// Update order status
+// Update order status (admin or customer cancel)
 router.patch('/:id/status', auth, async (req, res) => {
   try {
     const { status, note } = req.body;
     const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ message: 'Order not found' });
+
+    // Customers may only cancel their own orders at early stages
+    const isOwner = String(order.customer) === String(req.userId);
+    if (isOwner && status !== 'cancelled')
+      return res.status(403).json({ message: 'Customers can only cancel orders' });
+    if (isOwner && !['placed', 'confirmed'].includes(order.status.current))
+      return res.status(400).json({ message: 'Order cannot be cancelled at this stage' });
 
     order.status.current = status;
     order.status.history.push({ status, note, timestamp: new Date() });
@@ -150,105 +173,16 @@ router.patch('/:id/status', auth, async (req, res) => {
   }
 });
 
-// Get single order (admin)
+// Get single order
 router.get('/:id', auth, async (req, res) => {
   try {
     const order = await Order.findById(req.params.id)
-      .populate('customer items.menuItem delivery.partner', 'name price image phone');
-    if (!order) {
-      return res.status(404).json({ message: 'Order not found' });
-    }
-    const obj = order.toObject();
-    obj.items = obj.items.map(item => ({
-      ...item,
-      name: item.name || item.menuItem?.name || 'Item',
-      image: item.image || item.menuItem?.image,
-    }));
-    res.json(obj);
+      .populate('customer', 'name phone email')
+      .populate('delivery.partner', 'name phone');
+    if (!order) return res.status(404).json({ message: 'Order not found' });
+    res.json(order);
   } catch (error) {
     res.status(500).json({ message: error.message });
-  }
-});
-
-// Add item to existing order
-router.post('/:id/items', auth, async (req, res) => {
-  try {
-    const { menuItem, quantity, price, addOns, specialInstructions } = req.body;
-    const order = await Order.findById(req.params.id);
-    
-    if (!order) {
-      return res.status(404).json({ message: 'Order not found' });
-    }
-
-    if (order.status.current === 'delivered') {
-      return res.status(400).json({ message: 'Cannot add items to a delivered order' });
-    }
-
-    const newItem = {
-      menuItem,
-      quantity,
-      price,
-      addOns: addOns || [],
-      specialInstructions
-    };
-
-    order.items.push(newItem);
-
-    // Recalculate pricing with free delivery check
-    const itemTotal = price * quantity + (addOns?.reduce((sum, addon) => sum + addon.price, 0) || 0);
-    order.pricing.subtotal += itemTotal;
-    order.pricing.deliveryFee = calculateDeliveryFee(order.pricing.subtotal);
-    order.pricing.tax = 0;
-    order.pricing.total = order.pricing.subtotal + order.pricing.deliveryFee - order.pricing.discount;
-    
-    await order.save();
-    await order.populate('items.menuItem customer');
-    
-    res.json(order);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
-});
-
-// Add charge to existing order
-router.post('/:id/charges', auth, async (req, res) => {
-  try {
-    const { type, amount, description } = req.body;
-    const order = await Order.findById(req.params.id);
-    
-    if (!order) {
-      return res.status(404).json({ message: 'Order not found' });
-    }
-
-    if (order.status.current === 'delivered') {
-      return res.status(400).json({ message: 'Cannot add charges to a delivered order' });
-    }
-
-    // Add charge based on type
-    if (type === 'delivery') {
-      order.pricing.deliveryFee += amount;
-    } else {
-      // For other charges, add to subtotal
-      order.pricing.subtotal += amount;
-    }
-    
-    // Recalculate total
-    order.pricing.tax = 0;
-    order.pricing.total = order.pricing.subtotal + order.pricing.deliveryFee - order.pricing.discount;
-    
-    // Add to status history for tracking
-    order.status.history.push({
-      status: order.status.current,
-      note: `${description}: ₹${amount} added`,
-      timestamp: new Date()
-    });
-    
-    await order.save();
-    await order.populate('items.menuItem customer');
-    
-    res.json(order);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
   }
 });
 

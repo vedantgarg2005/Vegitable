@@ -2,15 +2,16 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { menuAPI } from '../services/api';
 import toast from 'react-hot-toast';
-import { Plus, Search, Package, Tag, TrendingUp, Pencil, Trash2, X, Star } from 'lucide-react';
+import { Plus, Search, Package, Tag, TrendingUp, Pencil, Trash2, X, Star, AlertCircle } from 'lucide-react';
 
 const CATEGORIES = ['vegetables', 'fruits', 'leafy', 'exotic', 'herbs', 'organic', 'other'];
+const imgSrc = (img) => !img ? '' : img.startsWith('/') ? img : `/uploads/${img}`;
 const UNITS = ['gm', 'Kg', 'piece', 'dozen', 'litre'];
 const emptyForm = { name: '', category: '', isBestseller: false, variants: [] };
 const emptyVariant = { labelQty: '', unit: 'gm', price: '', marketPrice: '', stock: 0 };
 
 export default function Products() {
-  const [filters, setFilters] = useState({ page: 1, limit: 50, category: '', search: '' });
+  const [filters, setFilters] = useState({ page: 1, limit: 1000, category: '', search: '' });
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [formData, setFormData] = useState(emptyForm);
@@ -43,6 +44,12 @@ export default function Products() {
     onError: () => toast.error('Failed to delete product'),
   });
 
+  const toggleStockMutation = useMutation({
+    mutationFn: ({ id, isAvailable }) => menuAPI.toggleStock(id, isAvailable),
+    onSuccess: () => qc.invalidateQueries(['menu-items']),
+    onError: () => toast.error('Failed to update stock'),
+  });
+
   const closeModal = () => {
     setShowModal(false);
     setEditingItem(null);
@@ -64,7 +71,7 @@ export default function Products() {
         return { marketPrice: '', ...base };
       }),
     });
-    setImagePreview(item.image || '');
+    setImagePreview(imgSrc(item.image));
     setImageFile(null);
     setShowModal(true);
   };
@@ -113,6 +120,7 @@ export default function Products() {
           { label: 'Total', value: total, icon: Package, color: 'bg-blue-50 text-blue-600' },
           { label: 'Active', value: active, icon: TrendingUp, color: 'bg-green-50 text-green-600' },
           { label: 'Bestsellers', value: bestsellers, icon: Star, color: 'bg-yellow-50 text-yellow-600' },
+          { label: 'Out of Stock', value: outOfStock, icon: AlertCircle, color: 'bg-red-50 text-red-500' },
         ].map(({ label, value, icon: Icon, color }) => (
           <div key={label} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex items-center gap-3">
             <div className={`p-2 rounded-lg ${color}`}><Icon className="w-5 h-5" /></div>
@@ -179,11 +187,12 @@ export default function Products() {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       {item.image
-                        ? <img src={item.image} alt={item.name} className="w-10 h-10 object-cover rounded-lg flex-shrink-0" />
+                        ? <img src={imgSrc(item.image)} alt={item.name} className="w-10 h-10 object-cover rounded-lg flex-shrink-0" />
                         : <div className="w-10 h-10 bg-gray-100 rounded-lg flex-shrink-0 flex items-center justify-center"><Package className="w-4 h-4 text-gray-300" /></div>}
-                      <div className="font-medium text-gray-800 flex items-center gap-1">
+                      <div className="font-medium text-gray-800 flex items-center gap-1.5">
                         {item.name}
                         {item.isBestseller && <span className="text-yellow-500 text-xs">⭐</span>}
+                        {item.availability?.isAvailable === false && <span className="text-xs bg-red-100 text-red-500 font-semibold px-1.5 py-0.5 rounded">Out of Stock</span>}
                       </div>
                     </div>
                   </td>
@@ -198,7 +207,17 @@ export default function Products() {
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex gap-2 justify-end">
+                    <div className="flex gap-2 justify-end items-center">
+                      <button
+                        onClick={() => toggleStockMutation.mutate({ id: item._id, isAvailable: item.availability?.isAvailable === false })}
+                        className={`text-xs font-semibold px-2.5 py-1 rounded-lg transition-colors ${
+                          item.availability?.isAvailable === false
+                            ? 'bg-red-100 text-red-500 hover:bg-red-200'
+                            : 'bg-green-100 text-green-600 hover:bg-green-200'
+                        }`}
+                      >
+                        {item.availability?.isAvailable === false ? 'Out of Stock' : 'In Stock'}
+                      </button>
                       <button onClick={() => handleEdit(item)} className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg"><Pencil className="w-3.5 h-3.5" /></button>
                       <button onClick={() => handleDelete(item._id)} className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg"><Trash2 className="w-3.5 h-3.5" /></button>
                     </div>

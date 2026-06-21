@@ -30,9 +30,9 @@ export default function About() {
         <div style={{ position: 'absolute', top: -80, right: -80, width: 300, height: 300, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', pointerEvents: 'none' }} />
         <div style={{ maxWidth: 600, margin: '0 auto', position: 'relative' }}>
           <div style={{ width: 72, height: 72, borderRadius: 24, background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, margin: '0 auto 20px' }}>🌿</div>
-          <h1 style={{ color: 'white', fontSize: 'clamp(28px,5vw,48px)', fontWeight: 900, margin: '0 0 14px', lineHeight: 1.15 }}>Farm Fresh, Every Day</h1>
+          <h1 style={{ color: 'white', fontSize: 'clamp(28px,5vw,48px)', fontWeight: 900, margin: '0 0 14px', lineHeight: 1.15 }}>Fresh Tokri — Farm Fresh, Every Day</h1>
           <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 15, lineHeight: 1.7, margin: '0 0 28px', maxWidth: 480, marginLeft: 'auto', marginRight: 'auto' }}>
-            We started FreshBasket with a simple belief — everyone deserves fresh, affordable vegetables delivered right to their door.
+            We started Fresh Tokri with a simple belief — everyone deserves fresh, affordable vegetables delivered right to their door.
           </p>
           <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'white', color: '#16a34a', borderRadius: 12, padding: '12px 24px', textDecoration: 'none', fontSize: 14, fontWeight: 800, boxShadow: '0 4px 16px rgba(0,0,0,0.15)' }}>
             Shop Now →
@@ -95,7 +95,7 @@ export default function About() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {[
               { icon: Phone,  color: '#16a34a', bg: '#f0fdf4', label: 'Phone',   value: '+91 98765 43210' },
-              { icon: Mail,   color: '#0284c7', bg: '#f0f9ff', label: 'Email',   value: 'hello@freshbasket.in' },
+              { icon: Mail,   color: '#0284c7', bg: '#f0f9ff', label: 'Email',   value: 'hello@freshtokri.in' },
               { icon: MapPin, color: '#dc2626', bg: '#fff1f2', label: 'Address', value: 'Andheri East, Mumbai, Maharashtra 400069' },
             ].map(({ icon: Icon, color, bg, label, value }) => (
               <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 14 }}>

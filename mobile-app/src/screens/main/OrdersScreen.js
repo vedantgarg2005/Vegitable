@@ -9,7 +9,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useWallet } from '../../context/WalletContext';
 import { useCart } from '../../context/CartContext';
 import { useLanguage } from '../../context/LanguageContext';
-import { colors, spacing, shadows, borderRadius, ms, rs, vs } from '../../utils/theme';
+import { colors, shadows, borderRadius, ms, rs, vs } from '../../utils/theme';
 import { OrderCardSkeleton } from '../../components/SkeletonLoader';
 
 const STATUS_CONFIG = {
@@ -203,7 +203,7 @@ export default function OrdersScreen({ navigation }) {
     return (
       <View style={styles.container}>
         <StatusBar barStyle="light-content" />
-        <View style={[styles.header, { paddingTop: insets.top + vs(12), backgroundColor: colors.navy }]}>
+        <View style={[styles.header, { paddingTop: insets.top + vs(12) }]}>
           <Text style={styles.headerTitle}>{t.myOrders}</Text>
           <View style={{ flex: 1 }} />
         </View>
@@ -228,7 +228,7 @@ export default function OrdersScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
-      <View style={[styles.header, { paddingTop: insets.top + vs(12), backgroundColor: colors.navy }]}>
+      <View style={[styles.header, { paddingTop: insets.top + vs(12) }]}>
         <Text style={styles.headerTitle}>{t.myOrders}</Text>
         {orders.length > 0 && (
           <View style={styles.headerBadge}>
@@ -286,13 +286,12 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingBottom: vs(18),
-    borderBottomLeftRadius: rs(28),
-    borderBottomRightRadius: rs(28),
+    paddingHorizontal: rs(16),
+    paddingBottom: vs(16),
     gap: rs(10),
+    backgroundColor: colors.navy,
   },
-  headerTitle: { fontSize: ms(22), fontWeight: '800', color: '#fff', letterSpacing: -0.3 },
+  headerTitle: { fontSize: ms(16), fontWeight: '800', color: '#fff', letterSpacing: -0.3 },
   headerBadge: {
     backgroundColor: 'rgba(255,255,255,0.25)',
     paddingHorizontal: rs(10), paddingVertical: vs(3),

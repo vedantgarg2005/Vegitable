@@ -7,12 +7,13 @@ const router = express.Router();
 const User = require('../models/User');
 const Order = require('../models/Order');
 const Product = require('../models/Product');
+const MenuItem = require('../models/MenuItem');
 const Review = require('../models/Review');
 const PromoCode = require('../models/PromoCode');
 const Fleet = require('../models/Fleet');
 const Campaign = require('../models/Campaign');
 const Notification = require('../models/Notification');
-const { auth } = require('../middleware/auth');
+const { auth, adminAuth } = require('../middleware/auth');
 const StoreSettings = require('../models/StoreSettings');
 
 const upload = multer({
@@ -110,21 +111,6 @@ router.get('/profile', auth, async (req, res) => {
 router.post('/logout', (req, res) => {
   res.json({ message: 'Logged out successfully' });
 });
-
-// Admin authentication middleware
-const adminAuth = async (req, res, next) => {
-  try {
-    await auth(req, res, () => {});
-    const user = await User.findById(req.userId);
-    if (!user || user.role !== 'admin') {
-      return res.status(403).json({ message: 'Access denied. Admin only.' });
-    }
-    req.user = user;
-    next();
-  } catch (error) {
-    res.status(401).json({ message: 'Authentication failed' });
-  }
-};
 
 // Dashboard Analytics
 router.get('/dashboard/stats', adminAuth, async (req, res) => {
@@ -277,7 +263,7 @@ router.patch('/orders/:id/status', adminAuth, async (req, res) => {
 // Product Management
 router.get('/menu', adminAuth, async (req, res) => {
   try {
-    const { page = 1, limit = 10, category, brand, isActive, search } = req.query;
+    const { page = 1, limit = 1000, category, brand, isActive, search } = req.query;
     const query = {};
 
     if (category) query.category = category;
@@ -288,14 +274,25 @@ router.get('/menu', adminAuth, async (req, res) => {
       { description: { $regex: search, $options: 'i' } }
     ];
 
-    const menuItems = await Product.find(query)
-      .limit(limit * 1)
-      .skip((page - 1) * limit)
-      .sort({ sortOrder: 1, createdAt: -1 });
+    const [fromProducts, fromMenuItems] = await Promise.all([
+      Product.find(query).sort({ sortOrder: 1, createdAt: -1 }),
+      MenuItem.find(query).sort({ sortOrder: 1, createdAt: -1 }),
+    ]);
 
-    const total = await Product.countDocuments(query);
+    // Merge, deduplicate by _id string
+    const seen = new Set();
+    const all = [...fromProducts, ...fromMenuItems].filter(p => {
+      const id = String(p._id);
+      if (seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    }).sort((a, b) => a.name.localeCompare(b.name));
 
-    res.json({ menuItems, totalPages: Math.ceil(total / limit), currentPage: page, total });
+    const total = all.length;
+    const skip = (page - 1) * limit;
+    const menuItems = all.slice(skip, skip + Number(limit));
+
+    res.json({ menuItems, totalPages: Math.ceil(total / limit), currentPage: Number(page), total });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -306,11 +303,35 @@ router.post('/menu', adminAuth, upload.single('image'), async (req, res) => {
     const data = { ...req.body };
     if (req.file) data.image = `/uploads/${req.file.filename}`;
     if (data.variants) data.variants = JSON.parse(data.variants);
+    if (typeof data.availability === 'string') data.availability = JSON.parse(data.availability);
     const product = new Product(data);
     await product.save();
     res.status(201).json(product);
   } catch (error) {
     res.status(400).json({ message: error.message });
+  }
+});
+
+router.patch('/menu/:id/stock', adminAuth, async (req, res) => {
+  try {
+    const isAvailable = req.body.isAvailable === true || req.body.isAvailable === 'true';
+    let product = await Product.findByIdAndUpdate(
+      req.params.id,
+      { $set: { availability: { isAvailable } } },
+      { new: true }
+    );
+    if (!product) {
+      product = await MenuItem.findByIdAndUpdate(
+        req.params.id,
+        { $set: { availability: { isAvailable } } },
+        { new: true }
+      );
+    }
+    if (!product) return res.status(404).json({ message: 'Product not found' });
+    res.json(product);
+  } catch (error) {
+    console.error('Stock toggle error:', error);
+    res.status(500).json({ message: error.message });
   }
 });
 
@@ -323,7 +344,8 @@ router.patch('/menu/:id', adminAuth, upload.single('image'), async (req, res) =>
       updates.image = `/uploads/${req.file.filename}`;
     }
     if (updates.variants) updates.variants = JSON.parse(updates.variants);
-    const product = await Product.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true });
+    if (typeof updates.availability === 'string') updates.availability = JSON.parse(updates.availability);
+    const product = await Product.findByIdAndUpdate(req.params.id, { $set: updates }, { new: true, runValidators: true });
     if (!product) return res.status(404).json({ message: 'Product not found' });
     res.json(product);
   } catch (error) {
@@ -472,9 +494,25 @@ router.get('/analytics/popular-items', adminAuth, async (req, res) => {
 router.get('/products', async (req, res) => {
   try {
     const { category } = req.query;
-    const query = { isActive: true };
+    const query = { isActive: true, $nor: [
+      { 'availability.isAvailable': false },
+      { availability: JSON.stringify({ isAvailable: false }) },
+    ]};
     if (category && category !== 'all') query.category = category;
-    const products = await Product.find(query).sort({ sortOrder: 1, createdAt: -1 });
+
+    const [fromProducts, fromMenuItems] = await Promise.all([
+      Product.find(query).sort({ sortOrder: 1, createdAt: -1 }),
+      MenuItem.find(query).sort({ sortOrder: 1, createdAt: -1 }),
+    ]);
+
+    const seen = new Set();
+    const products = [...fromProducts, ...fromMenuItems].filter(p => {
+      const id = String(p._id);
+      if (seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+
     res.json(products);
   } catch (error) {
     res.status(500).json({ message: error.message });

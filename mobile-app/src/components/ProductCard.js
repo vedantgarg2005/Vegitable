@@ -1,10 +1,12 @@
 import React, { useRef } from 'react';
-import { View, StyleSheet, TouchableOpacity, Image, Animated } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { Text } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, shadows, borderRadius, ms, rs, vs } from '../utils/theme';
 import { API_BASE_URL } from '../utils/constants';
 import { useLanguage } from '../context/LanguageContext';
+import CachedImage from './CachedImage';
+import DiscountBadge from './DiscountBadge';
 
 export function isOutOfStock(item) {
   return item?.availability?.isAvailable === false;
@@ -52,8 +54,8 @@ export default function ProductCard({ item, onPress, onAdd, onRemove, qty }) {
       {/* Image */}
       <View style={styles.imageWrap}>
         {item.image && item.image.startsWith('/uploads') ? (
-          <Image
-            source={{ uri: `${API_BASE_URL.replace('/api', '')}${item.image}` }}
+          <CachedImage
+            uri={`${API_BASE_URL.replace('/api', '')}${item.image}`}
             style={styles.image}
             resizeMode="cover"
           />
@@ -62,12 +64,12 @@ export default function ProductCard({ item, onPress, onAdd, onRemove, qty }) {
         )}
         {discount > 0 && (
           <View style={styles.discountBadge}>
-            <Text style={styles.discountText}>{discount}% OFF</Text>
+            <DiscountBadge discount={discount} />
           </View>
         )}
         {item.isNewArrival && !discount && (
-          <View style={[styles.discountBadge, { backgroundColor: colors.tagNew }]}>
-            <Text style={styles.discountText}>NEW</Text>
+          <View style={styles.newBadge}>
+            <Text style={styles.newBadgeText}>NEW</Text>
           </View>
         )}
       </View>
@@ -142,12 +144,16 @@ const styles = StyleSheet.create({
   image: { width: '100%', height: rs(160) },
   emoji: { fontSize: ms(64) },
   discountBadge: {
-    position: 'absolute', top: rs(8), left: rs(8),
-    backgroundColor: colors.tagSale,
-    borderRadius: borderRadius.xs,
-    paddingHorizontal: rs(6), paddingVertical: vs(2),
+    position: 'absolute', top: rs(6), left: rs(6),
   },
-  discountText: { fontSize: ms(10), fontWeight: '800', color: '#fff' },
+  newBadge: {
+    position: 'absolute', top: rs(8), left: rs(8),
+    backgroundColor: colors.tagNew,
+    borderRadius: borderRadius.full,
+    paddingHorizontal: rs(8), paddingVertical: vs(4),
+    elevation: 3,
+  },
+  newBadgeText: { fontSize: ms(11), fontWeight: '900', color: '#fff', letterSpacing: 0.4 },
   info: { padding: rs(10), paddingBottom: vs(4) },
   brand: { fontSize: ms(10), fontWeight: '800', color: colors.primary, letterSpacing: 0.5, marginBottom: vs(2) },
   name: { fontSize: ms(13), fontWeight: '700', color: colors.text, marginBottom: vs(4), lineHeight: ms(18) },

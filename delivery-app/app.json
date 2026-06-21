@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Delivery Partner",
+    "name": "Fresh Tokri Delivery",
     "slug": "delivery-partner-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -19,7 +19,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#1B5E20"
       },
-      "package": "com.freshbasket.delivery",
+      "package": "com.freshtokri.delivery",
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
@@ -29,7 +29,7 @@
       ]
     },
     "ios": {
-      "bundleIdentifier": "com.freshbasket.delivery",
+      "bundleIdentifier": "com.freshtokri.delivery",
       "supportsTablet": false,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Allow Delivery Partner to use your location while delivering orders.",

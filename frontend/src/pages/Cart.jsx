@@ -109,19 +109,26 @@ export default function Cart() {
       <div className="container" style={{ paddingTop: 16, paddingBottom: 120 }}>
 
         {/* Free delivery progress */}
-        {deliveryFee > 0 && (
-          <div className="card animate-fade-up" style={{ padding: 14, marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div className="card animate-fade-up" style={{ padding: '14px 16px', marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Bike size={15} color="var(--green)" />
-              <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-2)', margin: 0 }}>
-                Add <strong style={{ color: 'var(--green)' }}>₹{FREE_DELIVERY - subtotal}</strong> more for FREE delivery
-              </p>
+              <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--green-light)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Bike size={16} color="var(--green)" />
+              </div>
+              <div>
+                {deliveryFee === 0
+                  ? <p style={{ fontSize: 13, fontWeight: 800, color: 'var(--green)', margin: 0 }}>🎉 Free delivery unlocked!</p>
+                  : <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', margin: 0 }}>Add <span style={{ color: 'var(--green)', fontWeight: 900 }}>₹{FREE_DELIVERY - subtotal}</span> more for free delivery</p>
+                }
+                <p style={{ fontSize: 11, color: 'var(--text-3)', margin: '2px 0 0' }}>Free delivery on orders above ₹{FREE_DELIVERY}</p>
+              </div>
             </div>
-            <div style={{ height: 6, borderRadius: 3, background: 'var(--green-light)', overflow: 'hidden' }}>
-              <div style={{ height: '100%', borderRadius: 3, background: 'var(--green)', width: `${progress}%`, transition: 'width 0.4s ease' }} />
-            </div>
+            <span style={{ fontSize: 12, fontWeight: 800, color: deliveryFee === 0 ? 'var(--green)' : 'var(--text-3)' }}>{Math.round(progress)}%</span>
           </div>
-        )}
+          <div style={{ height: 8, borderRadius: 8, background: 'var(--green-light)', overflow: 'hidden' }}>
+            <div style={{ height: '100%', borderRadius: 8, background: 'linear-gradient(90deg, var(--green), var(--green-dark))', width: `${progress}%`, transition: 'width 0.4s ease' }} />
+          </div>
+        </div>
 
         {/* Items */}
         <div className="card animate-fade-up" style={{ marginBottom: 12, overflow: 'hidden' }}>
@@ -140,12 +147,12 @@ export default function Cart() {
                   <p style={{ fontSize: 13, fontWeight: 800, color: 'var(--green)', margin: 0 }}>₹{item.price}<span style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-3)' }}>/{item.unit || 'kg'}</span></p>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', borderRadius: 10, overflow: 'hidden', border: '1.5px solid var(--green)', flexShrink: 0 }}>
-                  <button onClick={() => updateQty(item._id, item.qty - 1)}
+                  <button onClick={() => updateQty(item.cartKey || item._id, item.qty - 1)}
                     style={{ width: 32, height: 32, background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--green)' }}>
                     {item.qty === 1 ? <Trash2 size={12} /> : <Minus size={12} />}
                   </button>
                   <span style={{ width: 26, textAlign: 'center', fontSize: 13, fontWeight: 800, color: 'var(--green)' }}>{item.qty}</span>
-                  <button onClick={() => updateQty(item._id, item.qty + 1)}
+                  <button onClick={() => updateQty(item.cartKey || item._id, item.qty + 1)}
                     style={{ width: 32, height: 32, background: 'var(--green)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
                     <Plus size={12} />
                   </button>
@@ -207,18 +214,11 @@ export default function Cart() {
             <Link to="/addresses" style={{ fontSize: 12, fontWeight: 700, color: 'var(--green)' }}>+ Add New</Link>
           </div>
 
-          {/* No addresses — show inline form */}
+          {/* No addresses — prompt to add */}
           {savedAddresses.length === 0 && (
-            <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {[['street','Street / House No','e.g. 12B, MG Road',true],['landmark','Landmark','e.g. Near Metro',false],['city','City','e.g. Mumbai',true],['pincode','Pincode','e.g. 400001',true]].map(([name, label, ph, req]) => (
-                <div key={name}>
-                  <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
-                    {label}{req && <span style={{ color: 'var(--red)' }}> *</span>}
-                  </label>
-                  <input className="input" placeholder={ph} value={newAddr[name]} onChange={e => setNewAddr(f => ({ ...f, [name]: e.target.value }))} />
-                </div>
-              ))}
-            </div>
+            <Link to="/addresses" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 16px', fontSize: 13, fontWeight: 700, color: 'var(--green)', textDecoration: 'none' }}>
+              <Plus size={14} /> Add a delivery address
+            </Link>
           )}
 
           {/* Has saved addresses */}

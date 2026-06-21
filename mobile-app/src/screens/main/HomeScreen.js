@@ -2,8 +2,10 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, FlatList, ScrollView, StyleSheet, TouchableOpacity,
   StatusBar, ActivityIndicator, Dimensions, Animated, TextInput,
-  Modal, Alert, Image, RefreshControl,
+  Modal, Alert, RefreshControl,
 } from 'react-native';
+import { Image } from 'expo-image';
+import { Image as RNImage } from 'react-native';
 import Reanimated, {
   useSharedValue, useAnimatedStyle, withRepeat, withSequence,
   withTiming, Easing,
@@ -22,6 +24,11 @@ import { API_BASE_URL } from '../../utils/constants';
 import FoodCard, { isOutOfStock } from '../../components/FoodCard';
 import { FoodCardSkeleton } from '../../components/SkeletonLoader';
 
+const SLIDER_IMAGES = [
+  require('../../../assets/1.jpeg'),
+  require('../../../assets/2.jpeg'),
+];
+
 const TYPE_ICONS = { home: 'home-outline', work: 'briefcase-outline', other: 'location-outline' };
 
 const { width: W } = Dimensions.get('window');
@@ -29,69 +36,58 @@ const { width: W } = Dimensions.get('window');
 const VEGGIE_SUGGESTIONS = ['Tomatoes', 'Carrots', 'Spinach', 'Potatoes', 'Onions', 'Broccoli', 'Peppers', 'Cabbage'];
 
 
+const CATEGORY_IMAGES = [
+  { id: 'vegetables',   label: 'Vegetables',     src: require('../../../assets/Vegetables.webp') },
+  { id: 'fruits',       label: 'Fruits',          src: require('../../../assets/Fruits.webp') },
+  { id: 'exotic',       label: 'Exotic Veggie',  src: require('../../../assets/ExocticVegetable.webp') },
+  { id: 'exoticfruits', label: 'Exotic Fruits',  src: require('../../../assets/ExocticFruits.webp') },
+  { id: 'bakery',       label: 'Bakery',          src: require('../../../assets/Bakery.webp') },
+];
+
 const CATEGORIES = [
   { name: 'All',        emoji: '🛒' },
   { name: 'Vegetables', emoji: '🥦' },
-  { name: 'Fruits',     emoji: '🍎' },
-  { name: 'Leafy',      emoji: '🥬' },
+  { name: 'Fruits',     emoji: '' },
+  { name: 'Leafy',      emoji: '' },
   { name: 'Exotic',     emoji: '🥭' },
   { name: 'Herbs',      emoji: '🌿' },
   { name: 'Organic',    emoji: '🌱' },
 ];
 
-const OFFERS = [
-  { id: '1', title: '20% OFF on Fresh Veggies', subtitle: 'Use code FRESH20 • Limited time', bg: ['#2E7D32', '#1B5E20'], emoji: '🥦' },
-  { id: '2', title: 'Buy 1 Get 1 FREE', subtitle: 'On all seasonal fruits today', bg: ['#E65100', '#BF360C'], emoji: '🍎' },
-  { id: '3', title: 'Free Delivery', subtitle: 'On orders above ₹299', bg: ['#1B3A1F', '#254D2A'], emoji: '🚚' },
-];
-
-const STATS = [
-  { icon: '🌿', label: 'Farm Fresh' },
-  { icon: '⚡', label: 'Fast Delivery' },
-  { icon: '✅', label: 'Quality Check' },
-];
-
-function WelcomeBanner({ user }) {
-  const translateY = useSharedValue(0);
+function ImageSlider({ navigation }) {
+  const [activeIdx, setActiveIdx] = useState(0);
+  const sliderRef = useRef(null);
+  const sliderW = W - rs(16);
 
   useEffect(() => {
-    translateY.value = withRepeat(
-      withSequence(
-        withTiming(-6, { duration: 1000, easing: Easing.inOut(Easing.sin) }),
-        withTiming(0, { duration: 1000, easing: Easing.inOut(Easing.sin) }),
-      ),
-      -1,
-      false,
-    );
-  }, []);
-
-  const floatStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }],
-  }));
-
-  const firstName = user?.name?.split(' ')[0] || 'Guest';
+    const interval = setInterval(() => {
+      const next = (activeIdx + 1) % SLIDER_IMAGES.length;
+      setActiveIdx(next);
+      sliderRef.current?.scrollTo({ x: next * sliderW, animated: true });
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [activeIdx, sliderW]);
 
   return (
-    <View style={styles.welcomeCard}>
-      <View style={styles.welcomeRow}>
-        <View style={styles.welcomeTextBlock}>
-          <View style={styles.greetingRow}>
-            <Text style={styles.welcomeGreeting}>Hey, {firstName}!</Text>
-            <Text style={styles.waveEmoji}>👋</Text>
-          </View>
-          <Text style={styles.summerText}>Vegitable</Text>
-          <Text style={styles.tagline}>Fresh veggies, delivered daily</Text>
-        </View>
-        <Reanimated.View style={[floatStyle, styles.heroBadge]}>
-          <Text style={styles.heroBadgeEmoji}>🥦</Text>
-        </Reanimated.View>
-      </View>
-      <View style={styles.statsRow}>
-        {STATS.map((s, i) => (
-          <View key={i} style={styles.statChip}>
-            <Text style={styles.statIcon}>{s.icon}</Text>
-            <Text style={styles.statLabel}>{s.label}</Text>
-          </View>
+    <View style={{ marginTop: vs(14), marginHorizontal: rs(8) }}>
+      <ScrollView
+        ref={sliderRef}
+        horizontal
+        pagingEnabled
+        scrollEnabled
+        showsHorizontalScrollIndicator={false}
+        onMomentumScrollEnd={e => setActiveIdx(Math.round(e.nativeEvent.contentOffset.x / sliderW))}
+        style={{ borderRadius: borderRadius.md, overflow: 'hidden' }}
+      >
+        {SLIDER_IMAGES.map((src, i) => (
+          <TouchableOpacity key={i} activeOpacity={0.95} onPress={() => i === 1 && navigation.navigate('AllProducts', { category: 'Fruits', search: 'watermelon' })}>
+            <RNImage source={src} style={{ width: sliderW, height: vs(200) }} resizeMode="cover" />
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+      <View style={{ flexDirection: 'row', justifyContent: 'center', gap: rs(5), marginTop: vs(6) }}>
+        {SLIDER_IMAGES.map((_, i) => (
+          <View key={i} style={[{ width: rs(6), height: rs(6), borderRadius: rs(3), backgroundColor: colors.border }, i === activeIdx && { backgroundColor: colors.primary, width: rs(20) }]} />
         ))}
       </View>
     </View>
@@ -113,15 +109,12 @@ export default function HomeScreen({ navigation }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [foodItems, setFoodItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState('All');
-  const [bannerIndex, setBannerIndex] = useState(0);
+
   const [orderType, setOrderType] = useState('delivery');
   const [deliveryAvailable, setDeliveryAvailable] = useState(true);
   const { addToCart, updateQuantity, items: cartItems, itemCount, total } = useCart();
   const insets = useSafeAreaInsets();
-  const bannerRef = useRef(null);
   const searchRef = useRef(null);
-  const BANNER_W = W - rs(32);
 
   // Address state
   const [addresses, setAddresses] = useState([]);
@@ -243,7 +236,8 @@ export default function HomeScreen({ navigation }) {
       setLoading(true);
       const res = await menuAPI.getItems({});
       // filter out of stock globally
-      setFoodItems((res.data || []).filter(i => i.availability?.isAvailable !== false));
+      const raw = res.data || [];
+      setFoodItems([...raw.filter(i => i.availability?.isAvailable !== false), ...raw.filter(i => i.availability?.isAvailable === false)]);
     } catch {
     } finally {
       setLoading(false);
@@ -261,44 +255,15 @@ export default function HomeScreen({ navigation }) {
     return () => clearTimeout(t);
   }, [loadMenu]);
 
-  // Auto-scroll banners
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const next = (bannerIndex + 1) % OFFERS.length;
-      setBannerIndex(next);
-      bannerRef.current?.scrollToIndex({ index: next, animated: true });
-    }, 3500);
-    return () => clearInterval(interval);
-  }, [bannerIndex]);
-
-  const renderBanner = ({ item }) => (
-    <View style={[styles.bannerCard, { width: BANNER_W }]}>
-      <View style={[styles.bannerGradient, { backgroundColor: item.bg[0] }]}>
-        <View style={styles.bannerContent}>
-          <View style={styles.bannerPill}>
-            <Text style={styles.bannerPillText}>LIMITED OFFER</Text>
-          </View>
-          <Text style={styles.bannerTitle}>{item.title}</Text>
-          <Text style={styles.bannerSubtitle}>{item.subtitle}</Text>
-        </View>
-        <Text style={styles.bannerEmoji}>{item.emoji}</Text>
-      </View>
-    </View>
-  );
 
   const menuSectionHeader = null; // removed, now inline
 
-  const filteredItems = foodItems.filter(item => {
-    const matchSearch = !searchQuery || item.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchCat = selectedCategory === 'All' || item.category?.toLowerCase() === selectedCategory.toLowerCase();
-    return matchSearch && matchCat;
-  });
+  const filteredItems = foodItems.filter(item =>
+    !searchQuery || item.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   // Build category sections
   const categorySections = (() => {
-    if (selectedCategory !== 'All') {
-      return filteredItems.length > 0 ? [{ name: selectedCategory, items: filteredItems }] : [];
-    }
     const map = {};
     filteredItems.forEach(item => {
       const cat = item.category ? item.category.charAt(0).toUpperCase() + item.category.slice(1) : 'Other';
@@ -316,6 +281,7 @@ export default function HomeScreen({ navigation }) {
           item={item}
           qty={qty}
           compact
+          cardWidth={rs(148)}
           isOpen={restaurantOpen}
           nextAvailableLabel={nextOpenTime ? `Opens at ${formatTime12(nextOpenTime)}` : 'Closed'}
           onPress={() => { setSelectedItem(item); setItemQty(1); setSelectedVariant(item.variants?.[0] ?? null); }}
@@ -392,7 +358,22 @@ export default function HomeScreen({ navigation }) {
         contentContainerStyle={[styles.list, itemCount > 0 && styles.listWithCart]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} tintColor={colors.primary} />}
       >
-        <WelcomeBanner user={user} />
+        <ImageSlider navigation={navigation} />
+
+        {/* Category image strip */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: rs(16), paddingVertical: vs(14), gap: rs(12) }}>
+          {CATEGORY_IMAGES.map(cat => (
+            <TouchableOpacity key={cat.id} activeOpacity={0.85}
+              onPress={() => navigation.navigate('AllProducts', { category: cat.label })}
+              style={{ alignItems: 'center' }}
+            >
+              <View style={styles.catImageWrap}>
+                <RNImage source={cat.src} style={styles.catImage} resizeMode="cover" />
+              </View>
+              <Text style={styles.catImageLabel} numberOfLines={1}>{cat.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
 
         {!restaurantOpen && (
           <View style={styles.closedBanner}>
@@ -401,48 +382,7 @@ export default function HomeScreen({ navigation }) {
           </View>
         )}
 
-        {/* Offer Banners */}
-        <FlatList
-          ref={bannerRef}
-          data={OFFERS}
-          renderItem={renderBanner}
-          keyExtractor={b => b.id}
-          horizontal
-          pagingEnabled
-          snapToInterval={BANNER_W + rs(12)}
-          snapToAlignment="start"
-          decelerationRate="fast"
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.bannerListContent}
-          getItemLayout={(_, index) => ({ length: BANNER_W + rs(12), offset: (BANNER_W + rs(12)) * index, index })}
-          onMomentumScrollEnd={e => {
-            const idx = Math.round(e.nativeEvent.contentOffset.x / (BANNER_W + rs(12)));
-            setBannerIndex(Math.min(idx, OFFERS.length - 1));
-          }}
-        />
-        <View style={styles.bannerDots}>
-          {OFFERS.map((_, i) => <View key={i} style={[styles.dot, i === bannerIndex && styles.dotActive]} />)}
-        </View>
 
-        {/* Category chips */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>{t.shopByCategory}</Text>
-        </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesContent}>
-          {CATEGORIES.map(cat => (
-            <TouchableOpacity
-              key={cat.name}
-              onPress={() => setSelectedCategory(cat.name)}
-              style={[styles.categoryChip, selectedCategory === cat.name && styles.categoryChipActive]}
-              activeOpacity={0.8}
-            >
-              <View style={[styles.categoryEmojiWrap, selectedCategory === cat.name && styles.categoryEmojiWrapActive]}>
-                <Text style={styles.categoryEmoji}>{cat.emoji}</Text>
-              </View>
-              <Text style={[styles.categoryLabel, selectedCategory === cat.name && styles.categoryLabelActive]}>{cat.name}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
 
         {/* Category-wise sections */}
         {loading ? (
@@ -459,13 +399,13 @@ export default function HomeScreen({ navigation }) {
           categorySections.map(({ name, items }) => (
             <View key={name} style={styles.catSection}>
               <View style={styles.catSectionHeader}>
-                <Text style={styles.catSectionTitle}>
-                  {CATEGORIES.find(c => c.name.toLowerCase() === name.toLowerCase())?.emoji || '🛒'} {name}
-                </Text>
-                <Text style={styles.catSectionCount}>{items.length} items</Text>
+                <Text style={styles.catSectionTitle}>{name}</Text>
+                <TouchableOpacity onPress={() => navigation.navigate('AllProducts', { category: name })} activeOpacity={0.7}>
+                  <Text style={styles.showMoreText}>Show More</Text>
+                </TouchableOpacity>
               </View>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catRow}>
-                {items.map(renderCard)}
+                {items.slice(0, 10).map(renderCard)}
               </ScrollView>
             </View>
           ))
@@ -485,7 +425,7 @@ export default function HomeScreen({ navigation }) {
             </View>
             <Text style={styles.floatingCartLabel}>{t.items}</Text>
           </View>
-          <View style={styles.floatingCartRight}>
+          <View style={{ alignItems: 'flex-end' }}>
             <Text style={styles.floatingCartTotal}>₹{total}</Text>
             <Text style={styles.floatingCartAction}>{t.viewCart} →</Text>
           </View>
@@ -512,7 +452,8 @@ export default function HomeScreen({ navigation }) {
                     <Image
                       source={{ uri: `${API_BASE_URL.replace('/api', '')}${selectedItem.image}` }}
                       style={styles.itemModalThumb}
-                      resizeMode="contain"
+                      contentFit="contain"
+                      cachePolicy="memory-disk"
                     />
                   ) : (
                     <View style={styles.itemModalThumbPlaceholder}>
@@ -778,14 +719,7 @@ const styles = StyleSheet.create({
   welcomeGreeting: { fontSize: ms(14), color: 'rgba(255,255,255,0.86)', fontWeight: '600' },
   waveEmoji: { fontSize: ms(16) },
   welcomeTextBlock: { flex: 1, justifyContent: 'center' },
-  summerText: {
-    fontSize: ms(28),
-    fontWeight: '900',
-    color: '#fff',
-    letterSpacing: -0.5,
-    lineHeight: ms(34),
-    marginBottom: vs(3),
-  },
+  logoImg: { width: rs(130), height: vs(36), marginBottom: vs(3) },
   tagline: { fontSize: ms(12), color: 'rgba(255,255,255,0.72)', fontWeight: '500' },
   heroBadge: {
     width: rs(74),
@@ -874,8 +808,8 @@ const styles = StyleSheet.create({
   menuSectionCount: { fontSize: ms(13), color: colors.placeholder },
 
   // Food list
-  list: { paddingBottom: vs(90) },
-  listWithCart: { paddingBottom: vs(132) },
+  list: { paddingBottom: vs(24) },
+  listWithCart: { paddingBottom: vs(80) },
 
   catSection: { marginTop: vs(16) },
   catSectionHeader: {
@@ -884,6 +818,7 @@ const styles = StyleSheet.create({
   },
   catSectionTitle: { fontSize: ms(16), fontWeight: '800', color: colors.text },
   catSectionCount: { fontSize: ms(12), color: colors.placeholder },
+  showMoreText: { fontSize: ms(13), fontWeight: '700', color: colors.primary },
   catRow: { paddingHorizontal: rs(16), paddingBottom: vs(4) },
 
   ratingRow: { flexDirection: 'row', alignItems: 'center', gap: rs(6), marginBottom: vs(8) },
@@ -1132,4 +1067,14 @@ itemModalOutOfStockBtn: {
   },
   floatingCartTotal: { color: '#fff', fontSize: ms(14), fontWeight: '800' },
   floatingCartAction: { color: 'rgba(255,255,255,0.88)', fontSize: ms(11), fontWeight: '700' },
+
+  catImageWrap: {
+    width: rs(72), height: rs(72),
+    borderRadius: rs(16),
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: colors.border,
+  },
+  catImage: { width: '100%', height: '100%' },
+  catImageLabel: { fontSize: ms(11), fontWeight: '700', color: colors.text, marginTop: vs(5), textAlign: 'center', maxWidth: rs(72), numberOfLines: 1 },
 });

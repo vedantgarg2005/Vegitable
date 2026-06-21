@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, CreditCard, CheckCircle2, Circle } from 'lucide-react';
+import { ArrowLeft, MapPin, CreditCard, CheckCircle2, Circle, XCircle, Star } from 'lucide-react';
 import api from '../services/api';
 import { useLoginModal } from '../context/AuthContext';
+import toast from 'react-hot-toast';
 
 const STATUS_STEPS = ['placed', 'confirmed', 'processing', 'packed', 'out_for_delivery', 'delivered'];
 const STATUS_LABEL = {
@@ -22,10 +23,18 @@ const STATUS_STYLE = {
   cancelled:        { bg: '#FFEBEE', color: '#C62828' },
 };
 
+const CANCELLABLE = ['placed', 'confirmed'];
+
 export default function OrderDetail() {
   const { id } = useParams();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [cancelling, setCancelling] = useState(false);
+  const [reviewItem, setReviewItem] = useState(null); // item being reviewed
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviewedItems, setReviewedItems] = useState(new Set());
 
   const navigate = useNavigate();
   const { openLogin } = useLoginModal();
@@ -87,6 +96,30 @@ export default function OrderDetail() {
       </div>
 
       <div className="max-w-xl mx-auto px-4 pt-4 pb-24 space-y-3">
+
+        {/* Cancel Button */}
+        {CANCELLABLE.includes(currentStatus) && (
+          <button
+            onClick={async () => {
+              if (!window.confirm('Cancel this order?')) return;
+              setCancelling(true);
+              try {
+                const { data } = await api.patch(`/orders/${id}/status`, { status: 'cancelled', note: 'Cancelled by customer' });
+                setOrder(data);
+                toast.success('Order cancelled');
+              } catch {
+                toast.error('Failed to cancel order');
+              } finally {
+                setCancelling(false);
+              }
+            }}
+            disabled={cancelling}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '13px', borderRadius: 16, border: '1.5px solid #fca5a5', background: '#fff5f5', color: '#c62828', fontWeight: 800, fontSize: 14, cursor: cancelling ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: cancelling ? 0.6 : 1 }}
+          >
+            <XCircle size={16} />
+            {cancelling ? 'Cancelling…' : 'Cancel Order'}
+          </button>
+        )}
 
         {/* Status Timeline */}
         {!isCancelled && (
@@ -170,6 +203,77 @@ export default function OrderDetail() {
             </div>
             <p className="text-sm text-gray-700">{order.delivery.address.street}{order.delivery.address.landmark ? `, ${order.delivery.address.landmark}` : ''}</p>
             <p className="text-xs text-gray-400 mt-0.5">{order.delivery.address.city} — {order.delivery.address.pincode}</p>
+          </div>
+        )}
+
+        {/* Review UI — only for delivered orders */}
+        {currentStatus === 'delivered' && order.items?.length > 0 && (
+          <div className="bg-white rounded-2xl shadow-sm p-5">
+            <p className="font-black text-gray-800 mb-3 text-sm">Rate Your Order</p>
+            {order.items.map((item, i) => {
+              const name = item.name || 'Item';
+              const itemId = item.product?._id || item.product || String(i);
+              if (reviewedItems.has(itemId)) {
+                return (
+                  <div key={i} className="flex items-center gap-2 py-2 text-sm" style={{ color: '#2E7D32' }}>
+                    <CheckCircle2 size={14} /> <span className="font-bold">{name}</span> — reviewed!
+                  </div>
+                );
+              }
+              if (reviewItem?.idx === i) {
+                return (
+                  <div key={i} style={{ background: '#f0fdf4', borderRadius: 12, padding: 14, marginBottom: 8 }}>
+                    <p className="text-sm font-bold text-gray-700 mb-2">{name}</p>
+                    <div className="flex gap-1 mb-3">
+                      {[1,2,3,4,5].map(s => (
+                        <button key={s} onClick={() => setRating(s)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                          <Star size={24} fill={s <= rating ? '#f59e0b' : 'none'} color={s <= rating ? '#f59e0b' : '#d1d5db'} />
+                        </button>
+                      ))}
+                    </div>
+                    <textarea
+                      value={comment}
+                      onChange={e => setComment(e.target.value)}
+                      placeholder="Share your experience (optional)"
+                      rows={2}
+                      style={{ width: '100%', borderRadius: 8, border: '1.5px solid #e5e5e5', padding: '8px 10px', fontSize: 13, fontFamily: 'inherit', resize: 'none', outline: 'none', boxSizing: 'border-box' }}
+                    />
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        onClick={async () => {
+                          setSubmittingReview(true);
+                          try {
+                            await api.post('/reviews', { orderId: id, menuItemId: itemId, rating, comment });
+                            setReviewedItems(prev => new Set(prev).add(itemId));
+                            setReviewItem(null); setComment(''); setRating(5);
+                            toast.success('Review submitted!');
+                          } catch (e) {
+                            toast.error(e.response?.data?.message || 'Failed to submit review');
+                          } finally { setSubmittingReview(false); }
+                        }}
+                        disabled={submittingReview}
+                        style={{ flex: 1, padding: '9px', borderRadius: 8, background: '#16a34a', color: 'white', border: 'none', fontWeight: 800, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        {submittingReview ? 'Submitting…' : 'Submit Review'}
+                      </button>
+                      <button onClick={() => setReviewItem(null)}
+                        style={{ padding: '9px 14px', borderRadius: 8, background: 'white', border: '1.5px solid #e5e5e5', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                );
+              }
+              return (
+                <div key={i} className="flex items-center justify-between py-2" style={{ borderBottom: '1px solid #f5f5f5' }}>
+                  <span className="text-sm font-semibold text-gray-700">{name}</span>
+                  <button
+                    onClick={() => { setReviewItem({ idx: i }); setRating(5); setComment(''); }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 12px', borderRadius: 8, border: '1.5px solid #f59e0b', background: '#fffbeb', color: '#b45309', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    <Star size={12} fill="#f59e0b" color="#f59e0b" /> Rate
+                  </button>
+                </div>
+              );
+            })}
           </div>
         )}
 

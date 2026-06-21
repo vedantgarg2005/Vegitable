@@ -3,6 +3,8 @@
 
 *, *::before, *::after { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
+img { pointer-events: none; user-select: none; -webkit-user-select: none; -webkit-user-drag: none; }
+
 :root {
   --black:        #0a0a0a;
   --dark:         #111111;

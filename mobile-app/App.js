@@ -67,6 +67,7 @@ export async function registerPushToken() {
 }
 
 import OnboardingScreen from './src/screens/OnboardingScreen';
+import SplashScreenCustom from './src/screens/SplashScreenCustom';
 
 function AppContent() {
   const { user, loading } = useAuth();
@@ -93,7 +94,7 @@ function AppContent() {
     if (user) registerPushToken();
   }, [user]);
 
-  if (!isReady || loading) return null;
+  if (!isReady || loading) return <SplashScreenCustom />;
 
   if (showOnboarding) {
     return <OnboardingScreen onDone={() => setShowOnboarding(false)} />;

@@ -81,23 +81,19 @@ const ProfileScreen = ({ navigation }) => {
   );
 
   const headerContent = (
-    <View
-      style={[styles.header, { paddingTop: insets.top + vs(8), backgroundColor: colors.navy }]}
-    >
+    <View style={[styles.header, { paddingTop: insets.top + vs(12) }]}>
       <TouchableOpacity style={styles.backBtn} onPress={() => navigation.navigate('Explore')} activeOpacity={0.7}>
         <Ionicons name="arrow-back" size={rs(22)} color="#fff" />
       </TouchableOpacity>
-      <View style={styles.headerRow}>
-        <View style={styles.avatarWrap}>
-          {user
-            ? <Avatar.Text size={rs(54)} label={user.name?.charAt(0) || 'U'} style={styles.avatar} color={colors.primary} />
-            : <Avatar.Icon size={rs(54)} icon="account" style={styles.avatar} color={colors.primary} />
-          }
-        </View>
-        <View style={styles.headerInfo}>
-          <Text style={styles.userName}>{user?.name || 'Welcome, Guest!'}</Text>
-          <Text style={styles.userSub}>{user?.email || user?.phone || 'Sign in to access your profile'}</Text>
-        </View>
+      <View style={styles.avatarWrap}>
+        {user
+          ? <Avatar.Text size={rs(44)} label={user.name?.charAt(0) || 'U'} style={styles.avatar} color={colors.primary} />
+          : <Avatar.Icon size={rs(44)} icon="account" style={styles.avatar} color={colors.primary} />
+        }
+      </View>
+      <View style={styles.headerInfo}>
+        <Text style={styles.userName} numberOfLines={1}>{user?.name || 'Welcome, Guest!'}</Text>
+        <Text style={styles.userSub} numberOfLines={1}>{user?.email || user?.phone || 'Sign in to access your profile'}</Text>
       </View>
     </View>
   );
@@ -207,27 +203,16 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
 
   header: {
-    paddingBottom: vs(20),
-    paddingHorizontal: rs(16),
-    borderBottomLeftRadius: rs(32),
-    borderBottomRightRadius: rs(32),
-    flexDirection: 'column',
-  },
-  headerRow: {
+    backgroundColor: colors.navy,
     flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: rs(16),
+    paddingBottom: vs(16),
     gap: rs(12),
-    marginTop: vs(12),
   },
-  backBtn: {
-    padding: rs(6),
-    alignSelf: 'flex-start',
-  },
-  headerInfo: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  avatarWrap: { position: 'relative' },
+  backBtn: { padding: rs(4) },
+  headerInfo: { flex: 1, justifyContent: 'center' },
+  avatarWrap: {},
   avatar: { backgroundColor: '#FFFFFF' },
   onlineDot: {
     position: 'absolute',

@@ -176,18 +176,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: rs(16),
-    paddingBottom: vs(18),
-    borderBottomLeftRadius: rs(24),
-    borderBottomRightRadius: rs(24),
+    paddingBottom: vs(16),
   },
-  backBtn: {
-    width: rs(38), height: rs(38), borderRadius: rs(19),
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center', alignItems: 'center',
-  },
+  backBtn: { padding: rs(4) },
   headerTitle: { fontSize: ms(18), fontWeight: '700', color: '#fff' },
-
-  scroll: { padding: rs(16), paddingBottom: vs(32) },
 
   avatarSection: { alignItems: 'center', marginBottom: vs(20), marginTop: vs(8) },
   avatarWrap: { position: 'relative', marginBottom: vs(10) },

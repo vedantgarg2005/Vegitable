@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Search as SearchIcon, X, SlidersHorizontal } from 'lucide-react';
 import api from '../services/api';
 import ProductCard from '../components/ProductCard';
@@ -29,7 +29,8 @@ function SkeletonCard() {
 }
 
 export default function SearchPage() {
-  const [query, setQuery]       = useState('');
+  const [searchParams] = useSearchParams();
+  const [query, setQuery]       = useState(searchParams.get('q') || '');
   const [products, setProducts] = useState([]);
   const [loading, setLoading]   = useState(false);
   const [category, setCategory] = useState('all');

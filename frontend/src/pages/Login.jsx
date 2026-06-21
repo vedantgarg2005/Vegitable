@@ -131,8 +131,9 @@ export default function LoginModal() {
       } else {
         goStep('register');
       }
-    } catch { goStep('register'); }
-    finally { setLoading(false); }
+    } catch (e) {
+      setError(e.response?.data?.message || 'Invalid OTP');
+    } finally { setLoading(false); }
   };
 
   const completeRegistration = async () => {
@@ -157,7 +158,7 @@ export default function LoginModal() {
   return (
     <div
       className="fixed inset-0 z-50 flex flex-col items-center justify-center px-5"
-      style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
+      style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 300 }}
       onClick={e => { if (e.target === e.currentTarget) { closeLogin(); setStep('phone'); setOtp(''); setName(''); setError(''); } }}
     >
       {/* Step Bar */}

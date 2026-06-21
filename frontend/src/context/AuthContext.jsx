@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import api from '../services/api';
+import { loginOpenRef } from './CartContext';
 
 const AuthContext = createContext();
 export const useLoginModal = () => useContext(LoginModalContext);
@@ -40,11 +41,15 @@ export function AuthProvider({ children }) {
   };
 
   const [loginOpen, setLoginOpen] = useState(false);
-  const openLogin  = useCallback(() => setLoginOpen(true),  []);
-  const closeLogin = useCallback(() => setLoginOpen(false), []);
+  const openLogin  = useCallback(() => { loginOpenRef.current = true;  setLoginOpen(true);  }, []);
+  const closeLogin = useCallback(() => { loginOpenRef.current = false; setLoginOpen(false); }, []);
+
+  const [profileOpen, setProfileOpen] = useState(false);
+  const openProfile  = useCallback(() => setProfileOpen(true),  []);
+  const closeProfile = useCallback(() => setProfileOpen(false), []);
 
   return (
-    <LoginModalContext.Provider value={{ loginOpen, openLogin, closeLogin }}>
+    <LoginModalContext.Provider value={{ loginOpen, openLogin, closeLogin, profileOpen, setProfileOpen, openProfile, closeProfile }}>
       <AuthContext.Provider value={{ user, login, loginWithEmail, register, logout }}>
         {children}
       </AuthContext.Provider>

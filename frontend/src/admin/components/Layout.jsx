@@ -54,7 +54,7 @@ const Layout = () => {
           <div className="w-8 h-8 bg-primary-500 rounded-lg flex items-center justify-center flex-shrink-0">
             <span className="text-white font-bold text-sm">🥦</span>
           </div>
-          {!collapsed && <h1 className="text-lg font-bold text-white">FreshBasket</h1>}
+          {!collapsed && <h1 className="text-lg font-bold text-white">Fresh Tokri</h1>}
         </div>
         <button
           onClick={() => setMobileOpen(false)}
