@@ -204,28 +204,105 @@ export default function Home() {
         )}
       </header>
 
-      {/* ── BANNER IMAGE ── */}
-      <div style={{ maxWidth: 1400, margin: '20px auto 0', padding: '0 20px' }}>
-        <img src="/1.jpeg" alt="Banner" style={{ display: 'block', width: '100%', borderRadius: 18, boxShadow: '0 4px 24px rgba(0,0,0,0.10)' }} />
+      {/* ── HERO SECTION ── */}
+      <div style={{ background: 'linear-gradient(135deg, #052e16 0%, #14532d 45%, #166534 100%)', position: 'relative', overflow: 'hidden' }}>
+        {/* decorative circles */}
+        <div style={{ position: 'absolute', top: -60, right: -60, width: 320, height: 320, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', bottom: -40, left: '30%', width: 200, height: 200, borderRadius: '50%', background: 'rgba(74,222,128,0.07)', pointerEvents: 'none' }} />
+
+        <div style={{ maxWidth: 1400, margin: '0 auto', padding: '52px 28px 48px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 32, flexWrap: 'wrap' }}>
+          <div style={{ flex: '1 1 340px', minWidth: 0 }}>
+            {/* badge */}
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, background: 'rgba(74,222,128,0.15)', border: '1px solid rgba(74,222,128,0.3)', borderRadius: 20, padding: '5px 13px', marginBottom: 20 }}>
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#4ade80', display: 'inline-block', boxShadow: '0 0 6px #4ade80' }} />
+              <span style={{ color: '#4ade80', fontSize: 12, fontWeight: 700, letterSpacing: '0.04em' }}>Farm Fresh · Delivered in 60 min</span>
+            </div>
+
+            <h1 style={{ color: 'white', fontSize: 'clamp(28px, 5vw, 48px)', fontWeight: 900, lineHeight: 1.12, margin: '0 0 14px', letterSpacing: '-0.03em' }}>
+              Fresh from the Farm,<br />
+              <span style={{ color: '#4ade80' }}>Right to Your Door</span>
+            </h1>
+            <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: 15, lineHeight: 1.7, margin: '0 0 28px', maxWidth: 420 }}>
+              Premium vegetables, fruits &amp; herbs sourced directly from trusted farmers — quality guaranteed, every order.
+            </p>
+
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              <button onClick={() => shopRef.current?.scrollIntoView({ behavior: 'smooth' })}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#16a34a', color: 'white', border: 'none', borderRadius: 12, padding: '13px 24px', fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 6px 20px rgba(22,163,74,0.45)', transition: 'all 0.2s' }}
+                onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1px)'}
+                onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}>
+                Shop Now <ArrowRight size={15} />
+              </button>
+              <Link to="/about"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.08)', color: 'white', border: '1.5px solid rgba(255,255,255,0.2)', borderRadius: 12, padding: '12px 22px', fontSize: 14, fontWeight: 700, textDecoration: 'none', transition: 'all 0.2s' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.14)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}>
+                Learn More
+              </Link>
+            </div>
+
+            {/* mini stats */}
+            <div style={{ display: 'flex', gap: 28, marginTop: 32, flexWrap: 'wrap' }}>
+              {[['10,000+', 'Happy Customers'], ['50+', 'Farm Partners'], ['60 min', 'Avg. Delivery']].map(([val, lbl]) => (
+                <div key={lbl}>
+                  <p style={{ margin: 0, color: 'white', fontSize: 20, fontWeight: 900, letterSpacing: '-0.03em' }}>{val}</p>
+                  <p style={{ margin: 0, color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 600 }}>{lbl}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* hero image */}
+          <div style={{ flex: '0 0 auto', maxWidth: 420, width: '100%' }} className="hidden md:block">
+            <img src="/1.jpeg" alt="Fresh produce" style={{ width: '100%', borderRadius: 20, boxShadow: '0 20px 60px rgba(0,0,0,0.4)', objectFit: 'cover', maxHeight: 320 }} />
+          </div>
+        </div>
+      </div>
+
+      {/* ── TRUST BADGES ── */}
+      <div style={{ background: 'white', borderBottom: '1px solid #f0f0f0' }}>
+        <div style={{ maxWidth: 1400, margin: '0 auto', padding: '0 20px' }}>
+          <div style={{ display: 'flex', overflowX: 'auto', scrollbarWidth: 'none', gap: 0 }}>
+            {[
+              { icon: '🌾', title: '100% Farm Fresh', sub: 'Sourced directly from farmers' },
+              { icon: '⚡', title: '60-Min Delivery', sub: 'Express to your doorstep' },
+              { icon: '✅', title: 'Quality Checked', sub: 'Every item handpicked' },
+              { icon: '🔒', title: 'Secure Payments', sub: 'Multiple payment options' },
+            ].map((b, i, arr) => (
+              <div key={b.title} style={{ flex: '1 0 180px', display: 'flex', alignItems: 'center', gap: 12, padding: '16px 20px', borderRight: i < arr.length - 1 ? '1px solid #f0f0f0' : 'none' }}>
+                <span style={{ fontSize: 22, flexShrink: 0 }}>{b.icon}</span>
+                <div>
+                  <p style={{ margin: 0, fontSize: 13, fontWeight: 800, color: '#0a0a0a' }}>{b.title}</p>
+                  <p style={{ margin: 0, fontSize: 11, color: '#999', fontWeight: 500 }}>{b.sub}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* ── CATEGORY IMAGE STRIP ── */}
-      <div style={{ maxWidth: 1400, margin: '20px auto 0', padding: '0 20px' }}>
-        <div style={{ display: 'flex', gap: 14, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 4 }}>
+      <div style={{ maxWidth: 1400, margin: '28px auto 0', padding: '0 20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+          <p style={{ margin: 0, fontSize: 17, fontWeight: 800, color: '#0a0a0a', letterSpacing: '-0.02em' }}>Shop by Category</p>
+          <button onClick={() => shopRef.current?.scrollIntoView({ behavior: 'smooth' })} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 700, color: '#16a34a', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>View All <ChevronRight size={13} /></button>
+        </div>
+        <div style={{ display: 'flex', gap: 12, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 4 }}>
           {CATEGORY_IMAGES.map(cat => (
             <button key={cat.id} onClick={() => { setCategory(cat.id); shopRef.current?.scrollIntoView({ behavior: 'smooth' }); }}
               style={{ flexShrink: 0, border: 'none', background: 'none', cursor: 'pointer', padding: 0, textAlign: 'center' }}>
-              <div style={{ width: 100, height: 100, borderRadius: 20, overflow: 'hidden', border: category === cat.id ? '3px solid #16a34a' : '2px solid #e8e8e8', transition: 'all 0.2s', boxShadow: category === cat.id ? '0 4px 16px rgba(22,163,74,0.25)' : '0 2px 8px rgba(0,0,0,0.06)' }}>
-                <img src={cat.img} alt={cat.label} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform 0.2s' }} />
+              <div style={{ width: 110, height: 110, borderRadius: 16, overflow: 'hidden', border: category === cat.id ? '2.5px solid #16a34a' : '1.5px solid #e8e8e8', transition: 'all 0.2s', boxShadow: category === cat.id ? '0 4px 16px rgba(22,163,74,0.25)' : '0 2px 8px rgba(0,0,0,0.05)', position: 'relative' }}>
+                <img src={cat.img} alt={cat.label} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                {category === cat.id && <div style={{ position: 'absolute', inset: 0, background: 'rgba(22,163,74,0.12)' }} />}
               </div>
-              <p style={{ margin: '8px 0 0', fontSize: 12, fontWeight: 700, color: category === cat.id ? '#16a34a' : '#444', whiteSpace: 'nowrap' }}>{cat.label}</p>
+              <p style={{ margin: '7px 0 0', fontSize: 12, fontWeight: 700, color: category === cat.id ? '#16a34a' : '#555', whiteSpace: 'nowrap' }}>{cat.label}</p>
             </button>
           ))}
         </div>
       </div>
 
       {/* ── MAIN CONTENT ── */}
-      <div style={{ maxWidth: 1400, margin: '0 auto', padding: '24px 20px 80px' }}>
+      <div style={{ maxWidth: 1400, margin: '0 auto', padding: '28px 20px 80px' }}>
 
         <div ref={shopRef} />
 
