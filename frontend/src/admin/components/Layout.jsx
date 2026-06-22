@@ -21,6 +21,7 @@ import {
   UserCheck,
   Wallet,
   Clock,
+  PackagePlus,
 } from 'lucide-react';
 
 const Layout = () => {
@@ -42,6 +43,7 @@ const Layout = () => {
     { name: 'Notifications', href: '/admin/notifications', icon: Bell },
     { name: 'Wallet', href: '/admin/wallet', icon: Wallet },
     { name: 'Store Hours', href: '/admin/store-settings', icon: Clock },
+    { name: 'Product Requests', href: '/admin/product-requests', icon: PackagePlus },
   ];
 
   const isActive = (path) => location.pathname === path;

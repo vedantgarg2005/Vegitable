@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 const Login = () => {
-  const [credentials, setCredentials] = useState({ email: '', password: '' });
+  const [credentials, setCredentials] = useState({ phone: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
@@ -36,21 +36,16 @@ const Login = () => {
         </div>
 
         <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-8 shadow-2xl">
-          <div className="mb-6 p-3 bg-primary-500/20 border border-primary-500/30 rounded-xl">
-            <p className="text-sm text-primary-200 text-center">
-              <strong>Credentials:</strong> admin@gmail.com / Vedant@2005
-            </p>
-          </div>
 
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div>
               <input
-                type="email"
+                type="tel"
                 required
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent transition-all"
-                placeholder="Email address"
-                value={credentials.email}
-                onChange={(e) => setCredentials({...credentials, email: e.target.value})}
+                placeholder="Phone number"
+                value={credentials.phone}
+                onChange={(e) => setCredentials({...credentials, phone: e.target.value})}
               />
             </div>
             <div>

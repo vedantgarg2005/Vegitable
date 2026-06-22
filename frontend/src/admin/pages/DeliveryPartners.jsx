@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import { UserPlus, Trash2, ToggleLeft, ToggleRight, Search, Bike } from 'lucide-react';
 
 const EMPTY_FORM = {
-  name: '', email: '', phone: '', password: '',
+  name: '', phone: '', password: '',
   vehicleType: 'bike', vehicleNumber: '', licenseNumber: '',
 };
 
@@ -96,7 +96,7 @@ export default function DeliveryPartners() {
                 <tr key={p._id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-5 py-3">
                     <div className="font-semibold text-gray-800">{p.name}</div>
-                    <div className="text-xs text-gray-400">{p.email || '—'}</div>
+                    <div className="text-xs text-gray-400">{p.phone}</div>
                   </td>
                   <td className="px-5 py-3 text-gray-600">{p.phone}</td>
                   <td className="px-5 py-3">
@@ -146,7 +146,6 @@ export default function DeliveryPartners() {
               {[
                 { key: 'name', label: 'Full Name', type: 'text', required: true },
                 { key: 'phone', label: 'Phone', type: 'tel', required: true },
-                { key: 'email', label: 'Email (optional)', type: 'email', required: false },
                 { key: 'password', label: 'Password', type: 'password', required: true },
                 { key: 'vehicleNumber', label: 'Vehicle Number', type: 'text', required: true },
                 { key: 'licenseNumber', label: 'License Number', type: 'text', required: true },

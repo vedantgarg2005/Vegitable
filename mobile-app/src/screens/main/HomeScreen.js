@@ -4,8 +4,8 @@ import {
   StatusBar, ActivityIndicator, Dimensions, Animated, TextInput,
   Modal, Alert, RefreshControl,
 } from 'react-native';
-import { Image } from 'expo-image';
 import { Image as RNImage } from 'react-native';
+import CachedImage from '../../components/CachedImage';
 import Reanimated, {
   useSharedValue, useAnimatedStyle, withRepeat, withSequence,
   withTiming, Easing,
@@ -28,6 +28,8 @@ const SLIDER_IMAGES = [
   require('../../../assets/1.jpeg'),
   require('../../../assets/2.jpeg'),
 ];
+
+const OPS_IMAGE = require('../../../assets/Ops.webp');
 
 const TYPE_ICONS = { home: 'home-outline', work: 'briefcase-outline', other: 'location-outline' };
 
@@ -187,6 +189,25 @@ export default function HomeScreen({ navigation }) {
     const unsubscribe = navigation.addListener('focus', loadAddresses);
     return unsubscribe;
   }, [navigation, loadAddresses]);
+
+  // Auto-fetch location on first open if no address is set
+  useEffect(() => {
+    if (!user) return;
+    const autoFetch = async () => {
+      const alreadyFetched = await AsyncStorage.getItem('location_auto_fetched');
+      if (alreadyFetched) return;
+      await AsyncStorage.setItem('location_auto_fetched', 'true');
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') return;
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const [place] = await Location.reverseGeocodeAsync({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
+      if (place) {
+        const label = [place.name, place.street, place.district, place.city].filter(Boolean).join(', ');
+        setSelectedAddress({ _id: 'current', type: 'other', address: label, city: place.city || '', isCurrentLocation: true });
+      }
+    };
+    autoFetch();
+  }, [user]);
 
   const useCurrentLocation = async () => {
     if (isFetchingRef.current) return;
@@ -410,6 +431,10 @@ export default function HomeScreen({ navigation }) {
             </View>
           ))
         )}
+
+        {/* Ops Image */}
+        <RNImage source={OPS_IMAGE} style={{ width: W, height: vs(140), marginTop: vs(16) }} resizeMode="cover" />
+
       </ScrollView>
 
       {/* Floating cart bar — like Swiggy */}
@@ -449,11 +474,10 @@ export default function HomeScreen({ navigation }) {
                 {/* Image + name/description side by side */}
                 <View style={styles.itemModalTopRow}>
                   {selectedItem.image && selectedItem.image.startsWith('/uploads') ? (
-                    <Image
-                      source={{ uri: `${API_BASE_URL.replace('/api', '')}${selectedItem.image}` }}
+                    <CachedImage
+                      uri={`${API_BASE_URL.replace('/api', '')}${selectedItem.image}`}
                       style={styles.itemModalThumb}
-                      contentFit="contain"
-                      cachePolicy="memory-disk"
+                      resizeMode="contain"
                     />
                   ) : (
                     <View style={styles.itemModalThumbPlaceholder}>

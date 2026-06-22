@@ -5,11 +5,11 @@ import { useAuth, useLoginModal } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 
 const INNER_PAGES = {
-  '/cart':          { back: '/',        sub: 'Your Order',  title: (cart) => `Cart · ${cart.length} item${cart.length !== 1 ? 's' : ''}` },
-  '/orders':        { back: '/',        sub: 'History',     title: () => 'My Orders' },
-  '/addresses':     { back: '/',        sub: 'Saved',       title: () => 'Addresses' },
-  '/wallet':        { back: '/',        sub: 'My',          title: () => 'Wallet' },
-  '/about':         { back: '/',        sub: 'Info',        title: () => 'About Us' },
+  '/cart':      { back: '/', sub: 'Your Order',  title: (cart) => `Cart · ${cart.length} item${cart.length !== 1 ? 's' : ''}` },
+  '/orders':    { back: '/', sub: 'History',     title: () => 'My Orders' },
+  '/addresses': { back: '/', sub: 'Saved',       title: () => 'Addresses' },
+  '/wallet':    { back: '/', sub: 'My',          title: () => 'Wallet' },
+  '/about':     { back: '/', sub: 'Info',        title: () => 'About Us' },
 };
 
 export default function Navbar() {
@@ -25,91 +25,82 @@ export default function Navbar() {
   const innerPage = INNER_PAGES[pathname];
   const isInner = !!innerPage || isOrderDetail;
 
+  const iconBtn = {
+    width: 38, height: 38, borderRadius: 12, border: '1.5px solid var(--border)',
+    background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
+    cursor: 'pointer', flexShrink: 0, transition: 'all 0.15s', boxShadow: 'var(--shadow-sm)',
+  };
+
   return (
-    <nav className="flex items-center justify-between px-4 sticky top-0 z-50"
-      style={{ background: 'black', borderBottom: '1px solid #222', boxShadow: '0 1px 8px rgba(0,0,0,0.2)', height: 56 }}>
+    <nav style={{ background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(12px)', borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, zIndex: 50, height: 68 }}
+      className="flex items-center justify-between px-4">
 
       {isInner ? (
         <>
-          <button onClick={() => navigate(isOrderDetail ? '/orders' : innerPage.back)}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, borderRadius: 10, border: '1.5px solid #e5e5e5', background: 'none', cursor: 'pointer', flexShrink: 0 }}>
-            <ArrowLeft size={16} />
+          <button onClick={() => navigate(isOrderDetail ? '/orders' : innerPage.back)} style={iconBtn}>
+            <ArrowLeft size={16} color="var(--text)" />
           </button>
           <div style={{ textAlign: 'center', flex: 1 }}>
-            {!isOrderDetail && <p style={{ fontSize: 10, fontWeight: 700, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>{innerPage.sub}</p>}
-            <p style={{ fontSize: 16, fontWeight: 900, color: '#0a0a0a', margin: 0 }}>
+            {!isOrderDetail && <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0 }}>{innerPage.sub}</p>}
+            <p style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', margin: 0, letterSpacing: '-0.02em' }}>
               {isOrderDetail ? 'Order Detail' : innerPage.title(cart, user)}
             </p>
           </div>
-          {pathname === '/notifications' ? (
-            <div style={{ width: 34 }} />
-          ) : (
-            <button onClick={openCart}
-              style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, borderRadius: 10, border: totalItems > 0 ? '1.5px solid #16a34a' : '1.5px solid #e5e5e5', background: totalItems > 0 ? '#16a34a' : 'white', flexShrink: 0, cursor: 'pointer' }}>
-              <ShoppingBag size={15} color={totalItems > 0 ? 'white' : '#555'} />
-              {totalItems > 0 && (
-                <span style={{ position: 'absolute', top: -4, right: -4, minWidth: 16, height: 16, borderRadius: '50%', background: '#15803d', border: '1.5px solid white', color: 'white', fontSize: 8, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 2px' }}>
-                  {totalItems}
-                </span>
-              )}
-            </button>
-          )}
+          <button onClick={openCart} style={{ ...iconBtn, borderColor: totalItems > 0 ? 'var(--green)' : 'var(--border)', background: totalItems > 0 ? 'var(--green)' : 'white', position: 'relative' }}>
+            <ShoppingBag size={16} color={totalItems > 0 ? 'white' : 'var(--text-2)'} />
+            {totalItems > 0 && (
+              <span style={{ position: 'absolute', top: -5, right: -5, minWidth: 18, height: 18, borderRadius: '50%', background: 'var(--green-dark)', border: '2px solid white', color: 'white', fontSize: 9, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {totalItems}
+              </span>
+            )}
+          </button>
         </>
       ) : (
         <>
-          <Link to="/" className="flex items-center gap-2 flex-shrink-0" style={{ textDecoration: 'none' }}>
-            <img src="/Logo.png" style={{ width: 80, height: 80, borderRadius: 10, objectFit: 'cover' }} />
+          <Link to="/" style={{ textDecoration: 'none', flexShrink: 0 }}>
+            <img src="/Logo.png" alt="Logo" style={{ width: 130, height: 52, objectFit: 'contain' }} />
           </Link>
+
           <div className="flex items-center gap-2" style={{ flex: 1, justifyContent: 'flex-end' }}>
             {user ? (
               <>
                 <form onSubmit={e => { e.preventDefault(); navigate(searchVal.trim() ? `/search?q=${encodeURIComponent(searchVal.trim())}` : '/search'); }}
-                  style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f5f5f5', borderRadius: 10, padding: '7px 12px', border: '1.5px solid transparent', transition: 'all 0.15s', maxWidth: 220 }}
-                  onFocus={e => e.currentTarget.style.borderColor = '#16a34a'}
-                  onBlur={e => e.currentTarget.style.borderColor = 'transparent'}>
-                  <Search size={13} color="#aaa" style={{ flexShrink: 0 }} />
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f4f4f5', borderRadius: 12, padding: '8px 14px', border: '1.5px solid transparent', transition: 'all 0.15s', maxWidth: 220 }}
+                  onFocusCapture={e => e.currentTarget.style.borderColor = 'var(--green)'}
+                  onBlurCapture={e => e.currentTarget.style.borderColor = 'transparent'}>
+                  <Search size={14} color="#9ca3af" style={{ flexShrink: 0 }} />
                   <input
                     value={searchVal}
                     onChange={e => setSearchVal(e.target.value)}
                     placeholder="Search…"
-                    style={{ background: 'none', border: 'none', outline: 'none', fontSize: 13, fontWeight: 500, color: '#0a0a0a', fontFamily: 'inherit', width: 140 }}
+                    style={{ background: 'none', border: 'none', outline: 'none', fontSize: 13, fontWeight: 500, color: 'var(--text)', fontFamily: 'inherit', width: 130 }}
                   />
                 </form>
-                <NavLink to="/notifications" title="Notifications"
-                  className="w-8 h-8 rounded-md flex items-center justify-center transition-all hover:bg-gray-100"
-                  style={{ border: '1px solid #e5e5e5' }}>
-                  <Bell size={15} color="#555" />
+                <NavLink to="/notifications" title="Notifications" style={iconBtn}>
+                  <Bell size={16} color="var(--text-2)" />
                 </NavLink>
-                <NavLink to="/wallet" title="Wallet"
-                  className="w-8 h-8 rounded-md flex items-center justify-center transition-all hover:bg-gray-100"
-                  style={{ border: '1px solid #e5e5e5' }}>
-                  <Wallet size={15} color="#555" />
+                <NavLink to="/wallet" title="Wallet" style={iconBtn}>
+                  <Wallet size={16} color="var(--text-2)" />
                 </NavLink>
-                <button onClick={openCart} title="Cart"
-                  className="relative w-8 h-8 rounded-md flex items-center justify-center transition-all hover:bg-gray-100"
-                  style={{ border: totalItems > 0 ? '1px solid #16a34a' : '1px solid #e5e5e5', background: totalItems > 0 ? '#16a34a' : 'white', cursor: 'pointer' }}>
-                  <ShoppingBag size={15} color={totalItems > 0 ? 'white' : '#555'} />
+                <button onClick={openCart} title="Cart" style={{ ...iconBtn, borderColor: totalItems > 0 ? 'var(--green)' : 'var(--border)', background: totalItems > 0 ? 'var(--green)' : 'white', position: 'relative' }}>
+                  <ShoppingBag size={16} color={totalItems > 0 ? 'white' : 'var(--text-2)'} />
                   {totalItems > 0 && (
-                    <span className="absolute -top-1 -right-1 min-w-[16px] h-4 rounded-full text-white text-[9px] font-black flex items-center justify-center px-0.5"
-                      style={{ background: '#15803d', border: '1.5px solid white', fontSize: 8 }}>
+                    <span style={{ position: 'absolute', top: -5, right: -5, minWidth: 18, height: 18, borderRadius: '50%', background: 'var(--green-dark)', border: '2px solid white', color: 'white', fontSize: 9, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       {totalItems}
                     </span>
                   )}
                 </button>
                 <button onClick={openProfile}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-bold transition-all hover:bg-gray-50 ml-1"
-                  style={{ border: '1px solid #e5e5e5', color: '#0a0a0a', background: 'white', cursor: 'pointer', fontFamily: 'inherit' }}>
-                  <div className="w-5 h-5 rounded flex items-center justify-center text-[10px] font-black text-white"
-                    style={{ background: '#16a34a' }}>
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px 6px 6px', borderRadius: 12, border: '1.5px solid var(--border)', background: 'white', cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s', boxShadow: 'var(--shadow-sm)' }}>
+                  <div style={{ width: 26, height: 26, borderRadius: 8, background: 'linear-gradient(135deg, #16a34a, #15803d)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 900, color: 'white', flexShrink: 0 }}>
                     {user.name?.[0]?.toUpperCase()}
                   </div>
-                  <span className="hidden md:block" style={{ fontSize: 12 }}>{user.name?.split(' ')[0]}</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', display: 'none' }} className="md:block">{user.name?.split(' ')[0]}</span>
                 </button>
               </>
             ) : (
               <button onClick={openLogin}
-                className="px-4 py-1.5 rounded-md text-sm font-bold transition-all hover:bg-gray-50"
-                style={{ border: '1px solid #e5e5e5', color: '#0a0a0a', fontSize: 12 }}>
+                style={{ padding: '9px 20px', borderRadius: 12, background: 'var(--green)', color: 'white', fontSize: 13, fontWeight: 700, border: 'none', cursor: 'pointer', fontFamily: 'inherit', boxShadow: 'var(--shadow-green)', transition: 'all 0.15s' }}>
                 Login
               </button>
             )}

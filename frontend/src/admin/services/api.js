@@ -48,6 +48,7 @@ export const ordersAPI = {
 export const usersAPI = {
   getUsers: (params) => api.get('/admin/users', { params }),
   updateUserStatus: (id, data) => api.patch(`/admin/users/${id}/status`, data),
+  deleteUser: (id) => api.delete(`/admin/users/${id}`),
 };
 
 const toFormData = (data) => {
@@ -116,6 +117,11 @@ export const walletAPI = {
   getUsersWithWallet: (params) => api.get('/admin/users', { params }),
   creditWallet: (userId, data) => api.post(`/admin/users/${userId}/wallet/credit`, data),
   debitWallet: (userId, data) => api.post(`/admin/users/${userId}/wallet/debit`, data),
+};
+
+export const productRequestsAPI = {
+  getAll: (params) => api.get('/admin/product-requests', { params }),
+  updateStatus: (id, status) => api.patch(`/admin/product-requests/${id}/status`, { status }),
 };
 
 export const storeSettingsAPI = {

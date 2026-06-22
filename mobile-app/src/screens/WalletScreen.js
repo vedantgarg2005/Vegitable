@@ -38,7 +38,7 @@ export default function WalletScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
 
-      {/* Header + Balance */}
+      {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + vs(12) }]}>
         <Text style={styles.headerTitle}>{t.myWallet}</Text>
         <View style={styles.balanceWrap}>
@@ -108,14 +108,16 @@ const styles = StyleSheet.create({
 
   header: {
     backgroundColor: colors.navy,
-    paddingHorizontal: spacing.md,
-    paddingBottom: vs(16),
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: rs(16),
+    paddingBottom: vs(16),
   },
-  headerTitle: { fontSize: ms(22), fontWeight: '800', color: '#fff', letterSpacing: -0.3, marginBottom: vs(8) },
-  balanceWrap: { alignItems: 'center' },
-  balanceLabel: { fontSize: ms(13), color: 'rgba(255,255,255,0.8)', fontWeight: '500', marginBottom: vs(4) },
-  balanceAmount: { fontSize: ms(40), fontWeight: '800', color: '#fff', letterSpacing: -1 },
+  headerTitle: { fontSize: ms(18), fontWeight: '700', color: '#fff' },
+  balanceWrap: { alignItems: 'flex-end' },
+  balanceLabel: { fontSize: ms(11), color: 'rgba(255,255,255,0.75)', fontWeight: '500' },
+  balanceAmount: { fontSize: ms(16), fontWeight: '800', color: '#fff' },
 
   scrollContent: { padding: spacing.md },
 

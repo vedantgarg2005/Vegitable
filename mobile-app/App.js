@@ -71,19 +71,19 @@ import SplashScreenCustom from './src/screens/SplashScreenCustom';
 
 function AppContent() {
   const { user, loading } = useAuth();
-  const [isReady, setIsReady] = useState(false);
+  const [appReady, setAppReady] = useState(false);
+  const [splashDone, setSplashDone] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
     async function prepare() {
       try {
-        await new Promise(resolve => setTimeout(resolve, 2000));
         const done = await AsyncStorage.getItem('onboarding_done');
         if (!done) setShowOnboarding(true);
       } catch (e) {
         console.warn(e);
       } finally {
-        setIsReady(true);
+        setAppReady(true);
         SplashScreen.hideAsync();
       }
     }
@@ -94,7 +94,9 @@ function AppContent() {
     if (user) registerPushToken();
   }, [user]);
 
-  if (!isReady || loading) return <SplashScreenCustom />;
+  if (!splashDone) return <SplashScreenCustom onDone={() => setSplashDone(true)} />;
+
+  if (!appReady || loading) return null;
 
   if (showOnboarding) {
     return <OnboardingScreen onDone={() => setShowOnboarding(false)} />;

@@ -32,7 +32,15 @@ router.get('/', async (req, res) => {
       ];
     }
 
-    const products = await Product.find(query).sort({ createdAt: -1 });
+    const limit = parseInt(req.query.limit) || 0;
+    const fields = req.query.fields
+      ? req.query.fields.split(','). join(' ')
+      : null;
+
+    let q = Product.find(query).sort({ createdAt: -1 });
+    if (limit) q = q.limit(limit);
+    if (fields) q = q.select(fields);
+    const products = await q.lean();
     res.json(products);
   } catch (error) {
     res.status(500).json({ message: error.message });

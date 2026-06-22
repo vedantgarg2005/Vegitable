@@ -150,7 +150,7 @@ function Orders() {
                           </div>
                           <div>
                             <div className="text-sm font-medium text-gray-800">{order.customer?.name || 'N/A'}</div>
-                            <div className="text-xs text-gray-400">{order.customer?.phone || order.customer?.email || ''}</div>
+                            <div className="text-xs text-gray-400">{order.customer?.phone || ''}</div>
                           </div>
                         </div>
                       </td>
@@ -207,7 +207,7 @@ function Orders() {
                     </div>
                     <div className="min-w-0">
                       <div className="text-sm font-medium text-gray-800 truncate">{order.customer?.name || 'N/A'}</div>
-                      <div className="text-xs text-gray-400 truncate">{order.customer?.phone || order.customer?.email || ''}</div>
+                      <div className="text-xs text-gray-400 truncate">{order.customer?.phone || ''}</div>
                     </div>
                     <span className="ml-auto font-semibold text-gray-800 text-sm">₹{(order.pricing?.subtotal || 0) + (order.pricing?.deliveryFee || 0) - (order.pricing?.discount || 0)}</span>
                   </div>

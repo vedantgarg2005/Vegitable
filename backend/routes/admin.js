@@ -34,12 +34,11 @@ async function getDeliveryEnabled() {
 router.post('/test-login', async (req, res) => {
   try {
     // Find or create test admin
-    let user = await User.findOne({ email: 'test@admin.com' });
+    let user = await User.findOne({ phone: '1234567890' });
     
     if (!user) {
       user = new User({
         name: 'Test Admin',
-        email: 'test@admin.com',
         phone: '1234567890',
         password: 'test123',
         role: 'admin'
@@ -54,7 +53,7 @@ router.post('/test-login', async (req, res) => {
       user: {
         id: user._id,
         name: user.name,
-        email: user.email,
+        phone: user.phone,
         role: user.role
       },
       message: 'Test login successful'
@@ -67,9 +66,9 @@ router.post('/test-login', async (req, res) => {
 // Admin Login
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { phone, password } = req.body;
     
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ phone });
     if (!user || !(await user.comparePassword(password))) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
@@ -85,7 +84,7 @@ router.post('/login', async (req, res) => {
       user: {
         id: user._id,
         name: user.name,
-        email: user.email,
+        phone: user.phone,
         role: user.role
       }
     });
@@ -161,7 +160,7 @@ router.get('/users', adminAuth, async (req, res) => {
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } }
+        { phone: { $regex: search, $options: 'i' } }
       ];
     }
 
@@ -199,6 +198,18 @@ router.patch('/users/:id/status', adminAuth, async (req, res) => {
   }
 });
 
+router.delete('/users/:id', adminAuth, async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    if (user.role === 'admin') return res.status(403).json({ message: 'Cannot delete admin accounts' });
+    await User.findByIdAndDelete(req.params.id);
+    res.json({ message: 'User deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Order Management
 router.get('/orders', adminAuth, async (req, res) => {
   try {
@@ -209,7 +220,7 @@ router.get('/orders', adminAuth, async (req, res) => {
     if (orderType) query.orderType = orderType;
 
     const orders = await Order.find(query)
-      .populate('customer', 'name email phone')
+      .populate('customer', 'name phone')
       .populate('items.menuItem', 'name price')
       .populate('delivery.partner', 'name phone')
       .limit(limit * 1)
@@ -534,7 +545,7 @@ router.get('/delivery-control', adminAuth, async (req, res) => {
     const deliveryEnabled = await getDeliveryEnabled();
 
     const agents = await Fleet.find()
-      .populate('driver', 'name phone email isActive')
+      .populate('driver', 'name phone isActive')
       .populate('currentOrder')
       .sort({ status: 1 });
 
@@ -684,7 +695,7 @@ router.get('/reviews', adminAuth, async (req, res) => {
     if (minReport) query.reportCount = { $gte: Number(minReport) };
 
     const reviews = await Review.find(query)
-      .populate('customer', 'name email')
+      .populate('customer', 'name')
       .populate('product', 'name')
       .populate('order', 'orderNumber')
       .limit(limit * 1)
@@ -750,7 +761,7 @@ router.get('/campaigns', adminAuth, async (req, res) => {
 router.post('/campaigns', adminAuth, async (req, res) => {
   try {
     const { promoCode, ...rest } = req.body;
-    const campaign = new Campaign({ ...rest, promoCode: promoCode?.toUpperCase() || undefined, createdBy: req.user._id });
+    const campaign = new Campaign({ ...rest, promoCode: promoCode?.toUpperCase() || undefined, createdBy: req.userId });
     await campaign.save();
 
     // Auto-create a PromoCode if a code is provided and it's a discount campaign
@@ -791,6 +802,9 @@ router.delete('/campaigns/:id', adminAuth, async (req, res) => {
   try {
     const campaign = await Campaign.findByIdAndDelete(req.params.id);
     if (!campaign) return res.status(404).json({ message: 'Campaign not found' });
+    if (campaign.promoCode) {
+      await PromoCode.deleteOne({ code: campaign.promoCode });
+    }
     res.json({ message: 'Campaign deleted' });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -854,7 +868,6 @@ router.get('/delivery-partners', adminAuth, async (req, res) => {
       userQuery.$or = [
         { name: { $regex: search, $options: 'i' } },
         { phone: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
       ];
     }
     const users = await User.find(userQuery).select('-password').sort({ createdAt: -1 });
@@ -870,13 +883,13 @@ router.get('/delivery-partners', adminAuth, async (req, res) => {
 
 router.post('/delivery-partners', adminAuth, async (req, res) => {
   try {
-    const { name, email, phone, password, vehicleType, vehicleNumber, licenseNumber } = req.body;
+    const { name, phone, password, vehicleType, vehicleNumber, licenseNumber } = req.body;
     if (!name || !phone || !password || !vehicleType || !vehicleNumber || !licenseNumber) {
       return res.status(400).json({ message: 'name, phone, password, vehicleType, vehicleNumber and licenseNumber are required' });
     }
-    const existing = await User.findOne({ $or: [{ phone }, ...(email ? [{ email }] : [])] });
-    if (existing) return res.status(409).json({ message: 'User with this phone/email already exists' });
-    const user = new User({ name, email, phone, password, role: 'delivery_partner' });
+    const existing = await User.findOne({ phone });
+    if (existing) return res.status(409).json({ message: 'User with this phone already exists' });
+    const user = new User({ name, phone, password, role: 'delivery_partner' });
     await user.save();
     const fleet = new Fleet({ driver: user._id, vehicleType, vehicleNumber, licenseNumber });
     await fleet.save();
@@ -1064,6 +1077,45 @@ router.put('/store-settings', adminAuth, async (req, res) => {
     res.json(settings);
   } catch (error) {
     res.status(400).json({ message: error.message });
+  }
+});
+
+// ─── Product Requests ────────────────────────────────────────────────────────
+
+const ProductRequest = require('mongoose').models.ProductRequest ||
+  require('mongoose').model('ProductRequest', new (require('mongoose').Schema)({
+    user: { type: require('mongoose').Schema.Types.ObjectId, ref: 'User' },
+    productName: { type: String, required: true, trim: true },
+    description: { type: String, trim: true },
+    status: { type: String, enum: ['pending', 'reviewed', 'added'], default: 'pending' },
+    createdAt: { type: Date, default: Date.now },
+  }));
+
+router.get('/product-requests', adminAuth, async (req, res) => {
+  try {
+    const { status } = req.query;
+    const query = status ? { status } : {};
+    const requests = await ProductRequest.find(query)
+      .populate('user', 'name phone')
+      .sort({ createdAt: -1 });
+    res.json(requests);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.patch('/product-requests/:id/status', adminAuth, async (req, res) => {
+  try {
+    const { status } = req.body;
+    if (!['pending', 'reviewed', 'added'].includes(status))
+      return res.status(400).json({ message: 'Invalid status' });
+    const request = await ProductRequest.findByIdAndUpdate(
+      req.params.id, { status }, { new: true }
+    ).populate('user', 'name phone');
+    if (!request) return res.status(404).json({ message: 'Request not found' });
+    res.json(request);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 });
 

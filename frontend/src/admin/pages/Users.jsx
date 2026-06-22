@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 
 function Users() {
   const [filters, setFilters] = useState({ page: 1, limit: 10, role: '', search: '' });
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const queryClient = useQueryClient();
 
   const { data: usersData, isLoading, error } = useQuery({
@@ -24,6 +25,16 @@ function Users() {
     onError: () => toast.error('Failed to update user status'),
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (id) => usersAPI.deleteUser(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['users']);
+      toast.success('User deleted');
+      setDeleteTarget(null);
+    },
+    onError: (err) => toast.error(err?.response?.data?.message || 'Failed to delete user'),
+  });
+
   const roleColors = {
     customer: 'bg-blue-100 text-blue-800',
     admin: 'bg-red-100 text-red-800',
@@ -37,6 +48,38 @@ function Users() {
 
   return (
     <div className="p-3 sm:p-6">
+
+      {/* Delete Confirmation Modal */}
+      {deleteTarget && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm">
+            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-red-100 mx-auto mb-4">
+              <svg className="w-6 h-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 text-center mb-1">Delete User?</h3>
+            <p className="text-sm text-gray-500 text-center mb-6">
+              <span className="font-medium text-gray-700">{deleteTarget.name}</span> will be permanently deleted. This cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => deleteMutation.mutate(deleteTarget._id)}
+                disabled={deleteMutation.isLoading}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50"
+              >
+                {deleteMutation.isLoading ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="bg-white rounded-lg shadow">
         <div className="p-4 sm:p-6 border-b">
           <div className="flex flex-wrap gap-3">
@@ -90,7 +133,7 @@ function Users() {
                       </div>
                       <div className="ml-4">
                         <div className="font-medium">{user.name}</div>
-                        <div className="text-sm text-gray-500">{user.email}</div>
+                        <div className="text-sm text-gray-500">{user.phone}</div>
                       </div>
                     </div>
                   </td>
@@ -106,15 +149,25 @@ function Users() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">{new Date(user.createdAt).toLocaleDateString()}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <button
-                      onClick={() => handleStatusToggle(user._id, user.isActive)}
-                      disabled={updateStatusMutation.isLoading}
-                      className={`px-3 py-1 text-xs rounded ${
-                        user.isActive ? 'bg-red-100 text-red-800 hover:bg-red-200' : 'bg-green-100 text-green-800 hover:bg-green-200'
-                      } disabled:opacity-50`}
-                    >
-                      {user.isActive ? 'Deactivate' : 'Activate'}
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleStatusToggle(user._id, user.isActive)}
+                        disabled={updateStatusMutation.isLoading}
+                        className={`px-3 py-1 text-xs rounded ${
+                          user.isActive ? 'bg-red-100 text-red-800 hover:bg-red-200' : 'bg-green-100 text-green-800 hover:bg-green-200'
+                        } disabled:opacity-50`}
+                      >
+                        {user.isActive ? 'Deactivate' : 'Activate'}
+                      </button>
+                      {user.role !== 'admin' && (
+                        <button
+                          onClick={() => setDeleteTarget(user)}
+                          className="px-3 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700"
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -138,18 +191,28 @@ function Users() {
                   <span className="font-medium text-gray-800 truncate">{user.name}</span>
                   <span className={`px-1.5 py-0.5 text-xs rounded-full flex-shrink-0 ${roleColors[user.role]}`}>{user.role?.replace('_', ' ')}</span>
                 </div>
-                <div className="text-xs text-gray-500 truncate">{user.email}</div>
+                <div className="text-xs text-gray-500 truncate">{user.phone}</div>
                 <div className="text-xs text-gray-400">{user.phone} · ₹{user.wallet?.balance || 0}</div>
               </div>
-              <button
-                onClick={() => handleStatusToggle(user._id, user.isActive)}
-                disabled={updateStatusMutation.isLoading}
-                className={`text-xs px-2.5 py-1 rounded flex-shrink-0 ${
-                  user.isActive ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-                }`}
-              >
-                {user.isActive ? 'Deactivate' : 'Activate'}
-              </button>
+              <div className="flex flex-col gap-1 flex-shrink-0">
+                <button
+                  onClick={() => handleStatusToggle(user._id, user.isActive)}
+                  disabled={updateStatusMutation.isLoading}
+                  className={`text-xs px-2.5 py-1 rounded ${
+                    user.isActive ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                  }`}
+                >
+                  {user.isActive ? 'Deactivate' : 'Activate'}
+                </button>
+                {user.role !== 'admin' && (
+                  <button
+                    onClick={() => setDeleteTarget(user)}
+                    className="text-xs px-2.5 py-1 rounded bg-red-600 text-white"
+                  >
+                    Delete
+                  </button>
+                )}
+              </div>
             </div>
           ))}
         </div>

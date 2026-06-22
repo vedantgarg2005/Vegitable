@@ -104,7 +104,6 @@ function OrderDetails() {
     mutationFn: (itemData) => ordersAPI.addItemToOrder(id, itemData),
     onSuccess: () => {
       queryClient.invalidateQueries(['order', id]);
-      toast.success('Item added to order');
       setShowAddItem(false);
       setSelectedItem('');
       setQuantity(1);

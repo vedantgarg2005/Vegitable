@@ -17,6 +17,7 @@ import Campaigns from './pages/Campaigns';
 import Notifications from './pages/Notifications';
 import Wallet from './pages/Wallet';
 import StoreSettings from './pages/StoreSettings';
+import ProductRequests from './pages/ProductRequests';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 5 * 60 * 1000 } },
@@ -51,6 +52,7 @@ function AdminContent() {
         <Route path="notifications" element={<Notifications />} />
         <Route path="wallet" element={<Wallet />} />
         <Route path="store-settings" element={<StoreSettings />} />
+        <Route path="product-requests" element={<ProductRequests />} />
       </Route>
     </Routes>
   );

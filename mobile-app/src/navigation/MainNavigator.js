@@ -18,7 +18,6 @@ import HelpSupportScreen from '../screens/HelpSupportScreen';
 import TermsConditionsScreen from '../screens/TermsConditionsScreen';
 import RefundPolicyScreen from '../screens/RefundPolicyScreen';
 import ShippingPolicyScreen from '../screens/ShippingPolicyScreen';
-import MyProfileScreen from '../screens/MyProfileScreen';
 import OrderTrackingScreen from '../screens/OrderTrackingScreen';
 import WalletScreen from '../screens/WalletScreen';
 import ReviewScreen from '../screens/ReviewScreen';
@@ -132,7 +131,6 @@ export default function MainNavigator() {
       <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
       <Stack.Screen name="RefundPolicy" component={RefundPolicyScreen} />
       <Stack.Screen name="ShippingPolicy" component={ShippingPolicyScreen} />
-      <Stack.Screen name="MyProfile" component={MyProfileScreen} />
       <Stack.Screen name="OrderTracking" component={OrderTrackingScreen} />
       <Stack.Screen name="Wallet" component={WalletScreen} />
       <Stack.Screen name="Review" component={ReviewScreen} />

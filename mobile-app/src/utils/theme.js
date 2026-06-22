@@ -1,7 +1,10 @@
 import { Dimensions, PixelRatio } from 'react-native';
 import { DefaultTheme } from 'react-native-paper';
 
-const getWindow = () => Dimensions.get('window');
+const getWindow = () => {
+  const win = Dimensions.get('window');
+  return { width: win.width || 390, height: win.height || 844 };
+};
 
 export const rs = (size) => {
   const { width } = getWindow();
@@ -12,8 +15,8 @@ export const vs = (size) => {
   return Math.round((height / 844) * size);
 };
 export const ms = (size, factor = 0.5) => Math.round(size + (rs(size) - size) * factor);
-export const W = getWindow().width;
-export const H = getWindow().height;
+export const W = () => getWindow().width;
+export const H = () => getWindow().height;
 
 export const colors = {
   // BigBasket Brand
@@ -112,11 +115,11 @@ export const shadows = {
 };
 
 export const borderRadius = {
-  xs: rs(4),
-  sm: rs(8),
-  md: rs(12),
-  lg: rs(16),
-  xl: rs(24),
+  get xs() { return rs(4); },
+  get sm() { return rs(8); },
+  get md() { return rs(12); },
+  get lg() { return rs(16); },
+  get xl() { return rs(24); },
   full: 999,
 };
 

@@ -91,41 +91,39 @@ export default function Home() {
   return (
     <div style={{ background: '#f6faf7', minHeight: '100vh' }}>
 
-      {/* ── TOP NAV — desktop only (mobile uses Navbar in App.jsx layout) ── */}
-      <header className="hidden sm:block" style={{ background: 'white', borderBottom: '1px solid #efefef', position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 1px 8px rgba(0,0,0,0.04)' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 16px', height: 58, display: 'flex', alignItems: 'center', gap: 12 }}>
+      {/* ── TOP NAV — desktop only ── */}
+      <header className="hidden sm:block" style={{ background: 'white', borderBottom: '1px solid #f0f0f0', position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+        <div style={{ maxWidth: 1400, margin: '0 auto', padding: '0 24px', height: 72, display: 'flex', alignItems: 'center', gap: 20 }}>
 
-          {/* Logo */}
-          <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', flexShrink: 0 }}>
-            <img src="/Logo.png" alt="Fresh Tokri" style={{ width: 34, height: 34, borderRadius: 10, objectFit: 'cover' }} />
-            <span style={{ fontWeight: 800, fontSize: 15, color: '#0a0a0a', letterSpacing: -0.3 }}>Fresh Tokri</span>
+          <Link to="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', flexShrink: 0 }}>
+            <img src="/Logo.png" alt="Fresh Tokri" style={{ height: 52, objectFit: 'contain' }} />
           </Link>
 
-          {/* Search */}
-          <div style={{ flex: 1, position: 'relative', maxWidth: 420 }}>
-            <Search size={13} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#aaa', pointerEvents: 'none', zIndex: 1 }} />
+          {/* Search — centered, wider */}
+          <div style={{ flex: 1, position: 'relative', maxWidth: 560, margin: '0 auto' }}>
+            <Search size={14} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#bbb', pointerEvents: 'none', zIndex: 1 }} />
             <input
               type="text"
-              placeholder="Search vegetables, fruits…"
+              placeholder="Search fresh vegetables, fruits & more…"
               value={searchVal}
               onChange={e => { setSearchVal(e.target.value); setSearchOpen(true); }}
-              onFocus={e => { e.target.style.borderColor = '#16a34a'; e.target.style.background = 'white'; setSearchOpen(true); }}
-              onBlur={e => { e.target.style.borderColor = 'transparent'; e.target.style.background = '#f5f5f5'; setTimeout(() => setSearchOpen(false), 150); }}
-              style={{ width: '100%', background: '#f5f5f5', border: '1.5px solid transparent', borderRadius: 10, padding: '9px 32px 9px 34px', fontSize: 13, fontWeight: 500, outline: 'none', fontFamily: 'inherit', color: '#0a0a0a', transition: 'all 0.15s' }}
+              onFocus={e => { e.target.style.borderColor = '#16a34a'; e.target.style.background = 'white'; e.target.style.boxShadow = '0 0 0 3px rgba(22,163,74,0.1)'; setSearchOpen(true); }}
+              onBlur={e => { e.target.style.borderColor = 'transparent'; e.target.style.background = '#f5f5f5'; e.target.style.boxShadow = 'none'; setTimeout(() => setSearchOpen(false), 150); }}
+              style={{ width: '100%', background: '#f5f5f5', border: '1.5px solid transparent', borderRadius: 12, padding: '10px 16px 10px 40px', fontSize: 13, fontWeight: 500, outline: 'none', fontFamily: 'inherit', color: '#0a0a0a', transition: 'all 0.2s' }}
             />
             {searchOpen && searchVal.trim() && (
-              <div style={{ position: 'absolute', top: '110%', left: 0, right: 0, background: 'white', borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.12)', border: '1.5px solid #f0f0f0', zIndex: 200, overflow: 'hidden' }}>
-                {searchLoading && <p style={{ padding: '12px 14px', fontSize: 12, color: '#aaa', margin: 0 }}>Searching…</p>}
-                {!searchLoading && searchResults.length === 0 && <p style={{ padding: '12px 14px', fontSize: 12, color: '#aaa', margin: 0 }}>No results for "{searchVal}"</p>}
+              <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, background: 'white', borderRadius: 14, boxShadow: '0 12px 40px rgba(0,0,0,0.12)', border: '1.5px solid #f0f0f0', zIndex: 200, overflow: 'hidden' }}>
+                {searchLoading && <p style={{ padding: '12px 16px', fontSize: 12, color: '#aaa', margin: 0 }}>Searching…</p>}
+                {!searchLoading && searchResults.length === 0 && <p style={{ padding: '12px 16px', fontSize: 12, color: '#aaa', margin: 0 }}>No results for "{searchVal}"</p>}
                 {!searchLoading && searchResults.map(p => (
                   <Link key={p._id} to={`/product/${p._id}`} onMouseDown={e => e.preventDefault()}
-                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', textDecoration: 'none', borderBottom: '1px solid #f5f5f5' }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', textDecoration: 'none', borderBottom: '1px solid #f8f8f8' }}
                     onMouseEnter={e => e.currentTarget.style.background = '#f6faf7'}
                     onMouseLeave={e => e.currentTarget.style.background = 'white'}>
-                    {p.image && <img src={p.image.startsWith('http') ? p.image : `http://localhost:5000/uploads/${p.image}`} alt={p.name} style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />}
+                    {p.image && <img src={p.image.startsWith('http') ? p.image : `http://localhost:5000/uploads/${p.image}`} alt={p.name} style={{ width: 40, height: 40, borderRadius: 10, objectFit: 'cover', flexShrink: 0, border: '1px solid #f0f0f0' }} />}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#0a0a0a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</p>
-                      <p style={{ margin: 0, fontSize: 11, color: '#16a34a', fontWeight: 700 }}>₹{p.price}</p>
+                      <p style={{ margin: 0, fontSize: 12, color: '#16a34a', fontWeight: 800 }}>₹{p.price}</p>
                     </div>
                   </Link>
                 ))}
@@ -133,24 +131,23 @@ export default function Home() {
             )}
           </div>
 
-          {/* Right actions */}
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-            <button onClick={openCart} style={{ display: 'flex', alignItems: 'center', gap: 6, background: totalItems > 0 ? '#16a34a' : 'white', border: '1.5px solid', borderColor: totalItems > 0 ? '#16a34a' : '#e5e5e5', borderRadius: 10, padding: '7px 13px', cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}>
-              <ShoppingCart size={14} color={totalItems > 0 ? 'white' : '#555'} />
-              <span style={{ color: totalItems > 0 ? 'white' : '#555', fontSize: 12, fontWeight: 700 }}>
-                {totalItems > 0 ? `${totalItems} item${totalItems > 1 ? 's' : ''}` : 'Cart'}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+            <button onClick={openCart} style={{ display: 'flex', alignItems: 'center', gap: 7, background: totalItems > 0 ? '#16a34a' : '#f5f5f5', border: 'none', borderRadius: 12, padding: '9px 16px', cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.2s', boxShadow: totalItems > 0 ? '0 4px 14px rgba(22,163,74,0.35)' : 'none' }}>
+              <ShoppingCart size={15} color={totalItems > 0 ? 'white' : '#555'} />
+              <span style={{ color: totalItems > 0 ? 'white' : '#555', fontSize: 13, fontWeight: 700 }}>
+                {totalItems > 0 ? `${totalItems} item${totalItems > 1 ? 's' : ''} · ₹${totalPrice}` : 'Cart'}
               </span>
             </button>
             {user ? (
-              <button onClick={openProfile} style={{ display: 'flex', alignItems: 'center', gap: 7, background: '#f5f5f5', borderRadius: 10, padding: '7px 13px', border: '1.5px solid #e5e5e5', cursor: 'pointer', fontFamily: 'inherit' }}>
-                <div style={{ width: 22, height: 22, borderRadius: 6, background: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 900, color: 'white' }}>
+              <button onClick={openProfile} style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f5f5f5', borderRadius: 12, padding: '8px 14px', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+                <div style={{ width: 26, height: 26, borderRadius: 8, background: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 900, color: 'white' }}>
                   {user.name?.[0]?.toUpperCase()}
                 </div>
-                <span style={{ color: '#0a0a0a', fontSize: 12, fontWeight: 700 }}>{user.name?.split(' ')[0]}</span>
+                <span style={{ color: '#0a0a0a', fontSize: 13, fontWeight: 700 }}>{user.name?.split(' ')[0]}</span>
               </button>
             ) : (
-              <button onClick={openLogin} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#16a34a', color: 'white', borderRadius: 10, padding: '8px 16px', fontSize: 12, fontWeight: 700, border: 'none', cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(22,163,74,0.3)' }}>
-                <User size={12} /> Login
+              <button onClick={openLogin} style={{ display: 'flex', alignItems: 'center', gap: 7, background: '#16a34a', color: 'white', borderRadius: 12, padding: '9px 20px', fontSize: 13, fontWeight: 700, border: 'none', cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 4px 14px rgba(22,163,74,0.35)' }}>
+                <User size={14} /> Login
               </button>
             )}
           </div>
@@ -158,10 +155,9 @@ export default function Home() {
       </header>
 
       {/* ── MOBILE NAV ── */}
-      <header className="flex sm:hidden" style={{ background: 'white', borderBottom: '1px solid #efefef', position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 1px 8px rgba(0,0,0,0.04)', height: 56, alignItems: 'center', padding: '0 16px', gap: 10 }}>
+      <header className="flex sm:hidden" style={{ background: 'white', borderBottom: '1px solid #efefef', position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 1px 8px rgba(0,0,0,0.04)', height: 90, alignItems: 'center', padding: '0 16px', gap: 10 }}>
         <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 7, textDecoration: 'none', flexShrink: 0 }}>
-          <img src="/Logo.png" alt="Fresh Tokri" style={{ width: 28, height: 28, borderRadius: 8, objectFit: 'cover' }} />
-          <span style={{ fontWeight: 800, fontSize: 14, color: '#0a0a0a' }}>Fresh Tokri</span>
+          <img src="/Logo.png" alt="Fresh Tokri" style={{ width: 200, height: 80, objectFit: 'contain' }} />
         </Link>
         <div style={{ flex: 1, position: 'relative' }}>
           <Search size={12} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#aaa', pointerEvents: 'none' }} />
@@ -209,47 +205,42 @@ export default function Home() {
       </header>
 
       {/* ── BANNER IMAGE ── */}
-      <img src="/1.jpeg" alt="Banner" style={{ display: 'block', width: 'calc(100% - 120px)', margin: '20px auto 0', borderRadius: 12 }} />
+      <div style={{ maxWidth: 1400, margin: '20px auto 0', padding: '0 20px' }}>
+        <img src="/1.jpeg" alt="Banner" style={{ display: 'block', width: '100%', borderRadius: 18, boxShadow: '0 4px 24px rgba(0,0,0,0.10)' }} />
+      </div>
 
       {/* ── CATEGORY IMAGE STRIP ── */}
-      <div style={{ maxWidth: 1100, margin: '16px auto 0', padding: '0 12px' }}>
-        <div style={{ display: 'flex', gap: 12, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 4 }}>
+      <div style={{ maxWidth: 1400, margin: '20px auto 0', padding: '0 20px' }}>
+        <div style={{ display: 'flex', gap: 14, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 4 }}>
           {CATEGORY_IMAGES.map(cat => (
             <button key={cat.id} onClick={() => { setCategory(cat.id); shopRef.current?.scrollIntoView({ behavior: 'smooth' }); }}
               style={{ flexShrink: 0, border: 'none', background: 'none', cursor: 'pointer', padding: 0, textAlign: 'center' }}>
-              <div style={{ width: 90, height: 90, borderRadius: 16, overflow: 'hidden', border: category === cat.id ? '2.5px solid #16a34a' : '2px solid #e5e5e5', transition: 'border 0.15s' }}>
-                <img src={cat.img} alt={cat.label} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+              <div style={{ width: 100, height: 100, borderRadius: 20, overflow: 'hidden', border: category === cat.id ? '3px solid #16a34a' : '2px solid #e8e8e8', transition: 'all 0.2s', boxShadow: category === cat.id ? '0 4px 16px rgba(22,163,74,0.25)' : '0 2px 8px rgba(0,0,0,0.06)' }}>
+                <img src={cat.img} alt={cat.label} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform 0.2s' }} />
               </div>
-              <p style={{ margin: '6px 0 0', fontSize: 11, fontWeight: 700, color: category === cat.id ? '#16a34a' : '#555', whiteSpace: 'nowrap' }}>{cat.label}</p>
+              <p style={{ margin: '8px 0 0', fontSize: 12, fontWeight: 700, color: category === cat.id ? '#16a34a' : '#444', whiteSpace: 'nowrap' }}>{cat.label}</p>
             </button>
           ))}
         </div>
       </div>
 
       {/* ── MAIN CONTENT ── */}
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '20px 12px 100px' }}>
+      <div style={{ maxWidth: 1400, margin: '0 auto', padding: '24px 20px 80px' }}>
 
-        {/* Categories */}
-        <div ref={shopRef} style={{ display: 'flex', gap: 8, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 2, marginBottom: 24 }}>
-          {CATEGORIES.map(cat => (
-            <button key={cat.id} onClick={() => setCategory(cat.id)}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, padding: '8px 16px', borderRadius: 22, border: '1.5px solid', borderColor: category === cat.id ? '#16a34a' : '#e5e5e5', background: category === cat.id ? '#16a34a' : 'white', color: category === cat.id ? 'white' : '#555', fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}>
-              <span>{cat.emoji}</span> {cat.label}
-            </button>
-          ))}
-        </div>
+        <div ref={shopRef} />
 
-        {/* Products */}
         {loading ? (
-          <div className="product-grid">{Array.from({ length: 10 }).map((_, i) => <SkeletonCard key={i} />)}</div>
+          <div className="product-grid">{Array.from({ length: 12 }).map((_, i) => <SkeletonCard key={i} />)}</div>
         ) : category !== 'all' ? (
-          // Single category view
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-              <p style={{ fontSize: 13, fontWeight: 800, color: '#0a0a0a', margin: 0 }}>
-                {CATEGORIES.find(c => c.id === category)?.label}
-              </p>
-              <span style={{ fontSize: 11, color: '#bbb', fontWeight: 600 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 4, height: 22, background: '#16a34a', borderRadius: 4 }} />
+                <p style={{ fontSize: 16, fontWeight: 800, color: '#0a0a0a', margin: 0 }}>
+                  {CATEGORIES.find(c => c.id === category)?.emoji} {CATEGORIES.find(c => c.id === category)?.label}
+                </p>
+              </div>
+              <span style={{ fontSize: 12, color: '#bbb', fontWeight: 600, background: '#f5f5f5', padding: '4px 10px', borderRadius: 20 }}>
                 {products.filter(p => p.category === category && p.isActive !== false).length} items
               </span>
             </div>
@@ -258,18 +249,18 @@ export default function Home() {
             </div>
           </div>
         ) : (
-          // Grouped by category
           CATEGORIES.filter(cat => cat.id !== 'all').map(cat => {
             const catProducts = products.filter(p => p.category === cat.id && p.isActive !== false);
             if (!catProducts.length) return null;
             return (
-              <div key={cat.id} style={{ marginBottom: 36 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 18 }}>{cat.emoji}</span>
-                    <p style={{ fontSize: 14, fontWeight: 800, color: '#0a0a0a', margin: 0 }}>{cat.label}</p>
+              <div key={cat.id} style={{ marginBottom: 40 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ width: 4, height: 22, background: '#16a34a', borderRadius: 4 }} />
+                    <span style={{ fontSize: 20 }}>{cat.emoji}</span>
+                    <p style={{ fontSize: 16, fontWeight: 800, color: '#0a0a0a', margin: 0 }}>{cat.label}</p>
                   </div>
-                  <span style={{ fontSize: 11, color: '#bbb', fontWeight: 600 }}>{catProducts.length} items</span>
+                  <span style={{ fontSize: 12, color: '#999', fontWeight: 600, background: '#f5f5f5', padding: '4px 10px', borderRadius: 20 }}>{catProducts.length} items</span>
                 </div>
                 <div className="product-grid">
                   {catProducts.map(p => <ProductCard key={p._id} product={p} />)}
@@ -293,6 +284,9 @@ export default function Home() {
           <ArrowRight size={14} />
         </button>
       )}
+
+      {/* ── OPS IMAGE ── */}
+      <img src="/Ops.webp" alt="Ops" style={{ display: 'block', width: '100%' }} />
 
       {/* ── FOOTER ── */}
       <footer style={{ background: '#052e16' }}>

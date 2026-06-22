@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Modal, TextInput, ActivityIndicator, Alert,
+  Modal, TextInput, ActivityIndicator, Alert, Animated,
 } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
+import MapView from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,6 +15,21 @@ import { colors, shadows, borderRadius, ms, rs, vs } from '../utils/theme';
 const ADDRESS_TYPES = ['home', 'work', 'other'];
 const TYPE_ICONS = { home: 'home-outline', work: 'briefcase-outline', other: 'location-outline' };
 const EMPTY_FORM = { type: 'home', address: '', landmark: '', city: '', pincode: '', isDefault: false };
+
+const WHITE_MAP_STYLE = [
+  { elementType: 'geometry', stylers: [{ color: '#f5f5f5' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#616161' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#f5f5f5' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#ffffff' }] },
+  { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#e0e0e0' }] },
+  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#dadada' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#c9e8f5' }] },
+  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#9e9e9e' }] },
+  { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#eeeeee' }] },
+  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#e5f5e0' }] },
+  { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#f2f2f2' }] },
+  { featureType: 'administrative', elementType: 'geometry.stroke', stylers: [{ color: '#c9c9c9' }] },
+];
 
 export default function SavedAddressesScreen({ navigation }) {
   const insets = useSafeAreaInsets();
@@ -29,6 +44,9 @@ export default function SavedAddressesScreen({ navigation }) {
   const [mapRegion, setMapRegion] = useState({ latitude: 28.6139, longitude: 77.2090, latitudeDelta: 0.01, longitudeDelta: 0.01 });
   const [pinCoords, setPinCoords] = useState({ latitude: 28.6139, longitude: 77.2090 });
   const [locLoading, setLocLoading] = useState(false);
+  const [geocoding, setGeocoding] = useState(false);
+  const [liveAddress, setLiveAddress] = useState('');
+  const pinAnim = useRef(new Animated.Value(0)).current;
 
   // Step 2: form modal
   const [formVisible, setFormVisible] = useState(false);
@@ -54,6 +72,22 @@ export default function SavedAddressesScreen({ navigation }) {
 
   useEffect(() => { loadAddresses(); }, [loadAddresses]);
 
+  const pinLift = () => Animated.spring(pinAnim, { toValue: -14, useNativeDriver: true, speed: 20, bounciness: 6 }).start();
+  const pinDrop = () => Animated.spring(pinAnim, { toValue: 0, useNativeDriver: true, speed: 20, bounciness: 6 }).start();
+
+  const reverseGeocode = async (lat, lng) => {
+    setGeocoding(true);
+    setLiveAddress('');
+    try {
+      const [place] = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lng });
+      if (place) {
+        const parts = [place.name, place.street, place.district, place.city].filter(Boolean);
+        setLiveAddress(parts.slice(0, 2).join(', '));
+      }
+    } catch {}
+    finally { setGeocoding(false); }
+  };
+
   // Go to user's current location on map open
   const goToCurrentLocation = async () => {
     setLocLoading(true);
@@ -70,6 +104,7 @@ export default function SavedAddressesScreen({ navigation }) {
       setPinCoords({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
       setMapRegion(region);
       mapRef.current?.animateToRegion(region, 600);
+      reverseGeocode(loc.coords.latitude, loc.coords.longitude);
     } catch {}
     finally { setLocLoading(false); }
   };
@@ -89,9 +124,12 @@ export default function SavedAddressesScreen({ navigation }) {
     setFormVisible(true);
   };
 
-  // Reverse geocode when pin is confirmed
+  // Confirm uses already-geocoded liveAddress
   const confirmMapLocation = async () => {
-    setLocLoading(true);
+    if (!liveAddress && !geocoding) {
+      // fallback geocode if somehow empty
+      setLocLoading(true);
+    }
     try {
       const [place] = await Location.reverseGeocodeAsync({ latitude: pinCoords.latitude, longitude: pinCoords.longitude });
       if (place) {
@@ -227,35 +265,45 @@ export default function SavedAddressesScreen({ navigation }) {
           <MapView
             ref={mapRef}
             style={styles.map}
-            region={mapRegion}
+            initialRegion={mapRegion}
+            onRegionChange={() => { pinLift(); setLiveAddress(''); }}
             onRegionChangeComplete={region => {
-              setPinCoords({ latitude: region.latitude, longitude: region.longitude });
+              const lat = region.latitude;
+              const lng = region.longitude;
+              setPinCoords({ latitude: lat, longitude: lng });
+              setMapRegion(region);
+              pinDrop();
+              reverseGeocode(lat, lng);
             }}
+            customMapStyle={WHITE_MAP_STYLE}
             showsUserLocation
             showsMyLocationButton={false}
-          >
-            <Marker coordinate={pinCoords} draggable onDragEnd={e => setPinCoords(e.nativeEvent.coordinate)}>
-              <View style={styles.pinWrapper}>
-                <View style={styles.pinBubble}>
-                  <Ionicons name="location" size={rs(22)} color="#fff" />
-                </View>
-                <View style={styles.pinTail} />
+            moveOnMarkerPress={false}
+          />
+
+          {/* Fixed center pin */}
+          <View pointerEvents="none" style={styles.fixedPinContainer}>
+            <Animated.View style={{ transform: [{ translateY: pinAnim }] }}>
+              <View style={styles.pinBubble}>
+                <Ionicons name="location" size={rs(22)} color="#fff" />
               </View>
-            </Marker>
-          </MapView>
+            </Animated.View>
+            <View style={styles.pinTail} />
+            <View style={styles.pinShadowDot} />
+          </View>
 
           {/* Top bar */}
           <View style={[styles.mapTopBar, { top: insets.top + vs(10) }]}>
             <TouchableOpacity style={styles.mapBackBtn} onPress={() => setMapVisible(false)}>
               <Ionicons name="arrow-back" size={rs(22)} color={colors.text} />
             </TouchableOpacity>
-            <Text style={styles.mapTopTitle}>Pin Your Location</Text>
+            <Text style={styles.mapTopTitle}>Move map to set location</Text>
             <View style={{ width: rs(36) }} />
           </View>
 
           {/* Current location FAB */}
           <TouchableOpacity
-            style={[styles.mapLocFab, { bottom: insets.bottom + vs(110) }]}
+            style={[styles.mapLocFab, { bottom: insets.bottom + vs(130) }]}
             onPress={goToCurrentLocation}
             disabled={locLoading}
             activeOpacity={0.85}
@@ -267,9 +315,14 @@ export default function SavedAddressesScreen({ navigation }) {
 
           {/* Bottom confirm */}
           <View style={[styles.mapBottomBar, { paddingBottom: insets.bottom + vs(12) }]}>
-            <Text style={styles.mapHint}>Drag the map or pin to adjust location</Text>
-            <TouchableOpacity style={styles.confirmBtn} onPress={confirmMapLocation} disabled={locLoading}>
-              {locLoading
+            <View style={styles.liveAddressRow}>
+              <Ionicons name="location-outline" size={rs(18)} color={colors.primary} style={{ marginTop: vs(2) }} />
+              {geocoding
+                ? <ActivityIndicator size="small" color={colors.primary} style={{ marginLeft: rs(8) }} />
+                : <Text style={styles.liveAddressText} numberOfLines={2}>{liveAddress || 'Move map to detect address'}</Text>}
+            </View>
+            <TouchableOpacity style={styles.confirmBtn} onPress={confirmMapLocation} disabled={geocoding || locLoading}>
+              {(geocoding || locLoading)
                 ? <ActivityIndicator color="#fff" />
                 : <Text style={styles.confirmBtnText}>Confirm Location →</Text>}
             </TouchableOpacity>
@@ -395,7 +448,11 @@ const styles = StyleSheet.create({
   // Map
   mapContainer: { flex: 1 },
   map: { flex: 1 },
-  pinWrapper: { alignItems: 'center' },
+  fixedPinContainer: {
+    position: 'absolute', top: '50%', left: '50%',
+    marginLeft: -rs(21), marginTop: -rs(54),
+    alignItems: 'center',
+  },
   pinBubble: {
     width: rs(42), height: rs(42), borderRadius: rs(21),
     backgroundColor: colors.primary,
@@ -407,6 +464,10 @@ const styles = StyleSheet.create({
     borderLeftWidth: rs(7), borderRightWidth: rs(7), borderTopWidth: rs(12),
     borderLeftColor: 'transparent', borderRightColor: 'transparent',
     borderTopColor: colors.primary,
+  },
+  pinShadowDot: {
+    width: rs(10), height: rs(4), borderRadius: rs(5),
+    backgroundColor: 'rgba(0,0,0,0.2)', marginTop: vs(2),
   },
   mapTopBar: {
     position: 'absolute', left: rs(12), right: rs(12),
@@ -431,6 +492,8 @@ const styles = StyleSheet.create({
     padding: rs(20),
     ...shadows.large,
   },
+  liveAddressRow: { flexDirection: 'row', alignItems: 'flex-start', gap: rs(8), marginBottom: vs(14) },
+  liveAddressText: { flex: 1, fontSize: ms(14), color: colors.text, fontWeight: '500', lineHeight: ms(20) },
   mapHint: { fontSize: ms(13), color: colors.placeholder, marginBottom: vs(14), textAlign: 'center' },
   confirmBtn: {
     backgroundColor: colors.primary,

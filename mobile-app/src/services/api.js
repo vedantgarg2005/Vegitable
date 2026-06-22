@@ -58,6 +58,7 @@ export const walletAPI = {
 
 export const productRequestAPI = {
   submit: (data) => api.post('/product-requests', data),
+  getMyRequests: () => api.get('/product-requests/my'),
 };
 
 export const reviewAPI = {

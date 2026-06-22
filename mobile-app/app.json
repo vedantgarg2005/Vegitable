@@ -16,7 +16,10 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.freshtokri.app"
+      "bundleIdentifier": "com.freshtokri.app",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -52,8 +55,9 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "33a1ff86-b70a-4730-adac-deb1808e282c"
+        "projectId": "afe85c54-a96e-4a54-ac28-b040eb2d6cf2"
       }
-    }
+    },
+    "owner": "veds1212"
   }
 }

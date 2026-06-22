@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, ScrollView, StyleSheet, Alert, TextInput,
   TouchableOpacity, StatusBar, Modal, FlatList,
-  KeyboardAvoidingView, Platform, ActivityIndicator,
+  KeyboardAvoidingView, Platform, ActivityIndicator, Image,
 } from 'react-native';
 import { Text, Divider } from 'react-native-paper';
 import MapView, { Marker } from 'react-native-maps';
@@ -19,6 +19,8 @@ import { colors, shadows, borderRadius, ms, rs, vs } from '../utils/theme';
 import api, { menuAPI } from '../services/api';
 import { FREE_DELIVERY_THRESHOLD, STANDARD_DELIVERY_FEE, getDeliveryFee, API_BASE_URL, STORE_ADDRESS, MIN_ORDER_VALUE } from '../utils/constants';
 import CachedImage from '../components/CachedImage';
+
+const CART_IMG = require('../../assets/Cart.png');
 
 const ADDRESS_TYPES = ['home', 'work', 'other'];
 const TYPE_ICONS = { home: 'home-outline', work: 'briefcase-outline', other: 'location-outline' };
@@ -70,9 +72,12 @@ const CartScreen = ({ navigation, route }) => {
   }, []);
 
   useEffect(() => {
-    menuAPI.getItems()
-      .then(res => setSuggestedItems(res.data || []))
-      .catch(() => {});
+    const timer = setTimeout(() => {
+      menuAPI.getItems({ limit: 10, fields: '_id,name,image,price,marketPrice,variants,availability' })
+        .then(res => setSuggestedItems(res.data || []))
+        .catch(() => {});
+    }, 500);
+    return () => clearTimeout(timer);
   }, []);
 
   const authFetch = useCallback(async (path, options = {}) => {
@@ -350,21 +355,18 @@ const CartScreen = ({ navigation, route }) => {
 
       {/* Dark header */}
       <View style={[styles.header, { paddingTop: insets.top + vs(12) }]}>
-        <View style={styles.headerRow}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={rs(22)} color="#fff" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>{t.yourOrder}</Text>
-          <Text style={styles.headerCount}>{cartItems.length} {t.items}</Text>
-        </View>
-
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <Ionicons name="arrow-back" size={rs(22)} color="#fff" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{t.yourOrder}</Text>
+        <Text style={styles.headerCount}>{cartItems.length} {t.items}</Text>
       </View>
 
       {cartItems.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyEmoji}>🛒</Text>
-          <Text style={styles.emptyTitle}>{t.cartEmpty}</Text>
-          <Text style={styles.emptySubtitle}>{t.addFreshVeggies}</Text>
+          <Image source={CART_IMG} style={styles.emptyCartImage} resizeMode="contain" />
+          <Text style={styles.emptyTitle}>Add items to your cart</Text>
+          <Text style={styles.emptySubtitle}>Your cart is empty. Browse and add fresh items!</Text>
           <TouchableOpacity style={styles.browseBtn} onPress={() => navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] })}>
             <Text style={styles.browseBtnText}>Start Shopping</Text>
           </TouchableOpacity>
@@ -528,19 +530,26 @@ const CartScreen = ({ navigation, route }) => {
                   data={suggestedItems}
                   keyExtractor={item => item._id}
                   showsHorizontalScrollIndicator={false}
+                  initialNumToRender={4}
+                  maxToRenderPerBatch={4}
+                  windowSize={3}
                   contentContainerStyle={styles.suggestList}
                   renderItem={({ item }) => {
                     const inCart = cartItems.find(c => (c._id || c.id) === item._id);
                     return (
                       <View style={styles.suggestCard}>
                         {item.image ? (
-                        <CachedImage
-                            uri={item.image.startsWith('/uploads') ? `${API_BASE_URL.replace('/api', '')}${item.image}` : item.image}
-                            style={styles.suggestImage}
-                            resizeMode="cover"
-                          />
+                          <View style={styles.suggestImageWrap}>
+                            <CachedImage
+                              uri={item.image.startsWith('/uploads') ? `${API_BASE_URL.replace('/api', '')}${item.image}` : item.image}
+                              style={styles.suggestImage}
+                              resizeMode="contain"
+                            />
+                          </View>
                         ) : (
-                          <Text style={styles.suggestEmoji}>🥦</Text>
+                          <View style={styles.suggestImageWrap}>
+                            <Text style={styles.suggestEmoji}>🥦</Text>
+                          </View>
                         )}
                         <Text style={styles.suggestName} numberOfLines={2}>{item.name}</Text>
                         <View style={{ alignItems: 'center' }}>
@@ -701,7 +710,7 @@ const CartScreen = ({ navigation, route }) => {
             keyExtractor={item => item._id || item.code}
             style={{ marginTop: vs(12) }}
             showsVerticalScrollIndicator={false}
-            ListEmptyComponent={<Text style={styles.noOffersText}>{t.viewAllOffers}</Text>}
+            ListEmptyComponent={<Text style={styles.noOffersText}>No offers available</Text>}
             renderItem={({ item }) => (
               <View style={styles.offerCard}>
                 <View style={styles.offerLeft}>
@@ -985,19 +994,15 @@ const styles = StyleSheet.create({
 
   header: {
     backgroundColor: colors.navy,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: rs(16),
     paddingBottom: vs(16),
   },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: rs(12),
-  },
-  backBtn: {
-    padding: rs(4),
-  },
-  headerTitle: { flex: 1, fontSize: ms(16), fontWeight: '900', color: '#fff', letterSpacing: 1.5, fontFamily: 'Poppins_900Black' },
-  headerCount: { fontSize: ms(13), color: 'rgba(255,255,255,0.7)', fontWeight: '600', fontFamily: 'Poppins_600SemiBold' },
+  backBtn: { padding: rs(4) },
+  headerTitle: { flex: 1, fontSize: ms(18), fontWeight: '700', color: '#fff' },
+  headerCount: { fontSize: ms(13), color: 'rgba(255,255,255,0.7)', fontWeight: '600' },
   orderTypeToggle: {
     flexDirection: 'row',
     backgroundColor: 'rgba(255,255,255,0.12)',
@@ -1015,8 +1020,8 @@ const styles = StyleSheet.create({
   toggleBtnTextActive: { color: '#fff' },
   toggleBtnUnavailable: { fontSize: ms(10), fontWeight: '600', color: 'rgba(255,255,255,0.5)', marginTop: vs(1) },
 
-  emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: rs(32) },
-  emptyEmoji: { fontSize: ms(64), marginBottom: vs(16) },
+  emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: rs(32) },
+  emptyCartImage: { width: '100%', height: rs(300), marginBottom: vs(8) },
   emptyTitle: { fontSize: ms(20), fontWeight: '800', color: colors.text, marginBottom: vs(8) },
   emptySubtitle: { fontSize: ms(14), color: colors.placeholder, marginBottom: vs(24) },
   browseBtn: {
@@ -1425,8 +1430,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  suggestEmoji: { fontSize: ms(32), marginBottom: vs(4) },
-  suggestImage: { width: rs(110), height: rs(70), borderRadius: borderRadius.sm, marginBottom: vs(4) },
+  suggestImageWrap: {
+    width: rs(90), height: rs(90),
+    borderRadius: borderRadius.sm,
+    backgroundColor: '#F7F9F2',
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: vs(6),
+  },
+  suggestEmoji: { fontSize: ms(32) },
+  suggestImage: { width: rs(90), height: rs(90) },
   suggestName: { fontSize: ms(11), fontWeight: '700', color: colors.text, textAlign: 'center', marginBottom: vs(3), fontFamily: 'Poppins_700Bold' },
   suggestPrice: { fontSize: ms(12), fontWeight: '800', color: colors.primary, marginBottom: vs(2), fontFamily: 'Poppins_800ExtraBold' },
   suggestMrp: { fontSize: ms(10), color: colors.placeholder, textDecorationLine: 'line-through', marginBottom: vs(4) },

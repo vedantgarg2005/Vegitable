@@ -179,14 +179,11 @@ export default function OrderTrackingScreen({ route, navigation }) {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
 
-      <View
-        style={[styles.header, { paddingTop: insets.top + vs(8) }]}
-      >
+      <View style={[styles.header, { paddingTop: insets.top + vs(12) }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={rs(22)} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Track Order</Text>
-        <View style={{ width: rs(40) }} />
+        <Text style={[styles.headerTitle, { flex: 1, marginLeft: rs(8) }]}>Track Order</Text>
       </View>
 
       <ScrollView
@@ -471,15 +468,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.navy,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: rs(16),
-    paddingBottom: vs(14),
+    paddingBottom: vs(16),
   },
-  backBtn: {
-    width: rs(40), height: rs(40), borderRadius: rs(20),
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center', alignItems: 'center',
-  },
+  backBtn: { padding: rs(4) },
   headerTitle: { fontSize: ms(18), fontWeight: '700', color: '#fff' },
 
   scrollContent: { padding: rs(16) },

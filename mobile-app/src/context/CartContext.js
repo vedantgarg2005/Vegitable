@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { showMessage } from 'react-native-flash-message';
 import { API_BASE_URL } from '../utils/constants';
 
 const CartContext = createContext();
@@ -97,20 +96,10 @@ export function CartProvider({ children }) {
 
   const addToCart = (item) => {
     dispatch({ type: 'ADD_ITEM', payload: { ...item, id: item.id || item._id } });
-    showMessage({
-      message: 'Item added to cart',
-      type: 'success',
-      duration: 2000,
-    });
   };
 
   const removeFromCart = (itemId) => {
     dispatch({ type: 'REMOVE_ITEM', payload: itemId });
-    showMessage({
-      message: 'Item removed from cart',
-      type: 'info',
-      duration: 2000,
-    });
   };
 
   const updateQuantity = (itemId, quantity) => {
