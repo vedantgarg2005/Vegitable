@@ -18,7 +18,9 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.freshtokri.app",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSLocationWhenInUseUsageDescription": "Fresh Tokri uses your location to show nearby stores, calculate accurate delivery addresses, and estimate delivery time to your door.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Fresh Tokri uses your location to show nearby stores, calculate accurate delivery addresses, and estimate delivery time to your door."
       }
     },
     "android": {
